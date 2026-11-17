@@ -31,7 +31,7 @@ inline bootstrap scripts). Upgrade path: nonce-based CSP via `proxy.ts` (Next 16
 - Rate limiting is in-memory per instance (not shared across servers).
 - Cart, wishlist and recently-viewed data live in `localStorage` on the device.
 - No authentication, accounts, CSRF tokens or order storage exist yet (no state-changing endpoints beyond the read-only quote).
-- `/render` (product image generator) returns 404 in production unless `ENABLE_RENDER_ROUTE=1`.
+- No remote images or video: product photos, brand logos and campaign media are downloaded once at build time into `public/` and served from `'self'` (CSP `img-src`/`media-src`). The download helpers (`scripts/build-catalog.mjs`, `scripts/cutout-rembg.py`) are local tools, never run in the app.
 
 ## Before production
 Integrate a certified payment provider server-side (hosted fields / checkout), add a shared rate limiter

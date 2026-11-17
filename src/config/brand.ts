@@ -3,10 +3,10 @@
  * change it here and it updates everywhere (wordmark, metadata, footer, loader).
  */
 export const brand = {
-  name: 'YOUR BRAND',
+  name: 'SMADI',
   /** Short form used in tight spaces (mobile header, favicon text). */
-  shortName: 'YB',
-  tagline: 'Equipment for every decisive moment.',
+  shortName: 'SM',
+  tagline: 'Gear for every decisive moment.',
   description:
     'A curated sports equipment store for football, boxing, swimming and more — presented like a showroom, shopped like a store.',
   contact: {
@@ -33,8 +33,8 @@ export const brand = {
     blue: '#218FB0',
   },
   commerce: {
-    currency: 'EUR',
-    locale: 'en-IE',
+    currency: 'USD',
+    locale: 'en-US',
     /** The checkout is a demonstration until a real payment provider is integrated. */
     demoCheckout: true,
     freeShippingThresholdCents: null as number | null,

@@ -1,38 +1,60 @@
-/** Copy and styling for the three cinematic hero scenes (order matches the 3D engine). */
+/**
+ * Hero slides. Drop the AI videos into public/media/ and set `video` / `videoMobile`
+ * (MP4, H.264). Until then the still `poster` is used, with motion added in CSS.
+ */
 export const heroSlides = [
   {
     id: 'football',
     word: 'Football',
+    kicker: '01 — The strike',
     tagline: 'Built for every decisive moment.',
     cta: 'Explore football',
     href: '/football',
-    product: { slug: 'adidas-f50-elite-fg-coral-blaze', color: 'coral-blaze', name: 'adidas F50 Elite FG “Coral Blaze”' },
-    accent: '#89C94A',
-    poster: 'linear-gradient(180deg,#CFE2F0 0%,#F4EEDF 52%,#7FB34A 52.2%,#5C9A33 100%)',
-    swatch: '#F36A32',
+    product: { slug: 'adidas-f50-hyperfast-elite-fg-soccer-cleats', name: 'adidas F50 Hyperfast Elite FG' },
+    poster: '/media/cat-football.webp',
+    video: null as string | null,
+    videoMobile: null as string | null,
+    accent: '#FF6A2B',
+    glow: 'rgba(255,106,43,0.55)',
   },
   {
     id: 'boxing',
     word: 'Boxing',
+    kicker: '02 — The hook',
     tagline: 'Power in every round.',
     cta: 'Explore boxing',
     href: '/boxing',
-    product: { slug: 'venum-power-2-boxing-gloves-black-gold', color: 'black-gold', name: 'Venum Power 2.0 — Black/Gold' },
-    accent: '#C8A451',
-    poster: 'linear-gradient(180deg,#FBFAF6 0%,#EFEBE2 60%,#DCD7CC 60.2%,#CFC9BC 100%)',
-    swatch: '#C8A451',
+    product: { slug: 'venum-giant-20-mike-tyson-pro-boxing-gloves-blackgold', name: 'Venum Giant 2.0 — Black/Gold' },
+    poster: '/media/cat-boxing.webp',
+    video: null as string | null,
+    videoMobile: null as string | null,
+    accent: '#E7B85A',
+    glow: 'rgba(231,184,90,0.55)',
   },
   {
     id: 'swimming',
     word: 'Swimming',
+    kicker: '03 — The fly',
     tagline: 'Move beyond your limits.',
     cta: 'Explore swimming',
     href: '/swimming',
-    product: { slug: 'speedo-fastskin-pure-focus-mirror-goggles', color: 'gold-mirror', name: 'Speedo Fastskin Pure Focus Mirror' },
-    accent: '#64D7D1',
-    poster: 'linear-gradient(180deg,#EDF7F7 0%,#DDF2F2 50%,#6FDCE0 50.2%,#2AA7B8 100%)',
-    swatch: '#218FB0',
+    product: { slug: 'speedo-fastskin-speed-socket-20-mirrored-goggles-orangegold', name: 'Speedo Fastskin Speed Socket 2.0' },
+    poster: '/media/cat-swimming.webp',
+    video: null as string | null,
+    videoMobile: null as string | null,
+    accent: '#5EE7DF',
+    glow: 'rgba(94,231,223,0.55)',
   },
 ] as const;
 
 export type HeroSlide = (typeof heroSlides)[number];
+
+/** Category card media (stills now; swap for looping videos later). */
+export const categoryMedia: Record<string, string> = {
+  football: '/media/cat-football.webp',
+  boxing: '/media/cat-boxing.webp',
+  swimming: '/media/cat-swimming.webp',
+  running: '/media/cat-running.webp',
+  fitness: '/media/cat-fitness.webp',
+  basketball: '/media/cat-basketball.webp',
+};

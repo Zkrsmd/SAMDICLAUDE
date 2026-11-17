@@ -1,6 +1,6 @@
 import 'server-only';
 import { rawProducts } from '@/data/products';
-import { sportMap, sports } from '@/data/categories';
+import { sports } from '@/data/categories';
 import { brandName } from '@/data/brands';
 import { colorFamily } from '@/lib/color';
 import { CatalogSchema, type ListingParams } from '@/lib/validation/catalog';
@@ -8,6 +8,12 @@ import type { Product, SportSlug } from '@/types/catalog';
 
 /** Validated once at module load — a malformed catalogue fails the build, not the customer. */
 const products: Product[] = CatalogSchema.parse(rawProducts) as Product[];
+
+/** Sports and sub-categories that actually have products. */
+const liveSports = sports
+  .map((s) => ({ ...s, subs: s.subs.filter((x) => products.some((p) => p.sport === s.slug && p.sub === x.slug)) }))
+  .filter((s) => s.subs.length > 0);
+const liveMap = new Map(liveSports.map((s) => [s.slug, s]));
 const bySlug = new Map(products.map((p) => [p.slug, p]));
 
 export interface CardData {
@@ -44,8 +50,8 @@ export const toCard = (p: Product): CardData => ({
 
 export const getAllProducts = () => products;
 export const getProduct = (slug: string) => bySlug.get(slug);
-export const getSport = (slug: string) => (slug in sportMap ? sportMap[slug as SportSlug] : undefined);
-export const getSports = () => sports;
+export const getSport = (slug: string) => liveMap.get(slug as SportSlug);
+export const getSports = () => liveSports;
 export const getSub = (sport: string, sub: string) => getSport(sport)?.subs.find((s) => s.slug === sub);
 
 export const productsFor = (sport: SportSlug, sub?: string) =>

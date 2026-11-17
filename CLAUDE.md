@@ -1,32 +1,35 @@
 # CLAUDE.md — project guide
 
 ## Purpose
-Premium, mobile-first sports e-commerce prototype ("YOUR BRAND" placeholder) that feels like a cinematic
-campaign, an interactive 3D showroom and a real store at once.
+Premium, mobile-first sports e-commerce prototype for **SMADI** (hand mark logo) that feels like an award-site
+campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
+(the owner rejected the procedural/"comic" look).
 
 ## Non-negotiable visual rules
-- Predominantly **bright**: `#FAFAF7` bg, white, stone `#EFEEE8`, ink `#171A18`. Never a dark/neon site.
-- Sport accents appear as light/material (grass, gold, water), not as coloured boxes.
-- Type: Big Shoulders (display, uppercase), Instrument Sans (body), Geist Mono (labels). No Inter/Arial.
-- Sharp 2px corners, hairlines, placards. Avoid repeated identical rounded cards and random gradients.
+- Page is predominantly **bright** (`#FAFAF7`, white, stone, ink `#171A18`); cinematic dark media lives only inside
+  the hero, category headers and image cards. Never a dark/neon site overall.
+- Effects language: animated holographic conic borders (`.holo-border`, `.holo-ring`), `.btn-holo`, `.holo-text`,
+  frosted `.glass`, film grain, cursor spotlight, `[data-reveal]` scroll reveals. Use these, don't invent new gradients.
+- Type: Unbounded (display, uppercase, heavy), Sora (body), Geist Mono (labels). No Inter/Arial.
+  Unbounded is very wide — size giant words with container units (`cqw`) and check at 375px.
 - The sport word is composition (behind objects, on walls, on pool floors), not a caption.
 
 ## Architecture
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
-- `src/three/products` procedural representative models; `registry.ts` is the single swap point for licensed models.
-- `src/three/hero` imperative hero engine hosted in R3F (`useFrame` priority 1 renders through `postprocessing`).
+- Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
+- Hero/category media and video slots: `src/config/hero.ts` (drop MP4s in `public/media/`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
-- `scripts/render-products.mjs` generates `public/renders/*.webp` from the models (dev server must run).
+- `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 
 ## Commands
-`npm run dev` · `npm run build` · `npm run typecheck` · `npm run lint` · `npm run test:e2e` · `npm run renders`
+`npm run dev` · `npm run build` · `npm run typecheck` · `npm run lint` · `npm run test:e2e` · `npm run catalog` · `npm run cutout`
 
 ## Quality standards
 - Typecheck, lint and Playwright must pass before committing.
 - Inspect real output (screenshots via `scripts/qa-shots.mjs` or the browser pane) — compiling is not enough.
-- Respect `prefers-reduced-motion`; every 3D path has a non-3D fallback; swipe is never the only control.
-- Animation state lives in refs, never React state per frame. Dispose geometries/materials on unmount.
+- Respect `prefers-reduced-motion`; swipe is never the only control; videos always have a still poster.
+- Animation state lives in refs/CSS variables, never React state per frame.
 
 ## Security restrictions
 - No secrets in the repo; `.env.example` only. Never trust client prices/quantities; validate with Zod.

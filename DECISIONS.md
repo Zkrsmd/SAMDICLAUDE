@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11-18 — Pivot: real products and real media, no 3D
+The owner rejected the procedural 3D look ("looks like comics") and asked for realistic product photos, AI/stock video,
+real brand logos, ~20 example products per brand, a stronger opening, a floating glowing header, the name **SMADI**
+with a hand in the logo, bigger stylish type and lots of effects. As a result:
+- three / R3F / drei / postprocessing were removed, together with every 3D model, the hero engine and the render pipeline.
+- **Catalogue**: 129 products scraped from the brands' own stores (nike, adidas, puma, venum, everlast, speedo, arena, wilson).
+  Photos are cut out with an edge flood-fill key and then rembg `isnet-general-use` for gradients and floor shadows.
+  - adidas blocked bulk access after 6 products. The North Face denied access and was dropped.
+- **Hero**: media layers (video when supplied, AI still otherwise). Slides change with a slanted clip-path wipe plus a light sweep.
+  The outgoing slide darkens and blurs, the word slams in letter by letter and the product flies in. Autoplay chapter bars pause on hover and offscreen.
+- **Opening**: the holo hand mark, SMADI letters rising through masks, a live counter fed by real asset loading, two panels splitting, and a fog layer clearing.
+- **Drip**: kept, but as glossy ink with a faint sport-accent sheen. Coloured grass or gold goo read as cartoonish.
+- **Showroom**: a lit gallery wall of cut-outs with hover spotlight cones. Choosing a product flies its cut-out to full screen, then navigates.
+- **Type**: Unbounded / Sora / Geist Mono. Unbounded is very wide, so giant words are sized in `cqw` from their letter count.
+
+---
+
+## Earlier (3D era, superseded)
 ## Composition: "The Gallery" (chosen) vs "Full-bleed campaign"
 Each sport is a living installation inside one bright architectural studio. The action happens full-bleed, then the
 camera resolves into an exhibit of the product in white space (**ACTION → EXHIBIT**). Chosen because it keeps the site

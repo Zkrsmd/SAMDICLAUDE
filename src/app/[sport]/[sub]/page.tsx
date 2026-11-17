@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { SubNav } from '@/components/category/SubNav';
 import { Listing } from '@/components/category/Listing';
-import { ShowroomMount } from '@/components/showroom/ShowroomMount';
+import { Showroom } from '@/components/showroom/Showroom';
 import { brandName } from '@/data/brands';
 import { getSport, getSports, getSub, productsFor } from '@/lib/catalog';
 
@@ -43,9 +43,6 @@ export default async function SubPage({ params, searchParams }: Props) {
         name: p.name,
         brandName: brandName(p.brand),
         price: p.price,
-        kind: p.model.kind,
-        options: p.model.options ?? {},
-        palette: p.colors[0]!.palette,
       }))
     : [];
 
@@ -67,7 +64,7 @@ export default async function SubPage({ params, searchParams }: Props) {
           <SubNav sport={s.slug} subs={subs} active={x.slug} />
         </div>
       </header>
-      {x.showroom && showItems.length > 0 && <ShowroomMount items={showItems} mount={x.showroom} />}
+      {x.showroom && showItems.length > 0 && <Showroom items={showItems} mount={x.showroom} sport={s.name} />}
       <Listing base={list} searchParams={await searchParams} revealKey={`${s.slug}/${x.slug}`} title={x.showroom ? 'The full collection' : 'Products'} />
     </>
   );

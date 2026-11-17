@@ -88,6 +88,8 @@ export interface Product {
   sourceNote?: string;
   /** Subcategory keys ("sport/sub") this product is commonly paired with. */
   pairsWith?: string[];
+  /** Product photos (cut-out WebP, first = hero). */
+  images?: string[];
 }
 
 export interface Subcategory {

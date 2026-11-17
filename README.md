@@ -1,11 +1,14 @@
-# YOUR BRAND — immersive sports store (prototype)
+# SMADI — immersive sports store (prototype)
 
-A mobile-first sports equipment store presented like a cinematic campaign: a loader that dives
-through fog into three swipeable real-time 3D hero scenes (football, boxing, swimming), sport
-"worlds" for every category, a 3D showroom wall, an interactive 3D product viewer, and a full
-shopping flow with server-priced cart, search, filters, wishlist and a **demonstration** checkout.
+A mobile-first sports equipment store presented like a cinematic campaign. A holographic loader
+(SMADI hand mark, live counter) splits open and fog clears over a full-bleed hero. The hero has three
+sports (football, boxing, swimming) on real media: AI video when supplied, campaign stills until
+then. Slides change with slanted wipes and light sweeps, the sport word slams in letter by letter, and
+the real product floats in front.
 
-> The brand name is a placeholder. Change it in `src/config/brand.ts`.
+Below the hero: a glossy-ink drip, the official brand logos, "Choose your arena" sport worlds, a lit
+showroom wall, product pages with a floating photo stage, and a full shopping flow. The flow has a
+server-priced cart, search, filters, wishlist and a **demonstration** checkout.
 
 ## Quick start
 
@@ -21,9 +24,10 @@ npm run dev          # http://localhost:3000
 | `npm run typecheck` | TypeScript strict check |
 | `npm run lint` | ESLint (next core-web-vitals + typescript) |
 | `npm run test:e2e` | Playwright journeys (uses installed Microsoft Edge — no browser download) |
-| `npm run renders` | Regenerates product images from the procedural 3D models (needs `npm run dev` running) |
+| `npm run catalog` | Rebuilds `public/products/*.webp` + `src/data/products/generated.json` from `media-src/raw/*.json` |
+| `npm run cutout` | AI background removal (rembg) for photos the simple key cannot cut. It needs the local venv; see below |
 
-Run the end-to-end suite against a production build:
+The end-to-end suite runs against a production build:
 
 ```bash
 npm run build
@@ -34,24 +38,51 @@ npx next start -p 3100
 E2E_BASE_URL=http://localhost:3100 npm run test:e2e
 ```
 
+## Adding the hero videos
+
+1. Copy the generated clips (see `VIDEO_PROMPTS.md`) into `public/media/`, e.g. `football-strike.mp4`.
+2. Set `video` (and optionally `videoMobile`) for the slide in `src/config/hero.ts`.
+
+The still `poster` stays as the first frame and as the fallback. Category cards read `categoryMedia` in the same file.
+
+## Adding your own products
+
+Product data is validated by Zod (`src/lib/validation/catalog.ts`). Add entries to the catalogue, or replace
+`generated.json`, and put cut-out photos in `public/products/<slug>-1.webp` (and `-2.webp` for a second view).
+
+AI cut-outs use a local Python venv:
+
+```bash
+py -3 -m venv .venv-tools
+```
+
+```bash
+.venv-tools/Scripts/pip install --only-binary=:all: rembg onnxruntime pillow
+```
+
+```bash
+.venv-tools/Scripts/python scripts/cutout-rembg.py
+```
+
 ## What's inside
 
-- **Hero** (`src/three/hero/*`, `src/components/hero/*`): one R3F canvas hosting an imperative engine
-  (frame-precise choreography + post-processing). Fog-dive intro, three scenes, particle-swarm transitions,
-  swipe/drag/keys/dots, scroll-driven camera, quality tiers with runtime degrade, poster fallback.
-- **Homepage**: drip transition (grass / molten gold / water), brand word-marks, sport worlds, icons, best sellers.
-- **Categories** `/[sport]`, `/[sport]/[sub]`: world header, sub-category tiles, URL-synced filters & sort,
-  burst reveal, 3D showrooms on `/football/boots`, `/boxing/gloves`, `/swimming/goggles`.
-- **Product** `/product/[slug]`: 3D viewer (orbit, presets, inspect mode, live colour), scroll chapters,
-  drop-into-bag tray, sticky purchase bar, complete-your-kit, bundle, best sellers, floating collection.
+- **Hero** (`src/components/hero/*`, `src/config/hero.ts`): media layers, clip-path wipes, autoplay chapter bars,
+  swipe (direction-locked, vertical scroll stays native), arrows, keys, pointer parallax, scroll zoom.
+- **Effects** (`src/app/globals.css`, `src/components/layout/Effects.tsx`): holographic conic borders, holo buttons and text,
+  frosted glass, film grain, cursor spotlight, scroll reveals.
+- **Header**: a floating glass pill with an animated holo glow. It follows on scroll and tightens; the bag count pops.
+- **Categories** `/[sport]`, `/[sport]/[sub]`: campaign header, sub-category tiles, URL-synced filters and sort,
+  burst reveal, and lit showroom walls on `/football/boots`, `/boxing/gloves` and `/swimming/goggles` (hover spotlight, zoom into the product).
+- **Product** `/product/[slug]`: floating photo stage (tilt, swipe between photos, tap to zoom), scroll chapters,
+  drop-into-bag tray, fly-to-bag, sticky purchase bar, recommendations.
 - **Commerce**: cart drawer + `/cart`, `POST /api/cart/quote` (server pricing), `/search`, `/wishlist`,
   recently viewed, `/checkout` (demonstration only — no payments).
 
 ## Honest status
 
-- 3D products and athletes are **representative procedural models**, not official manufacturer assets.
-  See `ASSET_MANIFEST.md`. Swap in licensed models via `src/three/products/registry.ts`.
-- Only the researched flagship products are marked verified (see `RESEARCH.md`); other listings are demo data.
+- 129 example products from 8 brands are listed, with official product photos and list prices from the brands' own stores.
+  They exist to fill the demo; replace them with your own products, prices and photos before launch. See `ASSET_MANIFEST.md`.
+- The hero and category media are AI-generated stills supplied by the owner. The hero videos are pending.
 - No payment provider is integrated; the checkout is clearly labelled as a demonstration.
 
-Docs: `CLAUDE.md`, `DECISIONS.md`, `RESEARCH.md`, `SECURITY.md`, `ASSET_MANIFEST.md`.
+Docs: `CLAUDE.md`, `DECISIONS.md`, `RESEARCH.md`, `SECURITY.md`, `ASSET_MANIFEST.md`, `VIDEO_PROMPTS.md`.

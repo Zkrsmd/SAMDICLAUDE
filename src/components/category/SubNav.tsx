@@ -49,7 +49,7 @@ export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]
               <span className="relative">
                 <span className="block text-[14px] font-medium leading-tight">{s.name}</span>
                 <span className="mono mt-0.5 block text-[11px] opacity-60">
-                  {s.count} {s.showroom ? '· 3D showroom' : ''}
+                  {s.count} {s.showroom ? '· Showroom' : ''}
                 </span>
               </span>
             </Link>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Big_Shoulders, Geist_Mono, Instrument_Sans } from 'next/font/google';
+import { Geist_Mono, Sora, Unbounded } from 'next/font/google';
 import { brand } from '@/config/brand';
 import { getSports, searchIndex } from '@/lib/catalog';
 import { Header } from '@/components/header/Header';
@@ -8,10 +8,11 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { SearchOverlay } from '@/components/search/SearchOverlay';
 import { FlyToCart } from '@/components/cart/FlyToCart';
 import { RouteCurtain } from '@/components/layout/RouteCurtain';
+import { Effects } from '@/components/layout/Effects';
 import './globals.css';
 
-const display = Big_Shoulders({ subsets: ['latin'], axes: ['opsz'], variable: '--font-display-face', display: 'swap' });
-const sans = Instrument_Sans({ subsets: ['latin'], axes: ['wdth'], variable: '--font-sans-face', display: 'swap' });
+const display = Unbounded({ subsets: ['latin'], variable: '--font-display-face', display: 'swap' });
+const sans = Sora({ subsets: ['latin'], variable: '--font-sans-face', display: 'swap' });
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono-face', display: 'swap' });
 
 export const metadata: Metadata = {
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const nav = getSports().map((s) => ({ slug: s.slug, name: s.name, tier: s.tier, subs: s.subs.map((x) => ({ slug: x.slug, name: x.name })) }));
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
-      <body>
+      <body className="grain">
+        <noscript>
+          <style>{'[data-reveal]{opacity:1!important;transform:none!important;filter:none!important}'}</style>
+        </noscript>
         <a href="#main" className="sr-only-focusable fixed left-3 top-3 z-[100] bg-ink px-4 py-2 text-white">
           Skip to content
         </a>
@@ -43,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SearchOverlay index={searchIndex()} />
         <FlyToCart />
         <RouteCurtain />
+        <Effects />
       </body>
     </html>
   );

@@ -1,18 +1,18 @@
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
-import { ProductImage } from '@/components/product/ProductImage';
+import { renderUrl } from '@/lib/format';
+import { categoryMedia } from '@/config/hero';
 import type { SportSlug } from '@/types/catalog';
 
-const WORLD: Record<SportSlug, { cls: string; ink: string }> = {
-  football: { cls: 'world-turf', ink: '#FFFFFF' },
-  boxing: { cls: 'world-gym', ink: '#171A18' },
-  swimming: { cls: 'world-water', ink: '#FFFFFF' },
-  running: { cls: 'world-track', ink: '#FFFFFF' },
-  fitness: { cls: 'world-steel', ink: '#171A18' },
-  basketball: { cls: 'world-court', ink: '#171A18' },
-  outdoor: { cls: 'world-terrain', ink: '#171A18' },
+const GLOW: Partial<Record<SportSlug, string>> = {
+  football: 'rgba(255,106,43,.55)',
+  boxing: 'rgba(231,184,90,.6)',
+  swimming: 'rgba(94,231,223,.55)',
+  running: 'rgba(255,90,60,.5)',
+  fitness: 'rgba(170,180,200,.5)',
+  basketball: 'rgba(255,150,60,.5)',
 };
 
-/** Category header: the sport's material world, the word as architecture, the hero object. */
+/** Category header: the sport's campaign still, the word as architecture, the hero product floating. */
 export function CategoryHero({
   sport,
   title,
@@ -30,52 +30,50 @@ export function CategoryHero({
   hero?: { slug: string; color: string; name: string };
   compact?: boolean;
 }) {
-  const w = WORLD[sport];
-  const light = w.ink === '#FFFFFF';
+  const media = categoryMedia[sport];
+  const glow = GLOW[sport] ?? 'rgba(255,255,255,.4)';
   const letters = title.toUpperCase().split('');
   return (
-    <header
-      className={`world ${w.cls} relative isolate overflow-hidden [container-type:inline-size] ${compact ? 'min-h-[62svh]' : 'min-h-[86svh]'} md:min-h-[72vh]`}
-    >
-      <div aria-hidden className="world-fx absolute inset-0 -z-10" />
-      {light && <div aria-hidden className="world-scrim absolute inset-0 -z-[9]" />}
-      <div
-        className={`container-x relative flex h-full min-h-[inherit] flex-col pb-8 ${light ? 'on-light-world' : ''}`}
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 80px)' }}
-      >
-        <Breadcrumbs items={crumbs} light={light} />
+    <header className={`relative isolate overflow-hidden bg-[#07080A] text-white [container-type:inline-size] ${compact ? 'min-h-[62svh]' : 'min-h-[88svh]'} md:min-h-[78vh]`}>
+      {media && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={media} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" style={{ animation: 'ken-burns 18s ease-out both' }} />
+      )}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,.55),transparent_30%,transparent_50%,rgba(0,0,0,.85))]" />
+      <div aria-hidden className="absolute inset-0 -z-10" style={{ background: `radial-gradient(50% 40% at 65% 55%, ${glow}, transparent 70%)`, mixBlendMode: 'soft-light' }} />
+      <div className="container-x relative flex h-full min-h-[inherit] flex-col pb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 96px)' }}>
+        <Breadcrumbs items={crumbs} light />
         <h1
           className="display relative z-0 mt-6 whitespace-nowrap leading-[0.8]"
-          style={{ color: w.ink, fontSize: `${Math.min(30, 172 / Math.max(5, title.length))}cqw` }}
+          style={{ fontSize: `${Math.min(24, 96 / Math.max(4, title.length))}cqw`, filter: 'drop-shadow(0 10px 30px rgba(0,0,0,.35))' }}
           aria-label={title}
         >
           {letters.map((ch, i) => (
-            <span
-              key={i}
-              aria-hidden
-              className="inline-block"
-              style={{ animation: `rise-in .9s ${0.08 + i * 0.045}s var(--ease-expo) both` }}
-            >
-              {ch === ' ' ? ' ' : ch}
+            <span key={i} aria-hidden className="inline-block" style={{ animation: `letter-slam .9s ${0.1 + i * 0.05}s cubic-bezier(.16,1,.3,1) both` }}>
+              {ch === ' ' ? ' ' : ch}
             </span>
           ))}
         </h1>
         {hero && (
           <div
-            className="pointer-events-none absolute inset-x-[4%] top-[34%] bottom-[22%] md:inset-x-auto md:right-[4%] md:top-[18%] md:bottom-[10%] md:w-[46%]"
-            style={{ animation: 'hero-drop 1.3s .25s var(--ease-expo) both' }}
+            className="pointer-events-none absolute inset-x-[6%] top-[32%] bottom-[26%] md:inset-x-auto md:bottom-[10%] md:right-[5%] md:top-[18%] md:w-[44%]"
+            style={{ animation: 'product-in 1.5s .3s cubic-bezier(.16,1,.3,1) both' }}
           >
-            <div className="h-full w-full" style={{ animation: 'float-y 6s ease-in-out infinite', ['--r' as string]: '-4deg' }}>
-              <ProductImage slug={hero.slug} colorId={hero.color} alt={hero.name} priority sizes="(max-width:768px) 92vw, 46vw" className="drop-shadow-[0_40px_40px_rgba(0,0,0,0.25)]" />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={renderUrl(hero.slug)}
+              alt={hero.name}
+              className="float-product h-full w-full object-contain"
+              style={{ filter: `drop-shadow(0 30px 50px ${glow}) drop-shadow(0 20px 20px rgba(0,0,0,.5))` }}
+            />
           </div>
         )}
         <div className="mt-auto flex flex-col gap-4 md:max-w-md">
-          <p className="text-[17px] font-medium leading-snug md:text-[19px]" style={{ color: w.ink, animation: 'rise-in .8s .5s var(--ease-expo) both' }}>
+          <p className="text-[18px] font-semibold leading-snug md:text-[21px]" style={{ animation: 'rise-in .8s .5s var(--ease-expo) both' }}>
             {description}
           </p>
-          <p className="mono text-[12px] uppercase tracking-[0.14em]" style={{ color: w.ink, opacity: 0.85 }}>
-            {count} products
+          <p className="mono text-[12px] uppercase tracking-[0.16em] text-white/80">
+            <span className="holo-text font-bold">{count}</span> products
           </p>
         </div>
       </div>

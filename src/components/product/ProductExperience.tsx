@@ -1,5 +1,4 @@
 'use client';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
@@ -8,21 +7,18 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { useCart } from '@/stores/cart';
 import { useRecent, useWishlist } from '@/stores/lists';
 import { useTransitionStore, useUi } from '@/stores/ui';
-import { useHydrated } from '@/hooks/useHydrated';
+import { useHydrated, useReducedMotion } from '@/hooks/useHydrated';
 import { useDialog } from '@/hooks/useDialog';
-import { formatPrice, renderUrl, type RenderAngle } from '@/lib/format';
+import { formatPrice, renderUrl } from '@/lib/format';
 import type { Product } from '@/types/catalog';
-import type { Preset, ViewerState } from './ProductViewer';
 
-const ProductViewer = dynamic(() => import('./ProductViewer'), { ssr: false });
-const NO_OPTIONS = {};
-
-const CHAPTER_PRESETS: Record<string, Preset[]> = {
-  boot: ['side', 'top', 'sole', 'detail'],
-  glove: ['side', 'front', 'top', 'detail'],
-  goggles: ['front', 'side', 'top', 'detail'],
-  default: ['side', 'front', 'top', 'detail'],
-};
+/** Per-chapter pose of the floating cut-out (rotation in deg, scale). */
+const POSES = [
+  { r: -8, s: 1 },
+  { r: 6, s: 1.12 },
+  { r: -14, s: 0.96 },
+  { r: 2, s: 1.2 },
+];
 
 export function ProductExperience({
   product,
@@ -37,14 +33,14 @@ export function ProductExperience({
 }) {
   const router = useRouter();
   const hydrated = useHydrated();
+  const reduced = useReducedMotion();
   const [colorId, setColorId] = useState(product.colors[0]!.id);
   const [size, setSize] = useState<string | null>(product.sizes.length === 1 ? product.sizes[0]! : null);
   const [qty, setQty] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
-  const [mode, setMode] = useState<'3d' | 'gallery'>('3d');
+  const [view, setView] = useState(0);
   const [inspect, setInspect] = useState(false);
-  const [webgl, setWebgl] = useState(true);
   const [chapter, setChapter] = useState(0);
   const [barOn, setBarOn] = useState(false);
   const [landed, setLanded] = useState(false);
@@ -53,70 +49,42 @@ export function ProductExperience({
   const wished = useWishlist((s) => s.slugs.includes(product.slug));
   const toggleWish = useWishlist((s) => s.toggle);
   const setUi = useUi((s) => s.set);
-  const pending = useTransitionStore((s) => s.pending);
   const setPending = useTransitionStore((s) => s.setPending);
   const color = product.colors.find((c) => c.id === colorId)!;
-  const presets = CHAPTER_PRESETS[product.model.kind] ?? CHAPTER_PRESETS.default!;
-  const viewer = useRef<ViewerState>({
-    preset: 'hero',
-    nonce: 0,
-    drop: 0,
-    userAt: 0,
-    intro: pending && pending.slug === product.slug ? 'showroom' : 'normal',
-  });
-  const yaw = useRef(0);
+  const images = product.images?.length ? product.images : [renderUrl(product.slug)];
   const exhibit = useRef<HTMLDivElement>(null);
   const purchase = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const tilt = useRef<HTMLDivElement>(null);
   const imgSlot = useRef<HTMLDivElement>(null);
   const inspectRef = useRef<HTMLDivElement>(null);
+  const zoomImg = useRef<HTMLImageElement>(null);
   useDialog(inspectRef, inspect, () => setInspect(false));
-  const modelOptions = product.model.options ?? NO_OPTIONS;
 
   const chapters = [
     { title: 'The silhouette', text: product.short },
     ...product.features.slice(0, 3).map((f, i) => ({ title: ['Built in', 'Made to', 'Finished with'][i] ?? 'Detail', text: f })),
   ].slice(0, 4);
+  const pose = POSES[chapter % POSES.length]!;
 
   useEffect(() => {
     pushRecent(product.slug);
     setPending(null);
-    // ?color= deep links (read after mount so the page itself stays statically rendered)
     const wanted = new URLSearchParams(window.location.search).get('color');
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (wanted && product.colors.some((c) => c.id === wanted)) setColorId(wanted);
-    try {
-      const c = document.createElement('canvas');
-      setWebgl(!!(c.getContext('webgl2') ?? c.getContext('webgl')));
-    } catch {
-      setWebgl(false);
-    }
-    const t = window.setTimeout(() => {
-      viewer.current.nonce++;
-      viewer.current.preset = 'hero';
-    }, 60);
-    return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.slug]);
 
-  // scroll choreography: chapters rotate the camera; the end of the exhibit "drops" the product
+  // scroll choreography: chapters re-pose the product; the end of the exhibit drops it into the tray
   useEffect(() => {
     const onScroll = () => {
       const el = exhibit.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
-      const total = r.height - window.innerHeight;
-      const p = Math.min(1, Math.max(0, -r.top / Math.max(1, total)));
-      const i = Math.min(chapters.length - 1, Math.floor(p * chapters.length * 1.05));
-      setChapter((prev) => {
-        if (prev !== i) {
-          viewer.current.preset = presets[i % presets.length]!;
-          viewer.current.nonce++;
-        }
-        return i;
-      });
-      const isMobile = window.innerWidth < 1024;
-      viewer.current.drop = isMobile ? Math.min(1, Math.max(0, (p - 0.86) / 0.14)) : 0;
+      const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - window.innerHeight)));
+      setChapter(Math.min(chapters.length - 1, Math.floor(p * chapters.length * 1.05)));
+      stage.current?.style.setProperty('--drop', String(window.innerWidth < 1024 ? Math.min(1, Math.max(0, (p - 0.84) / 0.16)) : 0));
       const pr = purchase.current?.getBoundingClientRect();
       if (pr) {
         setBarOn(pr.bottom < 0);
@@ -126,54 +94,57 @@ export function ProductExperience({
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapters.length, product.slug]);
+  }, [chapters.length]);
 
-  // touch: horizontal drag spins the product, vertical drag scrolls the page
+  // mouse tilt (desktop) and horizontal swipe between photos (touch); vertical scroll stays native
   useEffect(() => {
     const el = stage.current;
-    if (!el || inspect) return;
+    if (!el) return;
     let sx = 0;
     let sy = 0;
-    let base = 0;
     let lock: 'h' | 'v' | null = null;
-    const down = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse') return;
-      sx = e.clientX;
-      sy = e.clientY;
-      base = yaw.current;
-      lock = null;
-    };
+    let down = false;
     const move = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse' || sx === 0) return;
+      if (e.pointerType === 'mouse' && tilt.current && !reduced) {
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        tilt.current.style.transform = `perspective(1200px) rotateY(${x * 22}deg) rotateX(${-y * 16}deg)`;
+        el.style.setProperty('--gx', `${(x + 0.5) * 100}%`);
+        el.style.setProperty('--gy', `${(y + 0.5) * 100}%`);
+      }
+      if (!down || lock) return;
       const dx = e.clientX - sx;
       const dy = e.clientY - sy;
-      if (!lock && Math.hypot(dx, dy) > 8) lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-      if (lock === 'h') {
-        yaw.current = base + dx / 90;
-        viewer.current.userAt = performance.now();
+      if (Math.hypot(dx, dy) > 10) {
+        lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v';
+        if (lock === 'h') setView((v) => (v + (dx < 0 ? 1 : -1) + images.length) % images.length);
       }
     };
-    const up = () => {
-      sx = 0;
+    const leave = () => {
+      if (tilt.current) tilt.current.style.transform = '';
+    };
+    const pd = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      down = true;
       lock = null;
+      sx = e.clientX;
+      sy = e.clientY;
     };
-    el.addEventListener('pointerdown', down);
-    window.addEventListener('pointermove', move, { passive: true });
-    window.addEventListener('pointerup', up);
+    const pu = () => {
+      down = false;
+    };
+    el.addEventListener('pointermove', move, { passive: true });
+    el.addEventListener('pointerleave', leave);
+    el.addEventListener('pointerdown', pd);
+    window.addEventListener('pointerup', pu);
     return () => {
-      el.removeEventListener('pointerdown', down);
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerleave', leave);
+      el.removeEventListener('pointerdown', pd);
+      window.removeEventListener('pointerup', pu);
     };
-  }, [inspect]);
-
-  const preset = (p: Preset) => {
-    viewer.current.preset = p;
-    viewer.current.nonce++;
-    viewer.current.userAt = 0;
-    yaw.current = 0;
-  };
+  }, [images.length, reduced]);
 
   const addToCart = (buyNow = false) => {
     if (!size) {
@@ -184,66 +155,88 @@ export function ProductExperience({
     setError(null);
     add({ productId: product.slug, colorId, size, qty });
     const rect = imgSlot.current?.getBoundingClientRect();
-    setUi({ flyFrom: { x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2, y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2, src: renderUrl(product.slug, colorId) } });
+    setUi({ flyFrom: { x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2, y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2, src: images[0]! } });
     setAdded(true);
     if (buyNow) router.push('/checkout');
     return true;
   };
 
-  const angles: RenderAngle[] = ['hero', 'side', 'top', 'detail'];
-
   return (
     <div className="lg:grid lg:grid-cols-[1.15fr_1fr]">
-      {/* ------------------------------ exhibit / viewer ------------------------------ */}
+      {/* ------------------------------ exhibit ------------------------------ */}
       <div ref={exhibit} className="relative lg:order-1" style={{ height: `calc(100svh + ${chapters.length * 55}svh)` }}>
-        <div ref={stage} className="sticky top-0 h-[100svh] overflow-hidden" style={{ background: 'radial-gradient(90% 60% at 50% 45%, #FFFFFF, #F1EFE9 70%)' }}>
-          <div className="absolute inset-x-0 top-[56px] bottom-[18svh] lg:bottom-0 lg:top-[64px]">
-            {mode === '3d' && webgl ? (
-              <ProductViewer kind={product.model.kind} options={modelOptions} palette={color.palette} state={viewer} inspect={false} yawRef={yaw} />
-            ) : (
-              <div className="relative h-full w-full">
-                <ProductImage slug={product.slug} colorId={colorId} angle={angles[chapter % angles.length]} alt={`${brandName} ${product.name}`} priority sizes="(max-width:1024px) 100vw, 55vw" />
-              </div>
-            )}
+        <div
+          ref={stage}
+          className="sticky top-0 h-[100svh] overflow-hidden"
+          style={{
+            touchAction: 'pan-y',
+            background:
+              'radial-gradient(500px circle at var(--gx, 50%) var(--gy, 40%), rgba(255,255,255,1), transparent 70%), radial-gradient(90% 60% at 50% 45%, #FFFFFF, #ECE9E1 75%)',
+          }}
+        >
+          {/* brand word as architecture behind the product */}
+          <div aria-hidden className="display pointer-events-none absolute inset-x-0 top-[22%] select-none text-center text-[30vw] leading-none text-ink/[0.05] lg:text-[17vw]">
+            {brandName}
           </div>
-          {/* chapter caption */}
+          <div aria-hidden className="pointer-events-none absolute left-1/2 top-[48%] h-[46vmin] w-[46vmin] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl" style={{ background: 'var(--holo-conic)', animation: reduced ? undefined : 'spin-a 9s linear infinite' }} />
+
+          <button
+            type="button"
+            onClick={() => setInspect(true)}
+            aria-label="Zoom into the product photo"
+            className="absolute inset-x-[6%] top-[13%] bottom-[24svh] cursor-zoom-in lg:inset-x-[8%] lg:bottom-[12%] lg:top-[14%]"
+            style={{ transform: 'translate3d(0, calc(var(--drop, 0) * 40svh), 0) scale(calc(1 - var(--drop, 0) * 0.45))', opacity: 'calc(1 - var(--drop, 0) * 0.9)' }}
+          >
+            <div ref={tilt} className="h-full w-full transition-transform duration-300 ease-out [transform-style:preserve-3d]">
+              <div
+                className="h-full w-full transition-transform duration-[900ms] ease-[var(--ease-expo)]"
+                style={{ transform: reduced ? undefined : `rotate(${pose.r}deg) scale(${pose.s})` }}
+              >
+                {images.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={src}
+                    src={src}
+                    alt={i === view ? `${brandName} ${product.name}${i ? ` — view ${i + 1}` : ''}` : ''}
+                    draggable={false}
+                    className={`absolute inset-0 h-full w-full object-contain transition-[opacity,transform,filter] duration-700 ease-[var(--ease-expo)] ${i === view ? 'float-product opacity-100' : 'scale-90 opacity-0 blur-md'}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </button>
+          <span aria-hidden className="absolute bottom-[22svh] left-1/2 h-6 w-[40%] -translate-x-1/2 rounded-[50%] bg-ink/15 blur-xl lg:bottom-[9%]" />
+
+          {/* chapter caption (mobile) */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[18svh] px-4 lg:hidden">
-            <div key={chapter} className="placard p-3" style={{ animation: 'rise-in .6s var(--ease-expo) both' }}>
+            <div key={chapter} className="glass rounded-2xl p-3" style={{ animation: 'rise-in .6s var(--ease-expo) both' }}>
               <p className="eyebrow text-muted">
                 {String(chapter + 1).padStart(2, '0')} / {String(chapters.length).padStart(2, '0')} · {chapters[chapter]?.title}
               </p>
-              <p className="mt-1 text-[15px] font-medium leading-snug">{chapters[chapter]?.text}</p>
+              <p className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug">{chapters[chapter]?.text}</p>
             </div>
           </div>
-          {/* viewer controls */}
-          <div className="absolute left-4 top-[68px] flex flex-col gap-1.5 lg:top-[84px]">
-            <div className="flex overflow-hidden rounded-[2px] border border-line bg-white/80 backdrop-blur" role="group" aria-label="View mode">
-              <button type="button" aria-pressed={mode === '3d'} onClick={() => setMode('3d')} className="eyebrow px-3 py-2 aria-pressed:bg-ink aria-pressed:text-white" disabled={!webgl}>
-                3D
-              </button>
-              <button type="button" aria-pressed={mode === 'gallery'} onClick={() => setMode('gallery')} className="eyebrow px-3 py-2 aria-pressed:bg-ink aria-pressed:text-white">
-                Images
-              </button>
-            </div>
-            <p className="eyebrow max-w-[150px] text-[9.5px] leading-snug text-muted">{mode === '3d' ? 'Representative 3D model' : 'Representative renders'}</p>
-          </div>
-          {mode === '3d' && webgl && (
-            <div className="absolute right-3 top-[68px] flex flex-col gap-1.5 lg:top-[84px]" role="group" aria-label="Viewing angle">
-              {(['side', 'front', 'top', ...(product.model.kind === 'boot' ? (['sole'] as const) : [])] as Preset[]).map((p) => (
-                <button key={p} type="button" onClick={() => preset(p)} className="eyebrow rounded-[2px] border border-line bg-white/80 px-2.5 py-1.5 capitalize backdrop-blur hover:bg-white">
-                  {p}
+
+          {/* photo switcher */}
+          {images.length > 1 && (
+            <div className="absolute right-3 top-[84px] flex flex-col gap-2 lg:right-6 lg:top-[100px]" role="group" aria-label="Product photos">
+              {images.map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setView(i)}
+                  aria-label={`Photo ${i + 1}`}
+                  aria-pressed={i === view}
+                  className={`glass relative h-16 w-16 overflow-hidden rounded-xl p-1.5 transition-all ${i === view ? 'ring-2 ring-ink' : 'opacity-70 hover:opacity-100'}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="h-full w-full object-contain" draggable={false} />
                 </button>
               ))}
-              <button type="button" onClick={() => preset('hero')} aria-label="Reset view" className="grid h-9 place-items-center rounded-[2px] border border-line bg-white/80 backdrop-blur hover:bg-white">
-                <Icon name="reset" size={16} />
-              </button>
-              <button type="button" onClick={() => setInspect(true)} aria-label="Inspect in full screen" className="grid h-9 place-items-center rounded-[2px] border border-line bg-ink text-white">
-                <Icon name="expand" size={16} />
-              </button>
             </div>
           )}
-          <p className="eyebrow pointer-events-none absolute bottom-[19svh] left-1/2 -translate-x-1/2 text-ink/70 lg:bottom-6">
-            {mode === '3d' ? 'Drag to rotate' : `View ${chapter + 1} of ${angles.length}`}
+          <p className="eyebrow pointer-events-none absolute bottom-[19svh] left-1/2 -translate-x-1/2 whitespace-nowrap text-ink/60 lg:bottom-6">
+            {images.length > 1 ? 'Swipe for more · tap to zoom' : 'Tap to zoom'}
           </p>
         </div>
       </div>
@@ -334,7 +327,7 @@ export function ProductExperience({
                   <Icon name="plus" size={16} />
                 </button>
               </div>
-              <button type="button" className="btn btn-ink h-12 flex-1" onClick={() => addToCart()}>
+              <button type="button" className="btn-holo h-12 flex-1" onClick={() => addToCart()}>
                 Add to bag
               </button>
               <button
@@ -443,10 +436,22 @@ export function ProductExperience({
       </div>
 
       {inspect && (
-        <div ref={inspectRef} role="dialog" aria-modal="true" aria-label="Inspect product in 3D" className="fixed inset-0 z-[90] bg-[#F4F2EC]">
-          <ProductViewer kind={product.model.kind} options={modelOptions} palette={color.palette} state={viewer} inspect yawRef={yaw} />
+        <div
+          ref={inspectRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Zoomed product photo"
+          className="fixed inset-0 z-[90] cursor-zoom-out overflow-hidden bg-[#F4F2EC]"
+          onClick={() => setInspect(false)}
+          onPointerMove={(e) => {
+            if (!zoomImg.current) return;
+            zoomImg.current.style.transformOrigin = `${(e.clientX / window.innerWidth) * 100}% ${(e.clientY / window.innerHeight) * 100}%`;
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img ref={zoomImg} src={images[view]} alt={`${brandName} ${product.name}, enlarged`} className="h-full w-full scale-[1.9] object-contain p-6 transition-transform duration-200" draggable={false} />
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
-            <p className="eyebrow text-muted">Drag to orbit · pinch or scroll to zoom</p>
+            <p className="eyebrow text-muted">Move to explore · tap to close</p>
             <button type="button" className="btn btn-ink h-11 px-4" onClick={() => setInspect(false)} autoFocus>
               Close <Icon name="close" size={16} />
             </button>

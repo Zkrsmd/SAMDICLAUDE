@@ -1,11 +1,53 @@
 import { brand } from '@/config/brand';
 
-/** Temporary editable word-mark. Swap for the final logo SVG once the brand is named. */
-export function Wordmark({ className = '' }: { className?: string }) {
+/**
+ * SMADI hand mark: an open palm with speed-cut fingers, filled with the holographic gradient.
+ * Replace with a final designed logo file when available.
+ */
+export function HandMark({ className = '', glow = true }: { className?: string; glow?: boolean }) {
   return (
-    <span className={`display inline-flex items-baseline gap-[0.18em] leading-none ${className}`} aria-label={brand.name}>
-      <span aria-hidden className="inline-block h-[0.62em] w-[0.62em] translate-y-[0.02em] rounded-full bg-orange" />
-      <span aria-hidden className="tracking-[0.02em]">
+    <svg viewBox="0 0 48 48" className={className} aria-hidden>
+      <defs>
+        <linearGradient id="smadi-holo" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#FF6A2B" />
+          <stop offset="0.35" stopColor="#FFC53D" />
+          <stop offset="0.65" stopColor="#5EE7DF" />
+          <stop offset="1" stopColor="#8B5CF6" />
+        </linearGradient>
+        <filter id="smadi-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="2.2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g fill="url(#smadi-holo)" filter={glow ? 'url(#smadi-glow)' : undefined}>
+        {/* fingers — cut on a forward slant like speed lines */}
+        <path d="M14.5 21.5 14 9.2a2.6 2.6 0 0 1 5.2-.3l.6 12.4Z" />
+        <path d="M20.6 20.6 20.5 5.6a2.7 2.7 0 0 1 5.4 0l.2 15Z" />
+        <path d="M26.9 20.8 27.6 7.8a2.6 2.6 0 0 1 5.2.3l-.6 13Z" />
+        <path d="M33 22.4 34.4 12.9a2.5 2.5 0 0 1 5 .6l-1.5 10.2Z" />
+        {/* thumb */}
+        <path d="M8.1 24.3a2.6 2.6 0 0 1 3.6-.6l5.4 3.8-2.9 4.2-5.4-3.8a2.6 2.6 0 0 1-.7-3.6Z" />
+        {/* palm */}
+        <path d="M13.6 22.3h24.6l-.9 9.6c-.6 6.3-5.9 11.1-12.2 11.1h-.3c-5.5 0-10.3-3.7-11.6-9.1Z" />
+      </g>
+      {/* speed cuts */}
+      <g stroke="#0B0D10" strokeWidth="1.6" strokeLinecap="round" opacity="0.9">
+        <path d="M18 30.5h12.5" />
+        <path d="M20.5 35h9" />
+      </g>
+    </svg>
+  );
+}
+
+/** Logo lock-up: hand mark + SMADI word-mark. */
+export function Wordmark({ className = '', glow = true }: { className?: string; glow?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-[0.35em] leading-none ${className}`} aria-label={brand.name}>
+      <HandMark className="h-[1.35em] w-[1.35em] shrink-0" glow={glow} />
+      <span aria-hidden className="display tracking-[0.08em]">
         {brand.name}
       </span>
     </span>

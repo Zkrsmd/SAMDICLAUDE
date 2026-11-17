@@ -20,4 +20,4 @@ description: Use for catalogue data, cart/checkout, API routes, filters/search, 
 
 ## Done means
 `npm run typecheck`, `npm run lint`, `npm run build` and `npm run test:e2e` pass; dialogs trap focus and close on Escape;
-every journey works with keyboard and without WebGL.
+every journey works with keyboard, with reduced motion and with WebGL disabled.

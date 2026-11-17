@@ -8,14 +8,11 @@ import { Icon } from '@/components/ui/Icon';
 import { brands } from '@/data/brands';
 import { bestSellers, countFor, featuredProducts, getAllProducts, getSports, productsFor, toCard } from '@/lib/catalog';
 
-const EXTRA: Partial<Record<ShowcaseSport['slug'], string>> = { football: 'adidas-trionda-pro-ball' };
 
 export default function Home() {
   const sports: ShowcaseSport[] = getSports().map((s) => {
     const list = productsFor(s.slug);
     const hero = list.find((p) => p.featured) ?? list.find((p) => p.bestSeller) ?? list[0]!;
-    const extraSlug = EXTRA[s.slug];
-    const extra = extraSlug ? list.find((p) => p.slug === extraSlug) : undefined;
     return {
       slug: s.slug,
       name: s.name,
@@ -23,11 +20,12 @@ export default function Home() {
       accent: s.accent,
       count: countFor(s.slug),
       hero: { slug: hero.slug, color: hero.colors[0]!.id },
-      extra: extra ? { slug: extra.slug, color: extra.colors[0]!.id } : undefined,
     };
   });
+  const order = ['football', 'boxing', 'swimming'];
   const icons = featuredProducts()
-    .filter((p) => p.verified && p.model.kind !== 'cap')
+    .sort((a, b) => order.indexOf(a.sport) - order.indexOf(b.sport))
+    .slice(0, 3)
     .map(toCard);
   const best = bestSellers(undefined, undefined, 8).map(toCard);
   const cards = getAllProducts().map(toCard);
@@ -35,14 +33,14 @@ export default function Home() {
   return (
     <>
       <HomeHero />
-      <Brands brands={brands.filter((b) => b.id !== 'your-brand')} />
+      <Brands brands={brands} />
       <CategoryShowcase sports={sports} />
       <Icons items={icons} />
       <section aria-labelledby="best-title" className="container-x py-16">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="eyebrow text-muted">Most wanted</p>
-            <h2 id="best-title" className="display mt-3 text-[clamp(44px,11vw,120px)]">
+            <h2 id="best-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]">
               Best sellers
             </h2>
           </div>

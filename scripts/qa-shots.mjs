@@ -42,12 +42,7 @@ for (const ev of events) {
   const wait = ev.at * 1000 - (Date.now() - t0);
   if (wait > 0) await page.waitForTimeout(wait);
   if (ev.type === 'shot') {
-    const info = await page.evaluate(() => {
-      const h = window.__hero;
-      if (!h) return null;
-      const s = h.scenes[h.active];
-      return { active: h.active, intro: h.introPhase, done: s?.introDone };
-    });
+    const info = await page.evaluate(() => ({ y: Math.round(window.scrollY), slide: document.querySelector('[aria-label="Choose sport"] [aria-current="true"]')?.getAttribute('aria-label') ?? null }));
     const file = path.join(out, `${prefix}-${String(ev.at).padStart(4, '0')}.png`);
     await page.screenshot({ path: file });
     console.log(file, JSON.stringify(info));
@@ -56,7 +51,7 @@ for (const ev of events) {
   } else if (ev.what === 'skip') {
     await page.getByRole('button', { name: 'Skip intro' }).click().catch(() => {});
   } else if (/^go\d$/.test(ev.what)) {
-    await page.evaluate((n) => window.__hero?.goTo(n), Number(ev.what.slice(2)));
+    await page.getByRole('group', { name: 'Choose sport' }).getByRole('button').nth(Number(ev.what.slice(2))).click();
   } else if (ev.what.startsWith('scroll')) {
     const frac = Number(ev.what.slice(6) || '0.5');
     await page.evaluate((f) => window.scrollTo(0, window.innerHeight * f), frac);

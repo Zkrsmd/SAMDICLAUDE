@@ -4,9 +4,10 @@ import { useEffect, useRef } from 'react';
 type Sport = 'football' | 'boxing' | 'swimming';
 
 const LOOK: Record<Sport, { top: string; bottom: string; gloss: string; blades: boolean }> = {
-  football: { top: '#4E8E2B', bottom: '#2F6A1E', gloss: 'rgba(210,255,170,0.45)', blades: true },
-  boxing: { top: '#E7CB86', bottom: '#A9832F', gloss: 'rgba(255,248,220,0.7)', blades: false },
-  swimming: { top: '#7FE0E2', bottom: '#2AA7B8', gloss: 'rgba(255,255,255,0.75)', blades: false },
+  // the dark hero melts onto the white page like glossy ink, lit by the sport's accent
+  football: { top: '#07080A', bottom: '#15171B', gloss: 'rgba(255,106,43,0.22)', blades: false },
+  boxing: { top: '#07080A', bottom: '#15171B', gloss: 'rgba(231,184,90,0.25)', blades: false },
+  swimming: { top: '#07080A', bottom: '#15171B', gloss: 'rgba(94,231,223,0.25)', blades: false },
 };
 
 interface Drip {

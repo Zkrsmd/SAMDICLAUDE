@@ -44,3 +44,10 @@ Sources: [Speedo Fastskin cap](https://us.speedo.com/fs3-competition-cap/1423086
 ## Everything else
 All other products are flagged `verified: false` in `src/data/products/*` with "Demo listing — replace with
 supplier copy" descriptions, or are store-brand ("YOUR BRAND Essentials") demo products. Verify with suppliers before launch.
+
+## 2026-11-18 — Example catalogue from official stores
+The 3D-era products above were replaced by 129 real listings taken from the brands' own online stores (US, USD list prices).
+Each product's `source` field records the domain it came from. Counts: Venum 20, Speedo 20, Everlast 18, Nike 24,
+Puma 16, arena 13, Wilson 12, adidas 6 (bulk access blocked). The North Face was unavailable (access denied).
+The hero boot is the current **adidas F50 Hyperfast Elite FG** colourway sold on adidas.com (black/blue). The orange "Coral Blaze"
+colourway was not available in the store at the time of collection; the owner's AI hero videos show an orange F50.

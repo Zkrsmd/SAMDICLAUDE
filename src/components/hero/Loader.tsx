@@ -1,141 +1,185 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { brand } from '@/config/brand';
+import { HandMark } from '@/components/ui/Wordmark';
 
-const VISITED_KEY = 'yb-visited-v1';
+const VISITED_KEY = 'smadi-visited-v1';
+const SPORTS = ['Football', 'Boxing', 'Swimming', 'Running', 'Basketball', 'Fitness'];
 
 /**
- * Bright studio loader. Shows real progress (fonts + 3D scene build + shader compile),
- * always offers Skip, and is shortened for returning visitors.
+ * Opening sequence: the holographic hand draws in, SMADI rises letter by letter, a counter
+ * tracks real progress (fonts + hero media), then the panel splits and a fog layer clears
+ * over the hero. Skippable; ~0.7s for returning visitors; instant with reduced motion.
  */
-export function Loader({ progress, onDone, active }: { progress: number; onDone: (skip: boolean) => void; active: boolean }) {
-  const [shown, setShown] = useState(0);
-  const [leaving, setLeaving] = useState(false);
-  const [gone, setGone] = useState(false);
-  const start = useRef(0);
-  const minMs = useRef(1700);
+export function Loader({ assets, onDone }: { assets: string[]; onDone: () => void }) {
+  const [phase, setPhase] = useState<'load' | 'exit' | 'fog' | 'gone'>('load');
+  const counter = useRef<HTMLSpanElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const word = useRef<HTMLSpanElement>(null);
   const done = useRef(false);
-  const target = useRef(progress);
-  target.current = progress;
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
-  useEffect(() => {
-    start.current = performance.now();
-    try {
-      if (localStorage.getItem(VISITED_KEY)) minMs.current = 550;
-      localStorage.setItem(VISITED_KEY, '1');
-    } catch {
-      /* storage unavailable — keep defaults */
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) minMs.current = 0;
-  }, []);
-
-  // smooth counter (stops once the loader has finished)
-  useEffect(() => {
-    if (gone) return;
-    let raf = 0;
-    const loop = () => {
-      setShown((s) => {
-        const elapsed = performance.now() - start.current;
-        const timeCap = minMs.current <= 0 ? 1 : Math.min(1, elapsed / minMs.current);
-        const goal = Math.min(target.current, timeCap);
-        return s + (goal - s) * 0.12;
-      });
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [gone]);
-
-  const finish = (skip: boolean) => {
+  const finish = useRef(() => {});
+  finish.current = () => {
     if (done.current) return;
     done.current = true;
-    setLeaving(true);
-    onDone(skip);
-    window.setTimeout(() => setGone(true), 900);
+    setPhase('exit');
+    onDoneRef.current();
+    window.setTimeout(() => setPhase('fog'), 1000);
+    window.setTimeout(() => setPhase('gone'), 2600);
   };
 
   useEffect(() => {
-    if (active && shown > 0.985 && progress >= 1) finish(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shown, progress, active]);
+    let minMs = 2600;
+    try {
+      if (localStorage.getItem(VISITED_KEY)) minMs = 700;
+      localStorage.setItem(VISITED_KEY, '1');
+    } catch {
+      /* storage blocked — keep the full intro */
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) minMs = 0;
 
-  if (gone) return null;
-  const pct = Math.round(shown * 100);
+    let loaded = 0;
+    const total = assets.length + 1;
+    const bump = () => {
+      loaded += 1;
+    };
+    document.fonts?.ready.then(bump, bump);
+    const imgs = assets.map((src) => {
+      const img = new Image();
+      img.onload = bump;
+      img.onerror = bump;
+      img.src = src;
+      return img;
+    });
+
+    const start = performance.now();
+    let shown = 0;
+    let raf = 0;
+    let s = 0;
+    const loop = () => {
+      const t = minMs ? Math.min(1, (performance.now() - start) / minMs) : 1;
+      const real = loaded / total;
+      shown += (Math.min(t, real) - shown) * 0.1;
+      if (Math.min(t, real) >= 1 && shown > 0.995) shown = 1;
+      const pct = Math.round(shown * 100);
+      if (counter.current) counter.current.textContent = String(pct).padStart(3, '0');
+      if (bar.current) bar.current.style.transform = `scaleX(${shown})`;
+      if (word.current && performance.now() - start > 300 * s) {
+        word.current.textContent = SPORTS[s % SPORTS.length]!;
+        s += 1;
+      }
+      if (shown >= 1) {
+        finish.current();
+        return;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    // never trap anyone behind the loader
+    const safety = window.setTimeout(() => finish.current(), 9000);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(safety);
+      imgs.forEach((i) => (i.onload = i.onerror = null));
+    };
+  }, [assets]);
+
+  if (phase === 'gone') return null;
+  const exiting = phase !== 'load';
+
   return (
-    <div
-      role="status"
-      aria-label="Loading"
-      className={`fixed inset-0 z-[95] flex flex-col overflow-hidden bg-[#F6F4EE] transition-opacity duration-[900ms] ease-[var(--ease-expo)] ${
-        leaving ? 'pointer-events-none opacity-0' : 'opacity-100'
-      }`}
-      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      {/* soft studio light sweeping across the cyclorama */}
+    <>
+      {/* fog that hangs over the hero and clears */}
       <div
         aria-hidden
-        className="absolute inset-0 opacity-70"
-        style={{
-          background:
-            'radial-gradient(120% 70% at 50% 110%, rgba(23,26,24,0.07), transparent 60%), radial-gradient(60% 50% at 30% 20%, #ffffff, transparent 70%)',
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-y-0 -left-1/2 w-1/2 opacity-60"
-        style={{
-          background: 'linear-gradient(100deg, transparent, rgba(255,255,255,0.9), transparent)',
-          animation: 'loader-sweep 2.4s cubic-bezier(.65,0,.35,1) infinite',
-        }}
-      />
-      <div className="container-x relative flex h-14 items-center justify-between">
-        <span className="eyebrow text-muted">Football · Boxing · Swimming</span>
-        <button type="button" onClick={() => finish(true)} className="eyebrow rounded-[2px] px-3 py-2 text-ink hover:bg-ink/5">
-          Skip intro
-        </button>
+        className="pointer-events-none fixed inset-0 z-[94] overflow-hidden"
+        style={{ animation: exiting ? 'fog-clear 2.2s .35s cubic-bezier(.4,0,.2,1) both' : undefined, backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' }}
+      >
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: '90vmax',
+              height: '60vmax',
+              left: `${[-30, 20, -10][i]}%`,
+              top: `${[10, 40, 60][i]}%`,
+              background: 'radial-gradient(closest-side, rgba(250,250,247,.95), rgba(250,250,247,0))',
+              animation: `fog-drift ${6 + i * 2}s ${i * 0.4}s ease-in-out infinite alternate`,
+            }}
+          />
+        ))}
       </div>
 
-      <div className="relative flex flex-1 flex-col items-center justify-center">
-        <div className="relative">
-          {/* hairlines that draw out from the centre */}
-          <span
-            aria-hidden
-            className="absolute left-1/2 top-1/2 h-px -translate-x-1/2 bg-ink/40"
-            style={{ width: `${Math.min(100, shown * 140)}vw`, opacity: 1 - shown * 0.6 }}
-          />
-          <h2
-            className="display relative text-[clamp(56px,17vw,180px)] text-ink"
+      {phase !== 'fog' && (
+        <div role="status" aria-label="Loading SMADI" className="fixed inset-0 z-[95] overflow-hidden text-ink">
+          {/* two halves that split apart on exit */}
+          {(['top', 'bottom'] as const).map((half) => (
+            <div
+              key={half}
+              aria-hidden
+              className="absolute inset-x-0 bg-[#FAFAF7]"
+              style={{
+                top: half === 'top' ? 0 : '50%',
+                bottom: half === 'top' ? '50%' : 0,
+                transform: exiting ? `translate3d(0, ${half === 'top' ? '-101%' : '101%'}, 0)` : 'none',
+                transition: 'transform 1s cubic-bezier(.77,0,.18,1)',
+              }}
+            />
+          ))}
+
+          <div
+            className="relative flex h-full flex-col"
             style={{
-              clipPath: `inset(${(1 - Math.min(1, shown * 1.4)) * 100}% 0 0 0)`,
-              letterSpacing: `${0.12 - shown * 0.13}em`,
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+              opacity: exiting ? 0 : 1,
+              transform: exiting ? 'scale(1.08)' : 'none',
+              filter: exiting ? 'blur(10px)' : 'none',
+              transition: 'opacity .55s, transform .9s cubic-bezier(.77,0,.18,1), filter .55s',
             }}
           >
-            {brand.name}
-          </h2>
-          <span
-            aria-hidden
-            className="absolute -right-4 top-2 h-3 w-3 rounded-full bg-orange"
-            style={{ transform: `scale(${shown})`, transition: 'transform .2s' }}
-          />
-        </div>
-        <p className="mono mt-6 text-[12px] text-muted" style={{ opacity: Math.min(1, shown * 2) }}>
-          {brand.tagline}
-        </p>
-      </div>
+            <div aria-hidden className="absolute inset-0 opacity-80" style={{ background: 'radial-gradient(60% 45% at 50% 45%, rgba(139,92,246,.10), rgba(94,231,223,.08) 40%, transparent 70%)' }} />
+            <div className="container-x relative flex h-16 items-center justify-between">
+              <span className="eyebrow text-muted">Season 2026 — Collection</span>
+              <button type="button" onClick={() => finish.current()} className="eyebrow rounded-full px-4 py-2 text-ink transition-colors hover:bg-ink/5">
+                Skip intro
+              </button>
+            </div>
 
-      <div className="container-x relative pb-8">
-        <div className="flex items-end justify-between">
-          <span aria-hidden className="display text-[64px] leading-none text-ink tabular-nums">
-            {String(pct).padStart(3, '0')}
-          </span>
-          <span className="eyebrow pb-2 text-muted" aria-live="polite">
-            {progress < 1 ? 'Preparing the studio' : 'Entering'}
-          </span>
+            <div className="relative flex flex-1 flex-col items-center justify-center">
+              <div className="relative" style={{ animation: 'rise-in 1s .1s var(--ease-expo) both' }}>
+                <div aria-hidden className="absolute inset-[-40%] rounded-full opacity-60 blur-3xl" style={{ background: 'var(--holo-conic)', animation: 'spin-a 6s linear infinite' }} />
+                <HandMark className="relative h-24 w-24 md:h-32 md:w-32" />
+              </div>
+              <h2 className="display mt-6 flex text-[clamp(64px,19vw,200px)] leading-[0.85]" aria-label={brand.name}>
+                {brand.name.split('').map((ch, i) => (
+                  <span key={i} className="mask-line">
+                    <span style={{ ['--d' as string]: `${350 + i * 80}ms` }}>{ch}</span>
+                  </span>
+                ))}
+              </h2>
+              <p className="mono mt-5 flex items-center gap-2 text-[12px] uppercase tracking-[0.2em] text-muted" style={{ animation: 'rise-in 1s .9s var(--ease-expo) both' }}>
+                Gear for <span ref={word} className="holo-text inline-block min-w-[11ch] font-bold">Football</span>
+              </p>
+            </div>
+
+            <div className="container-x relative pb-8">
+              <div className="flex items-end justify-between">
+                <span ref={counter} aria-hidden className="display text-[72px] leading-none tabular-nums md:text-[96px]">
+                  000
+                </span>
+                <span className="eyebrow pb-3 text-muted">Loading the arena</span>
+              </div>
+              <div className="mt-3 h-[3px] w-full overflow-hidden rounded-full bg-ink/10">
+                <div ref={bar} className="h-full origin-left rounded-full" style={{ background: 'var(--holo)', transform: 'scaleX(0)' }} />
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="mt-3 h-px w-full bg-ink/10">
-          <div className="h-px bg-ink" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-      <style>{`@keyframes loader-sweep { from { transform: translateX(0) } to { transform: translateX(300%) } }`}</style>
-    </div>
+      )}
+    </>
   );
 }

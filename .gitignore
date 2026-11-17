@@ -24,3 +24,7 @@ next-env.d.ts
 *.pem
 npm-debug.log*
 .vercel
+
+# local tooling
+.venv-tools/
+/media-src/

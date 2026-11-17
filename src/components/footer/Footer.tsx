@@ -46,7 +46,7 @@ export function Footer({ nav }: { nav: NavSport[] }) {
         <div className="hairline" />
         <div className="flex flex-col gap-2 py-5 text-[12px] text-muted md:flex-row md:justify-between">
           <span>© {new Date().getFullYear()} {brand.name}. Brand names belong to their owners; listed brands are not partners.</span>
-          <span>3D models and product imagery are representative renders.</span>
+          <span>Product photos are the brands’ official images, shown for demonstration.</span>
         </div>
       </div>
       <div aria-hidden className="display pointer-events-none select-none whitespace-nowrap px-2 pb-2 text-[22vw] leading-[0.75] text-ink/[0.04]">

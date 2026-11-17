@@ -7,7 +7,7 @@ const fmt = new Intl.NumberFormat(brand.commerce.locale, {
 
 export const formatPrice = (cents: number) => fmt.format(cents / 100);
 
-/** Representative studio render produced by `npm run renders`. */
+/** Cut-out product photo (scripts/build-catalog.mjs). `hero` = first image, others = second image. */
 export type RenderAngle = 'hero' | 'side' | 'top' | 'detail';
-export const renderUrl = (slug: string, colorId: string, angle: RenderAngle = 'hero') =>
-  `/renders/${slug}--${colorId}--${angle}.webp`;
+export const renderUrl = (slug: string, _colorId?: string, angle: RenderAngle = 'hero') =>
+  `/products/${slug}-${angle === 'hero' ? 1 : 2}.webp`;

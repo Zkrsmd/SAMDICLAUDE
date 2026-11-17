@@ -1,6 +1,7 @@
 import { CurtainLink } from '@/components/layout/RouteCurtain';
-import { ProductImage } from '@/components/product/ProductImage';
 import { Icon } from '@/components/ui/Icon';
+import { renderUrl } from '@/lib/format';
+import { categoryMedia } from '@/config/hero';
 import type { SportSlug } from '@/types/catalog';
 
 export interface ShowcaseSport {
@@ -13,67 +14,81 @@ export interface ShowcaseSport {
   extra?: { slug: string; color: string };
 }
 
-/** Each sport gets its own material world — turf, gym light, water, track, steel, court, terrain. */
-const WORLD: Record<SportSlug, { cls: string; ink: string; curtain: string; curtainInk: string }> = {
-  football: { cls: 'world-turf', ink: '#FFFFFF', curtain: '#5C9A33', curtainInk: '#FFFFFF' },
-  boxing: { cls: 'world-gym', ink: '#171A18', curtain: '#EFE9DC', curtainInk: '#171A18' },
-  swimming: { cls: 'world-water', ink: '#FFFFFF', curtain: '#2AA7B8', curtainInk: '#FFFFFF' },
-  running: { cls: 'world-track', ink: '#FFFFFF', curtain: '#C8553A', curtainInk: '#FFFFFF' },
-  fitness: { cls: 'world-steel', ink: '#171A18', curtain: '#D9DCD8', curtainInk: '#171A18' },
-  basketball: { cls: 'world-court', ink: '#171A18', curtain: '#E3A867', curtainInk: '#171A18' },
-  outdoor: { cls: 'world-terrain', ink: '#171A18', curtain: '#5E7D6A', curtainInk: '#FFFFFF' },
+const CURTAIN: Record<SportSlug, string> = {
+  football: '#1F3A12',
+  boxing: '#14110B',
+  swimming: '#06303A',
+  running: '#2A1410',
+  fitness: '#16181B',
+  basketball: '#2B1708',
+  outdoor: '#1B2A22',
+};
+const GLOW: Partial<Record<SportSlug, string>> = {
+  football: 'rgba(255,106,43,.55)',
+  boxing: 'rgba(231,184,90,.6)',
+  swimming: 'rgba(94,231,223,.55)',
+  running: 'rgba(255,90,60,.5)',
+  fitness: 'rgba(170,180,200,.5)',
+  basketball: 'rgba(255,150,60,.5)',
 };
 
 function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm'; index: number }) {
-  const w = WORLD[s.slug];
+  const media = categoryMedia[s.slug];
+  const glow = GLOW[s.slug] ?? 'rgba(255,255,255,.4)';
   return (
     <CurtainLink
       href={`/${s.slug}`}
-      color={w.curtain}
-      ink={w.curtainInk}
+      color={CURTAIN[s.slug]}
+      ink="#FFFFFF"
       word={s.name}
-      className={`world ${w.cls} group relative isolate block overflow-hidden rounded-[2px] [container-type:inline-size] ${
-        size === 'xl' ? 'min-h-[118vw] md:min-h-0 md:row-span-2' : size === 'lg' ? 'min-h-[92vw] md:min-h-[44vh]' : 'min-h-[56vw] md:min-h-[34vh]'
+      className={`group relative isolate block overflow-hidden rounded-[22px] bg-ink text-white [container-type:inline-size] ${
+        size === 'xl' ? 'min-h-[120vw] md:row-span-2 md:min-h-0' : size === 'lg' ? 'min-h-[92vw] md:min-h-[46vh]' : 'min-h-[70vw] md:min-h-[42vh]'
       }`}
       aria-label={`${s.name} — ${s.count} products`}
+      data-reveal=""
+      style={{ ['--d' as string]: `${index * 90}ms` }}
     >
-      <div aria-hidden className="world-fx absolute inset-0 -z-10" />
-      {w.ink === '#FFFFFF' && <div aria-hidden className="world-scrim absolute inset-0 -z-[9]" />}
+      {media && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={media}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 -z-20 h-full w-full scale-105 object-cover transition-transform duration-[1600ms] ease-[var(--ease-expo)] group-hover:scale-[1.15]"
+        />
+      )}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,.45),transparent_35%,transparent_55%,rgba(0,0,0,.8))]" />
+      <div aria-hidden className="absolute inset-0 -z-10 opacity-0 transition-opacity duration-700 group-hover:opacity-100" style={{ background: `radial-gradient(60% 50% at 50% 60%, ${glow}, transparent 70%)`, mixBlendMode: 'screen' }} />
+      {/* animated holo edge on hover */}
+      <span aria-hidden className="holo-ring opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
       <span
         aria-hidden
-        className={`display absolute -z-[5] select-none whitespace-nowrap leading-[0.78] ${size === 'sm' ? 'bottom-3 left-3' : 'left-4 top-[16%]'}`}
-        style={{
-          color: w.ink,
-          opacity: size === 'sm' ? 1 : 0.92,
-          // fit the word to the panel width (container query units)
-          fontSize: `${Math.min(size === 'sm' ? 24 : 27, (size === 'sm' ? 158 : 168) / s.name.length)}cqw`,
-        }}
+        className={`display absolute select-none whitespace-nowrap leading-[0.8] ${size === 'sm' ? 'left-4 top-4' : 'left-5 top-5'}`}
+        style={{ fontSize: `${Math.min(size === 'sm' ? 24 : 22, (size === 'sm' ? 86 : 92) / s.name.length)}cqw`, textShadow: '0 10px 40px rgba(0,0,0,.35)' }}
       >
         {s.name}
       </span>
+
       <div
-        className={`absolute transition-transform duration-[900ms] ease-[var(--ease-expo)] group-hover:-translate-y-3 group-hover:rotate-[-2deg] ${
-          size === 'sm' ? 'right-[-6%] top-[6%] h-[78%] w-[66%]' : 'inset-x-[6%] bottom-[12%] top-[30%]'
+        className={`absolute transition-transform duration-[900ms] ease-[var(--ease-expo)] group-hover:-translate-y-4 group-hover:scale-110 group-hover:rotate-[-4deg] ${
+          size === 'sm' ? 'inset-x-[12%] bottom-[20%] top-[30%]' : 'inset-x-[12%] bottom-[18%] top-[28%]'
         }`}
-        style={{ animation: `float-y ${5 + index}s ease-in-out infinite`, ['--r' as string]: size === 'sm' ? '-8deg' : '-3deg' }}
       >
-        <ProductImage slug={s.hero.slug} colorId={s.hero.color} alt="" sizes={size === 'sm' ? '45vw' : '(max-width:768px) 90vw, 50vw'} className="drop-shadow-[0_30px_30px_rgba(0,0,0,0.25)]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={renderUrl(s.hero.slug)}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-contain"
+          style={{ animation: `float-y ${5 + index}s ease-in-out infinite`, filter: `drop-shadow(0 30px 40px ${glow}) drop-shadow(0 18px 18px rgba(0,0,0,.5))` }}
+        />
       </div>
-      {s.extra && size !== 'sm' && (
-        <div className="world-roll absolute bottom-[6%] left-0 h-[16%] w-[16%]" aria-hidden>
-          <ProductImage slug={s.extra.slug} colorId={s.extra.color} alt="" sizes="20vw" />
-        </div>
-      )}
-      <div className={`absolute inset-x-0 bottom-0 flex items-end justify-between p-4 ${size === 'sm' ? 'top-0 flex-col items-start justify-start' : ''}`}>
-        {size !== 'sm' && (
-          <p className={`max-w-[18ch] text-[15px] font-medium ${w.ink === '#FFFFFF' ? 'on-light-world' : ''}`} style={{ color: w.ink }}>
-            {s.tagline}
-          </p>
-        )}
-        <span
-          className={`mono inline-flex items-center gap-2 rounded-[2px] bg-white/90 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink backdrop-blur ${size === 'sm' ? '' : ''}`}
-        >
-          {s.count} products <Icon name="arrow-right" size={14} />
+
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 md:p-5">
+        {size !== 'sm' ? <p className="max-w-[20ch] text-[16px] font-semibold leading-tight md:text-[18px]">{s.tagline}</p> : <span />}
+        <span className="mono inline-flex shrink-0 items-center gap-2 rounded-full border border-white/40 bg-white/15 px-3.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] backdrop-blur-md transition-colors group-hover:bg-white group-hover:text-ink">
+          {s.count} <span className="hidden sm:inline">products</span> <Icon name="arrow-right" size={14} />
         </span>
       </div>
     </CurtainLink>
@@ -85,11 +100,11 @@ export function CategoryShowcase({ sports }: { sports: ShowcaseSport[] }) {
   const minor = sports.slice(3);
   return (
     <section aria-labelledby="sports-title" className="container-x py-16 md:py-24">
-      <div className="flex items-end justify-between gap-6">
+      <div className="flex items-end justify-between gap-6" data-reveal>
         <div>
           <p className="eyebrow text-muted">Shop by sport</p>
-          <h2 id="sports-title" className="display mt-3 text-[clamp(44px,11vw,120px)]">
-            Choose your arena
+          <h2 id="sports-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]">
+            Choose your <span className="holo-text">arena</span>
           </h2>
         </div>
         <p className="hidden max-w-xs text-[15px] text-muted md:block">Every sport has its own world. Step into one — the products are waiting inside.</p>
@@ -99,7 +114,7 @@ export function CategoryShowcase({ sports }: { sports: ShowcaseSport[] }) {
           <Panel key={s.slug} s={s} size={i === 0 ? 'xl' : 'lg'} index={i} />
         ))}
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
         {minor.map((s, i) => (
           <Panel key={s.slug} s={s} size="sm" index={i + 3} />
         ))}

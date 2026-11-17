@@ -38,6 +38,7 @@ export const ProductSchema = z.object({
   verified: z.boolean(),
   sourceNote: z.string().optional(),
   pairsWith: z.array(z.string().regex(/^[a-z]+\/[a-z0-9-]+$/)).optional(),
+  images: z.array(z.string().regex(/^\/products\/[a-z0-9-]+\.webp$/)).optional(),
 });
 
 export const CatalogSchema = z.array(ProductSchema).superRefine((items, ctx) => {
