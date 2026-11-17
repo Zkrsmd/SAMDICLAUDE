@@ -68,6 +68,7 @@ export class HeroEngine {
   private fpsFrames = 0;
   private degradeLevel = 0;
   private notifiedIntro = new Set<number>();
+  private queued: { index: number; dir?: 1 | -1 } | null = null;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -167,10 +168,18 @@ export class HeroEngine {
     this.fogT = 0;
   }
 
+  /** The slide the hero is heading to (queued target, running transition, or current). */
+  get destination() {
+    return this.queued?.index ?? (this.tr && this.tr.target === 1 ? this.tr.to : this.active);
+  }
+
   goTo(index: number, dir?: 1 | -1) {
     if (index === this.active && !this.tr) return;
-    if (this.tr && this.tr.p < 0.5 && this.tr.to !== index) this.tr.to = index;
-    if (this.tr) return;
+    if (this.tr) {
+      // a tap during a transition is queued, never dropped
+      this.queued = { index, dir };
+      return;
+    }
     const d = dir ?? (index > this.active ? 1 : -1);
     this.ensure(index);
     if (this.reducedMotion) {
@@ -281,6 +290,9 @@ export class HeroEngine {
       if ((tr.p >= 1 && tr.target === 1) || (tr.p <= 0 && tr.target === 0)) {
         this.tr = null;
         this.swarm.uniforms.uOpacity.value = 0;
+        const q = this.queued;
+        this.queued = null;
+        if (q && q.index !== this.active) this.goTo(q.index, q.dir);
       }
     }
     ou.uSmear.value = smear;

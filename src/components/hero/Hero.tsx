@@ -114,8 +114,9 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
     },
     [fallback],
   );
-  const next = () => go(indexRef.current + 1, 1);
-  const prev = () => go(indexRef.current - 1, -1);
+  const base = () => engine.current?.destination ?? indexRef.current;
+  const next = () => go(base() + 1, 1);
+  const prev = () => go(base() - 1, -1);
 
   // pointer: swipe + parallax + product tap
   useEffect(() => {
