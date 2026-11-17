@@ -16,7 +16,7 @@ test('key routes render without page errors', async ({ page }) => {
 
 test('hero is usable and the store is reachable without 3D interaction', async ({ page }) => {
   await openHome(page);
-  await page.getByRole('tab', { name: 'Swimming' }).click();
+  await page.getByRole('group', { name: 'Choose sport' }).getByRole('button', { name: 'Swimming' }).click();
   await expect(page.getByRole('link', { name: /Explore swimming/i })).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Home' }).first()).toBeAttached();

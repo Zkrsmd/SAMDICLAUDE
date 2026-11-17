@@ -47,7 +47,9 @@ test.describe('core shopping journeys', () => {
     // adding without a size shows a validation message
     await page.getByRole('button', { name: 'Add to bag' }).first().click();
     await expect(page.getByText('Please choose a size.')).toBeVisible();
-    await page.getByRole('radio', { name: '12 oz' }).check();
+    // click the visible size label, as a shopper would; the native radio underneath must become checked
+    await page.locator('label').filter({ hasText: /^12 oz$/ }).click();
+    await expect(page.getByRole('radio', { name: '12 oz' })).toBeChecked();
     await page.getByRole('button', { name: 'Add to bag' }).first().click();
     await expect.poll(() => cartCount(page)).toBe(1);
 
