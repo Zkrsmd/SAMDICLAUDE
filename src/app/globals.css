@@ -239,3 +239,163 @@
     background-position: 200% 0;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Sport "worlds" — material identities for category panels/headers.  */
+/* ------------------------------------------------------------------ */
+.world-turf {
+  background:
+    radial-gradient(120% 60% at 70% 0%, rgba(255, 250, 225, 0.55), transparent 60%),
+    repeating-linear-gradient(90deg, #5c9a33 0 11%, #6aab3d 11% 22%);
+}
+.world-turf .world-fx {
+  background:
+    linear-gradient(180deg, transparent 62%, rgba(255, 255, 255, 0.9) 62.3%, rgba(255, 255, 255, 0.9) 62.9%, transparent 63.2%),
+    radial-gradient(2px 9px at 10% 100%, #2f6a1e 50%, transparent 52%) 0 100% / 9px 18px repeat-x,
+    radial-gradient(2px 12px at 50% 100%, #3e7f22 50%, transparent 52%) 4px 100% / 13px 24px repeat-x;
+  -webkit-mask: linear-gradient(transparent, #000 40%);
+  mask: linear-gradient(transparent, #000 40%);
+}
+.world-gym {
+  background:
+    linear-gradient(115deg, transparent 30%, rgba(255, 244, 214, 0.75) 42%, transparent 55%),
+    linear-gradient(180deg, #f4f1ea, #e3ddd1);
+}
+.world-gym .world-fx {
+  background-image:
+    radial-gradient(circle, rgba(200, 164, 81, 0.9) 0 1.5px, transparent 2px),
+    radial-gradient(circle, rgba(200, 164, 81, 0.6) 0 1px, transparent 1.5px);
+  background-size:
+    90px 120px,
+    60px 70px;
+  animation: dust-rise 14s linear infinite;
+  opacity: 0.8;
+}
+.world-water {
+  background: linear-gradient(180deg, #7fe0e2 0%, #3fb7c4 55%, #218fb0 100%);
+}
+.world-water .world-fx {
+  background:
+    radial-gradient(40% 18% at 30% 30%, rgba(255, 255, 255, 0.35), transparent 70%),
+    radial-gradient(30% 14% at 70% 55%, rgba(255, 255, 255, 0.3), transparent 70%),
+    radial-gradient(35% 16% at 45% 80%, rgba(255, 255, 255, 0.25), transparent 70%),
+    radial-gradient(circle at 20% 90%, rgba(255, 255, 255, 0.7) 0 3px, transparent 4px),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.6) 0 2px, transparent 3px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    120px 160px,
+    90px 130px;
+  animation: caustic-drift 9s ease-in-out infinite alternate, bubble-rise 6s linear infinite;
+  mix-blend-mode: screen;
+}
+.world-track {
+  background:
+    repeating-linear-gradient(100deg, transparent 0 14%, rgba(255, 255, 255, 0.85) 14% 14.6%),
+    linear-gradient(180deg, #d0613f, #b84d30);
+}
+.world-track .world-fx {
+  background: repeating-linear-gradient(90deg, transparent 0 40px, rgba(255, 255, 255, 0.25) 40px 120px, transparent 120px 300px);
+  -webkit-mask: linear-gradient(180deg, transparent 20%, #000 30% 34%, transparent 36% 60%, #000 62% 64%, transparent 66%);
+  mask: linear-gradient(180deg, transparent 20%, #000 30% 34%, transparent 36% 60%, #000 62% 64%, transparent 66%);
+  animation: streak 1.6s linear infinite;
+}
+.world-steel {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0 2px, transparent 2px 5px),
+    linear-gradient(135deg, #eceeec, #c6cbc8 50%, #e6e8e6);
+}
+.world-court {
+  background:
+    radial-gradient(circle at 50% 115%, transparent 38%, rgba(255, 255, 255, 0.9) 38.4% 39.2%, transparent 39.6%),
+    repeating-linear-gradient(90deg, #e3a867 0 24px, #dc9e5c 24px 48px);
+}
+.world-terrain {
+  background:
+    repeating-radial-gradient(ellipse at 30% 110%, transparent 0 18px, rgba(94, 125, 106, 0.35) 18px 19.5px),
+    linear-gradient(180deg, #e9ece5, #cfd8cf);
+}
+.world-roll {
+  animation: roll-across 7s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+@keyframes roll-across {
+  0% {
+    transform: translateX(-120%) rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: translateX(640%) rotate(900deg);
+  }
+}
+@keyframes dust-rise {
+  to {
+    background-position:
+      0 -240px,
+      30px -140px;
+  }
+}
+@keyframes caustic-drift {
+  to {
+    background-position:
+      40px 10px,
+      -30px 20px,
+      20px -15px,
+      0 0,
+      0 0;
+  }
+}
+@keyframes bubble-rise {
+  to {
+    background-position:
+      0 0,
+      0 0,
+      0 0,
+      0 -160px,
+      0 -130px;
+  }
+}
+@keyframes streak {
+  to {
+    background-position: -300px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-roll,
+  .world-fx {
+    animation: none !important;
+  }
+}
+@keyframes hero-drop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -40px, 0) scale(0.86) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: translate3d(40px, 30px, 0) rotate(4deg) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drop-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -220px, 0) scale(1.35) rotate(-14deg);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

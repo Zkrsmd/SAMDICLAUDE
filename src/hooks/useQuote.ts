@@ -3,22 +3,16 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CartLine } from '@/stores/cart';
 import type { QuoteResponse } from '@/app/api/cart/quote/route';
 
-/** Fetches a server-side price quote for the cart lines (debounced). */
+const EMPTY: QuoteResponse = { lines: [], rejected: [], subtotal: 0, currency: 'EUR' };
+
+/** Fetches a server-side price quote for the cart lines (debounced). The client never sends prices. */
 export function useQuote(lines: CartLine[], enabled = true) {
-  const [data, setData] = useState<QuoteResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const body = useMemo(() => JSON.stringify({ items: lines }), [lines]);
+  const [state, setState] = useState<{ key: string; data: QuoteResponse | null; error: string | null }>({ key: '', data: null, error: null });
 
   useEffect(() => {
-    if (!enabled) return;
-    if (!lines.length) {
-      setData({ lines: [], rejected: [], subtotal: 0, currency: 'EUR' });
-      setError(null);
-      return;
-    }
+    if (!enabled || !lines.length) return;
     const ctrl = new AbortController();
-    setLoading(true);
     const t = window.setTimeout(async () => {
       try {
         const res = await fetch('/api/cart/quote', {
@@ -28,12 +22,10 @@ export function useQuote(lines: CartLine[], enabled = true) {
           signal: ctrl.signal,
         });
         if (!res.ok) throw new Error(res.status === 429 ? 'Too many requests — try again shortly.' : 'Could not price your bag.');
-        setData((await res.json()) as QuoteResponse);
-        setError(null);
+        const data = (await res.json()) as QuoteResponse;
+        setState({ key: body, data, error: null });
       } catch (e) {
-        if ((e as Error).name !== 'AbortError') setError((e as Error).message);
-      } finally {
-        if (!ctrl.signal.aborted) setLoading(false);
+        if ((e as Error).name !== 'AbortError') setState((s) => ({ key: body, data: s.data, error: (e as Error).message }));
       }
     }, 120);
     return () => {
@@ -42,5 +34,6 @@ export function useQuote(lines: CartLine[], enabled = true) {
     };
   }, [body, enabled, lines.length]);
 
-  return { data, error, loading };
+  if (!lines.length) return { data: EMPTY, error: null, loading: false };
+  return { data: state.data, error: state.error, loading: state.key !== body };
 }

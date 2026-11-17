@@ -1,0 +1,48 @@
+'use client';
+import Link from 'next/link';
+import { CartLines } from './CartLines';
+import { useCart } from '@/stores/cart';
+import { useQuote } from '@/hooks/useQuote';
+import { useHydrated } from '@/hooks/useHydrated';
+import { formatPrice } from '@/lib/format';
+
+export function CartView() {
+  const hydrated = useHydrated();
+  const lines = useCart((s) => s.lines);
+  const { data, error, loading } = useQuote(lines, hydrated);
+  return (
+    <div className="container-x pb-10" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 88px)' }}>
+      <h1 className="display text-[clamp(52px,15vw,150px)]">Your bag</h1>
+      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
+        <div aria-live="polite" aria-busy={loading}>
+          {hydrated ? <CartLines quote={data} /> : <p className="py-10 text-muted">Loading your bag…</p>}
+          {error && <p className="py-3 text-red-700">{error}</p>}
+        </div>
+        <aside className="h-fit rounded-[2px] border border-line bg-white p-5 lg:sticky lg:top-24">
+          <h2 className="eyebrow text-muted">Summary</h2>
+          <dl className="mt-4 space-y-2 text-[15px]">
+            <div className="flex justify-between">
+              <dt>Subtotal</dt>
+              <dd className="mono font-semibold">{data ? formatPrice(data.subtotal) : '—'}</dd>
+            </div>
+            <div className="flex justify-between text-muted">
+              <dt>Delivery</dt>
+              <dd>Calculated at checkout (placeholder)</dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-[12px] text-muted">Prices are calculated on the server from the catalogue — the browser never sets the price.</p>
+          <Link
+            href="/checkout"
+            aria-disabled={!lines.length}
+            className={`btn btn-ink mt-5 h-12 w-full ${lines.length ? '' : 'pointer-events-none opacity-40'}`}
+          >
+            Continue to checkout
+          </Link>
+          <Link href="/" className="btn btn-line mt-3 h-12 w-full">
+            Keep shopping
+          </Link>
+        </aside>
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@ import { Footer } from '@/components/footer/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { SearchOverlay } from '@/components/search/SearchOverlay';
 import { FlyToCart } from '@/components/cart/FlyToCart';
+import { RouteCurtain } from '@/components/layout/RouteCurtain';
 import './globals.css';
 
 const display = Big_Shoulders({ subsets: ['latin'], axes: ['opsz'], variable: '--font-display-face', display: 'swap' });
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CartDrawer />
         <SearchOverlay index={searchIndex()} />
         <FlyToCart />
+        <RouteCurtain />
       </body>
     </html>
   );
