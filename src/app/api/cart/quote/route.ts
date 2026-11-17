@@ -32,8 +32,14 @@ export interface QuoteResponse {
 export async function POST(req: Request) {
   const origin = req.headers.get('origin');
   const host = req.headers.get('host');
-  if (origin && host && new URL(origin).host !== host) {
-    return NextResponse.json({ error: 'Cross-origin request rejected' }, { status: 403 });
+  if (origin && host) {
+    let sameOrigin = false;
+    try {
+      sameOrigin = new URL(origin).host === host;
+    } catch {
+      sameOrigin = false; // e.g. "Origin: null"
+    }
+    if (!sameOrigin) return NextResponse.json({ error: 'Cross-origin request rejected' }, { status: 403 });
   }
   if (!rateLimit(`quote:${clientKey(req.headers)}`, 120).ok) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
@@ -41,6 +47,8 @@ export async function POST(req: Request) {
   if (!req.headers.get('content-type')?.includes('application/json')) {
     return NextResponse.json({ error: 'Expected JSON' }, { status: 415 });
   }
+  const declared = Number(req.headers.get('content-length') ?? '0');
+  if (declared > MAX_BODY) return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   const text = await req.text();
   if (text.length > MAX_BODY) return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
 

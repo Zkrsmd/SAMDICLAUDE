@@ -15,7 +15,7 @@ export function CartView() {
       <h1 className="display text-[clamp(52px,15vw,150px)]">Your bag</h1>
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
         <div aria-live="polite" aria-busy={loading}>
-          {hydrated ? <CartLines quote={data} /> : <p className="py-10 text-muted">Loading your bag…</p>}
+          {hydrated ? <CartLines quote={data} failed={!!error} /> : <p className="py-10 text-muted">Loading your bag…</p>}
           {error && <p className="py-3 text-red-700">{error}</p>}
         </div>
         <aside className="h-fit rounded-[2px] border border-line bg-white p-5 lg:sticky lg:top-24">

@@ -6,8 +6,17 @@ import { useCart } from '@/stores/cart';
 import { formatPrice } from '@/lib/format';
 import type { QuoteResponse } from '@/app/api/cart/quote/route';
 
-export function CartLines({ quote, compact }: { quote: QuoteResponse | null; compact?: boolean }) {
-  const { setQty, remove } = useCart();
+export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | null; compact?: boolean; failed?: boolean }) {
+  const { setQty, remove, clear } = useCart();
+  if (!quote && failed)
+    return (
+      <div className="py-10 text-center">
+        <p className="text-muted">Your saved bag couldn’t be read.</p>
+        <button type="button" className="btn btn-line mt-4 h-11" onClick={clear}>
+          Reset bag
+        </button>
+      </div>
+    );
   if (!quote) return <div className="py-10 text-center text-muted">Loading your bag…</div>;
   if (!quote.lines.length && !quote.rejected.length)
     return (

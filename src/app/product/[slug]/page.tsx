@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
 import { ProductExperience } from '@/components/product/ProductExperience';
 import { ProductGrid, ProductRail, RecentlyViewed } from '@/components/product/ProductRail';
 import { Bundle } from '@/components/product/Bundle';
@@ -70,9 +69,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      <Suspense>
-        <ProductExperience product={product} brandName={brandName(product.brand)} sportName={sport.name} subName={sub.name} />
-      </Suspense>
+      <ProductExperience product={product} brandName={brandName(product.brand)} sportName={sport.name} subName={sub.name} />
 
       {kit.length > 0 && (
         <section aria-labelledby="kit-title" className="container-x py-14">
@@ -117,7 +114,8 @@ export default async function ProductPage({ params }: Props) {
           return (
             <Link key={w.slug} href={`/${w.slug}`} className={`world ${w.cls} group relative flex min-h-[38vw] items-end overflow-hidden rounded-[2px] p-5 md:min-h-[260px]`}>
               <span aria-hidden className="world-fx absolute inset-0" />
-              <span className="relative">
+              {w.ink === '#FFFFFF' && <span aria-hidden className="world-scrim absolute inset-0" />}
+              <span className={`relative ${w.ink === '#FFFFFF' ? 'on-light-world' : ''}`}>
                 <span className="eyebrow block" style={{ color: w.ink }}>
                   Another world
                 </span>

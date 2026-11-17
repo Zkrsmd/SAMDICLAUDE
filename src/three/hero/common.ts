@@ -79,6 +79,12 @@ export const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 export const seg = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
 export const damp = (a: number, b: number, lambda: number, dt: number) => THREE.MathUtils.damp(a, b, lambda, dt);
 
+/**
+ * Dead particles are parked far below the scene at a tiny (non-zero) scale. A zero scale would make
+ * shaders normalise zero-length normals → NaN, which MSAA + bloom spread across the whole frame.
+ */
+const PARKED = new THREE.Matrix4().compose(new THREE.Vector3(0, -9999, 0), new THREE.Quaternion(), new THREE.Vector3(1e-4, 1e-4, 1e-4));
+
 /** Simple CPU particle pool rendered with an InstancedMesh (debris, dust, droplets). */
 export class ParticlePool {
   mesh: THREE.InstancedMesh;
@@ -108,7 +114,7 @@ export class ParticlePool {
     this.maxLife = new Float32Array(count);
     this.spin = new Float32Array(count * 3);
     this.size = new Float32Array(count);
-    for (let i = 0; i < count; i++) this.mesh.setMatrixAt(i, new THREE.Matrix4().makeScale(0, 0, 0));
+    for (let i = 0; i < count; i++) this.mesh.setMatrixAt(i, PARKED);
   }
 
   emit(p: THREE.Vector3, v: THREE.Vector3, life: number, size: number) {
@@ -126,6 +132,10 @@ export class ParticlePool {
     for (let i = 0; i < this.count; i++) {
       if (this.life[i]! <= 0) continue;
       this.life[i]! -= dt;
+      if (this.life[i]! <= 0) {
+        this.mesh.setMatrixAt(i, PARKED);
+        continue;
+      }
       const k = i * 3;
       this.vel[k + 1]! += this.gravity * dt;
       const d = Math.exp(-this.drag * dt);
@@ -142,7 +152,7 @@ export class ParticlePool {
         this.vel[k + 2]! *= 0.5;
       }
       const lifeT = this.life[i]! / this.maxLife[i]!;
-      const sc = this.size[i]! * Math.min(1, lifeT * 3) * (this.life[i]! > 0 ? 1 : 0);
+      const sc = Math.max(1e-4, this.size[i]! * Math.min(1, lifeT * 3));
       this.e.set(this.spin[k]! * (1 - lifeT) * 3, this.spin[k + 1]! * (1 - lifeT) * 3, this.spin[k + 2]! * (1 - lifeT) * 3);
       this.q.setFromEuler(this.e);
       this.v.set(this.pos[k]!, this.pos[k + 1]!, this.pos[k + 2]!);
@@ -155,8 +165,7 @@ export class ParticlePool {
 
   clear() {
     this.life.fill(0);
-    const z = new THREE.Matrix4().makeScale(0, 0, 0);
-    for (let i = 0; i < this.count; i++) this.mesh.setMatrixAt(i, z);
+    for (let i = 0; i < this.count; i++) this.mesh.setMatrixAt(i, PARKED);
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 }

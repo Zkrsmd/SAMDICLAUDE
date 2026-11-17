@@ -34,6 +34,7 @@ export default function Showroom({ items, mount }: { items: ShowItem[]; mount: M
   const [zooming, setZooming] = useState<number | null>(null);
   const [mobile, setMobile] = useState(false);
   const pan = useRef({ x: 0, target: 0, v: 0 });
+  useEffect(() => () => void (document.body.style.cursor = ''), []);
   const wrap = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const setPending = useTransitionStore((s) => s.setPending);
@@ -149,8 +150,8 @@ export default function Showroom({ items, mount }: { items: ShowItem[]; mount: M
       </Canvas>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between p-4">
-        <p className="eyebrow text-ink/60">{mobile ? 'Swipe the wall · tap a product' : 'Hover to light · click to approach'}</p>
-        <p className="eyebrow text-ink/40">Representative 3D</p>
+        <p className="eyebrow text-ink/75">{mobile ? 'Swipe the wall · tap a product' : 'Hover to light · click to approach'}</p>
+        <p className="eyebrow text-ink/70">Representative 3D</p>
       </div>
 
       {mobile && (
@@ -171,7 +172,7 @@ export default function Showroom({ items, mount }: { items: ShowItem[]; mount: M
               <button type="button" className="btn btn-white h-11 px-3" aria-label="Previous product" onClick={() => step(-1)}>
                 <Icon name="arrow-left" size={18} />
               </button>
-              <span className="eyebrow text-ink/60">{items.length} on the wall</span>
+              <span className="eyebrow text-ink/75">{items.length} on the wall</span>
               <button type="button" className="btn btn-white h-11 px-3" aria-label="Next product" onClick={() => step(1)}>
                 <Icon name="arrow-right" size={18} />
               </button>
@@ -257,15 +258,37 @@ function Slot({
   onClick: () => void;
   showLabel: boolean;
 }) {
+  // keyed on identity-stable fields: server re-renders (filters/sort) must not rebuild models
+  const { kind, palette, options } = item;
   const model = useMemo(() => {
-    const size = item.kind === 'boot' ? 1.0 : item.kind === 'glove' ? 0.92 : 0.78;
-    const m = createModel(item.kind, item.palette, item.options, size);
-    if (item.kind === 'glove') m.rotation.set(0, -0.2, 0);
-    if (item.kind === 'goggles') m.rotation.set(0.1, -0.35, 0);
-    if (item.kind === 'boot') m.rotation.set(0, -0.35, 0);
+    const size = kind === 'boot' ? 1.0 : kind === 'glove' ? 0.92 : 0.78;
+    const m = createModel(kind, palette, options, size);
+    if (kind === 'glove') m.rotation.set(0, -0.2, 0);
+    if (kind === 'goggles') m.rotation.set(0.1, -0.35, 0);
+    if (kind === 'boot') m.rotation.set(0, -0.35, 0);
     return m;
-  }, [item]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.slug, kind]);
   useEffect(() => () => disposeDeep(model), [model]);
+  const shelfShadow = useMemo(() => contactShadow(1.1, 0.5, 0.35), []);
+  useEffect(
+    () => () => {
+      shelfShadow.geometry.dispose();
+      const m = shelfShadow.material as THREE.MeshBasicMaterial;
+      m.map?.dispose();
+      m.dispose();
+    },
+    [shelfShadow],
+  );
+  const mats = useMemo(() => {
+    const list: THREE.Material[] = [];
+    model.traverse((o) => {
+      const m = (o as THREE.Mesh).material;
+      if (m) for (const x of Array.isArray(m) ? m : [m]) list.push(x);
+    });
+    return list;
+  }, [model]);
+  const dimK = useRef(0);
   const holder = useRef<THREE.Group>(null);
   const glow = useRef<THREE.Mesh>(null);
   const spot = useRef<THREE.SpotLight>(null);
@@ -287,14 +310,15 @@ function Slot({
       spot.current.target.position.copy(pos);
       spot.current.target.updateMatrixWorld();
     }
-    g.visible = true;
-    g.traverse((o) => {
-      const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
-      if (m && 'opacity' in m && !Array.isArray(m)) {
-        m.transparent = dim || m.transparent;
-        m.opacity = THREE.MathUtils.damp(m.opacity, dim ? 0.12 : 1, 8, dt);
+    // fade the other products only while (or after) a zoom is happening
+    const goal = dim ? 1 : 0;
+    if (Math.abs(dimK.current - goal) > 0.001) {
+      dimK.current = THREE.MathUtils.damp(dimK.current, goal, 8, dt);
+      for (const m of mats) {
+        m.transparent = m.transparent || dim;
+        m.opacity = 1 - dimK.current * 0.88;
       }
-    });
+    }
   });
 
   return (
@@ -315,7 +339,7 @@ function Slot({
             <boxGeometry args={[1.0, 0.006, 0.01]} />
             <meshBasicMaterial color={new THREE.Color(1.5, 1.45, 1.35)} />
           </mesh>
-          <primitive object={contactShadow(1.1, 0.5, 0.35)} position={[0, 0.022, -0.15]} />
+          <primitive object={shelfShadow} position={[0, 0.022, -0.15]} />
         </group>
       )}
       {mount === 'hooks' && (
@@ -353,6 +377,7 @@ function Slot({
           document.body.style.cursor = '';
           onOut();
         }}
+        onPointerMissed={() => (document.body.style.cursor = '')}
         onClick={(e: ThreeEvent<MouseEvent>) => {
           e.stopPropagation();
           onClick();
@@ -390,11 +415,13 @@ function CameraRig({
   const pointer = useThree((s) => s.pointer);
   const look = useRef(new THREE.Vector3(0, 1.3, 0));
   const pos = useRef(new THREE.Vector3(0, 1.4, 5));
+  const tpV = useRef(new THREE.Vector3());
+  const tlV = useRef(new THREE.Vector3());
   useFrame((_, dt) => {
     const p = pan.current!;
     p.x = THREE.MathUtils.damp(p.x, p.target, 6, dt);
-    const tp = new THREE.Vector3();
-    const tl = new THREE.Vector3();
+    const tp = tpV.current;
+    const tl = tlV.current;
     if (zoom !== null) {
       const it = layout[zoom]!;
       tp.set(it.x + 0.12, it.y + 0.12, 1.05);

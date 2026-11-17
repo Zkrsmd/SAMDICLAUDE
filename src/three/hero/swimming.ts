@@ -19,6 +19,7 @@ import {
 const GOGGLES = { primary: '#D9A93B', secondary: '#1D2326', accent: '#1D2326' };
 const CAP = { primary: '#1F2E4D', secondary: '#E9EEF0', accent: '#D9A93B' };
 const EXHIBIT = new THREE.Vector3(0, 0.5, 0);
+const BREACH_CAM = new THREE.Vector3(0.3, 0.12, 2.6);
 const FLOOR_Y = -2.6;
 const UNDER_FOG = new THREE.Color('#3DB7C4');
 const ABOVE_BG = new THREE.Color('#EDF7F7');
@@ -30,10 +31,11 @@ const CAUSTIC = /* glsl */ `
     for (int n = 0; n < 4; n++) {
       float tt = t * (1.0 - (3.5 / float(n + 1)));
       i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));
-      c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten), p.y / (cos(i.y + tt) / inten)));
+      // epsilon guards: avoid 0/0 and inf at the pattern's singular points (NaN would poison bloom)
+      c += 1.0 / max(length(vec2(p.x / (sin(i.x + tt) / inten + 1e-4), p.y / (cos(i.y + tt) / inten + 1e-4))), 1e-3);
     }
-    c /= 4.0; c = 1.17 - pow(c, 1.4);
-    return pow(abs(c), 8.0);
+    c /= 4.0; c = 1.17 - pow(clamp(c, 0.0, 4.0), 1.4);
+    return clamp(pow(abs(c), 8.0), 0.0, 1.6);
   }
 `;
 
@@ -233,8 +235,10 @@ export function createSwimmingScene(quality: QualityTier): HeroScene {
   const bubbleMat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
-    vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 w = modelMatrix * instanceMatrix * vec4(position,1.0); vN = normalize(mat3(modelMatrix * instanceMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.5); gl_FragColor = vec4(vec3(0.92,1.0,1.0), f * 0.9 + 0.06); }`,
+    // NaN guards: dead particles are zero-scaled, so their normals must not be normalised blindly
+    // (NaN samples + MSAA + bloom would black out the whole frame).
+    vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 w = modelMatrix * instanceMatrix * vec4(position,1.0); vec3 n = mat3(modelMatrix * instanceMatrix) * normal; float l = length(n); vN = l > 1e-8 ? n / l : vec3(0.0, 0.0, 1.0); vec3 d = cameraPosition - w.xyz; float dl = length(d); vV = dl > 1e-8 ? d / dl : vec3(0.0, 0.0, 1.0); gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `varying vec3 vN; varying vec3 vV; void main(){ float f = pow(clamp(1.0 - abs(dot(vN, vV)), 0.0, 1.0), 2.5); gl_FragColor = vec4(vec3(0.92,1.0,1.0), clamp(f * 0.9 + 0.06, 0.0, 1.0)); }`,
   });
   const bubbles = new ParticlePool(new THREE.SphereGeometry(1, 12, 8), bubbleMat, quality === 'low' ? 160 : 380);
   bubbles.gravity = 2.2;
@@ -459,7 +463,7 @@ export function createSwimmingScene(quality: QualityTier): HeroScene {
       } else {
         const r = easeInOutCubic(seg(t, 3.1, 4.1));
         exhibitCam(tp, tl, Math.sin(ctx.time * 0.2) * 0.12 + ctx.pointer.x * 0.14);
-        tp.lerp(new THREE.Vector3(0.3, 0.12, 2.6), 1 - r);
+        tp.lerp(BREACH_CAM, 1 - r);
         tp.y += ctx.pointer.y * 0.04;
       }
       if (ctx.scroll > 0) {

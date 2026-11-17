@@ -73,9 +73,19 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
       if (w.requestIdleCallback) w.requestIdleCallback(cb, { timeout: 4000 });
       else window.setTimeout(cb, 2500);
     };
-    window.setTimeout(() => idle(() => e.preload(1)), 4500);
-    window.setTimeout(() => idle(() => e.preload(2)), 7500);
+    preloadTimers.current.push(
+      window.setTimeout(() => idle(() => engine.current === e && e.preload(1)), 4500),
+      window.setTimeout(() => idle(() => engine.current === e && e.preload(2)), 7500),
+    );
   }, []);
+  const preloadTimers = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      preloadTimers.current.forEach((t) => window.clearTimeout(t));
+      engine.current = null;
+    },
+    [],
+  );
   const loaderDoneRef = useRef(false);
   loaderDoneRef.current = loaderDone;
 
@@ -277,13 +287,12 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
               </button>
             </div>
             <div className="mt-5 flex items-center justify-between">
-              <div className="flex gap-1.5" role="tablist" aria-label="Choose sport">
+              <div className="flex gap-1.5" role="group" aria-label="Choose sport">
                 {heroSlides.map((s, i) => (
                   <button
                     key={s.id}
                     type="button"
-                    role="tab"
-                    aria-selected={i === index}
+                    aria-current={i === index ? 'true' : undefined}
                     aria-label={s.word}
                     onClick={() => go(i, i > index ? 1 : -1)}
                     className="pointer-events-auto flex h-8 items-center"

@@ -55,7 +55,7 @@ export function ProductCard({
         type="button"
         onClick={() => toggle(p.slug)}
         aria-pressed={hydrated ? wished : false}
-        aria-label={`${hydrated && wished ? 'Remove' : 'Save'} ${p.name} ${hydrated && wished ? 'from' : 'to'} wishlist`}
+        aria-label={`Save ${p.name} to wishlist`}
         className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-full text-ink/70 transition-colors hover:text-orange"
       >
         <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-orange' : ''} />
@@ -70,20 +70,29 @@ export function ProductCard({
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           <span className="mono text-[14px] font-semibold">{formatPrice(p.price)}</span>
           {p.colors.length > 1 && (
-            <div className="flex gap-1" role="radiogroup" aria-label="Colour">
+            <fieldset className="flex gap-1">
+              <legend className="sr-only">Colour for {p.name}</legend>
               {p.colors.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={c.id === color}
-                  aria-label={c.name}
-                  onClick={() => setColor(c.id)}
-                  className={`h-5 w-5 rounded-full border transition-transform ${c.id === color ? 'scale-110 border-ink' : 'border-line'}`}
-                  style={{ background: `linear-gradient(135deg, ${c.swatch[0]} 50%, ${c.swatch[1] ?? c.swatch[0]} 50%)` }}
-                />
+                <label key={c.id} className="relative cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`color-${p.slug}`}
+                    value={c.id}
+                    checked={c.id === color}
+                    onChange={() => setColor(c.id)}
+                    className="peer sr-only"
+                  />
+                  <span className="sr-only">{c.name}</span>
+                  <span
+                    aria-hidden
+                    className={`block h-5 w-5 rounded-full border transition-transform peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${
+                      c.id === color ? 'scale-110 border-ink' : 'border-line'
+                    }`}
+                    style={{ background: `linear-gradient(135deg, ${c.swatch[0]} 50%, ${c.swatch[1] ?? c.swatch[0]} 50%)` }}
+                  />
+                </label>
               ))}
-            </div>
+            </fieldset>
           )}
         </div>
       </div>

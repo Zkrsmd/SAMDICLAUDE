@@ -372,6 +372,7 @@ export class HeroEngine {
         this.degradeLevel++;
         if (this.degradeLevel === 1) this.events.onDegrade?.();
         else {
+          this.composer?.dispose();
           this.composer = null;
           this.renderer.toneMapping = THREE.NeutralToneMapping;
           for (const sc of this.scenes) sc?.degrade?.();

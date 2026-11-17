@@ -41,7 +41,7 @@ export function CartDrawer() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-5" aria-live="polite" aria-busy={loading}>
-          <CartLines quote={data} compact />
+          <CartLines quote={data} compact failed={!!error} />
           {error && <p className="py-4 text-[14px] text-red-700">{error}</p>}
         </div>
         <div className="border-t border-line p-5">

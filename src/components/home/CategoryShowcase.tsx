@@ -38,6 +38,7 @@ function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm';
       aria-label={`${s.name} — ${s.count} products`}
     >
       <div aria-hidden className="world-fx absolute inset-0 -z-10" />
+      {w.ink === '#FFFFFF' && <div aria-hidden className="world-scrim absolute inset-0 -z-[9]" />}
       <span
         aria-hidden
         className={`display absolute -z-[5] select-none whitespace-nowrap leading-[0.78] ${size === 'sm' ? 'bottom-3 left-3' : 'left-4 top-[16%]'}`}
@@ -64,7 +65,11 @@ function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm';
         </div>
       )}
       <div className={`absolute inset-x-0 bottom-0 flex items-end justify-between p-4 ${size === 'sm' ? 'top-0 flex-col items-start justify-start' : ''}`}>
-        {size !== 'sm' && <p className="max-w-[18ch] text-[15px] font-medium" style={{ color: w.ink }}>{s.tagline}</p>}
+        {size !== 'sm' && (
+          <p className={`max-w-[18ch] text-[15px] font-medium ${w.ink === '#FFFFFF' ? 'on-light-world' : ''}`} style={{ color: w.ink }}>
+            {s.tagline}
+          </p>
+        )}
         <span
           className={`mono inline-flex items-center gap-2 rounded-[2px] bg-white/90 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink backdrop-blur ${size === 'sm' ? '' : ''}`}
         >

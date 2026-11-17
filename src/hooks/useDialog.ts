@@ -1,10 +1,14 @@
 'use client';
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /** Escape-to-close, focus trap, focus restore and scroll lock for modal surfaces. */
 export function useDialog(ref: RefObject<HTMLElement | null>, open: boolean, onClose: () => void) {
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
     const el = ref.current;
@@ -18,7 +22,7 @@ export function useDialog(ref: RefObject<HTMLElement | null>, open: boolean, onC
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        close.current();
       }
       if (e.key === 'Tab' && el) {
         const items = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((n) => n.offsetParent !== null);
@@ -41,5 +45,5 @@ export function useDialog(ref: RefObject<HTMLElement | null>, open: boolean, onC
       document.documentElement.style.overflow = prevOverflow;
       previouslyFocused?.focus?.();
     };
-  }, [open, ref, onClose]);
+  }, [open, ref]);
 }

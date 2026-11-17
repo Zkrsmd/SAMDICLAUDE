@@ -10,21 +10,25 @@ export function FloatingCollection({ items, title }: { items: CardData[]; title:
   const band = useRef<HTMLUListElement>(null);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = band.current;
+    if (!el) return;
     let raf = 0;
     const loop = () => {
-      const el = band.current;
-      if (el) {
-        const r = el.getBoundingClientRect();
-        const p = (window.innerHeight - r.top) / (window.innerHeight + r.height);
-        [...el.children].forEach((c, i) => {
-          const y = Math.sin(p * Math.PI * 2 + i * 1.3) * 18;
-          (c as HTMLElement).style.setProperty('--fy', `${y}px`);
-        });
-      }
+      const r = el.getBoundingClientRect();
+      const p = (window.innerHeight - r.top) / (window.innerHeight + r.height);
+      const kids = el.children;
+      for (let i = 0; i < kids.length; i++) (kids[i] as HTMLElement).style.setProperty('--fy', `${Math.sin(p * Math.PI * 2 + i * 1.3) * 18}px`);
       raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    const io = new IntersectionObserver(([e]) => {
+      cancelAnimationFrame(raf);
+      if (e?.isIntersecting) raf = requestAnimationFrame(loop);
+    });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, []);
   return (
     <section aria-labelledby="coll-title" className="relative overflow-hidden py-16" style={{ background: 'radial-gradient(70% 90% at 50% 40%, #FFFFFF, #EFEEE8)' }}>

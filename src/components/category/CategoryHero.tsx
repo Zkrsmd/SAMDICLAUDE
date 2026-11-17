@@ -38,7 +38,11 @@ export function CategoryHero({
       className={`world ${w.cls} relative isolate overflow-hidden [container-type:inline-size] ${compact ? 'min-h-[62svh]' : 'min-h-[86svh]'} md:min-h-[72vh]`}
     >
       <div aria-hidden className="world-fx absolute inset-0 -z-10" />
-      <div className="container-x relative flex h-full min-h-[inherit] flex-col pb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 80px)' }}>
+      {light && <div aria-hidden className="world-scrim absolute inset-0 -z-[9]" />}
+      <div
+        className={`container-x relative flex h-full min-h-[inherit] flex-col pb-8 ${light ? 'on-light-world' : ''}`}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 80px)' }}
+      >
         <Breadcrumbs items={crumbs} light={light} />
         <h1
           className="display relative z-0 mt-6 whitespace-nowrap leading-[0.8]"

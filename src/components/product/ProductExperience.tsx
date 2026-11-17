@@ -1,6 +1,6 @@
 'use client';
 import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ProductImage } from './ProductImage';
@@ -9,11 +9,13 @@ import { useCart } from '@/stores/cart';
 import { useRecent, useWishlist } from '@/stores/lists';
 import { useTransitionStore, useUi } from '@/stores/ui';
 import { useHydrated } from '@/hooks/useHydrated';
+import { useDialog } from '@/hooks/useDialog';
 import { formatPrice, renderUrl, type RenderAngle } from '@/lib/format';
 import type { Product } from '@/types/catalog';
 import type { Preset, ViewerState } from './ProductViewer';
 
 const ProductViewer = dynamic(() => import('./ProductViewer'), { ssr: false });
+const NO_OPTIONS = {};
 
 const CHAPTER_PRESETS: Record<string, Preset[]> = {
   boot: ['side', 'top', 'sole', 'detail'],
@@ -33,11 +35,9 @@ export function ProductExperience({
   sportName: string;
   subName: string;
 }) {
-  const params = useSearchParams();
   const router = useRouter();
   const hydrated = useHydrated();
-  const initialColor = product.colors.find((c) => c.id === params.get('color'))?.id ?? product.colors[0]!.id;
-  const [colorId, setColorId] = useState(initialColor);
+  const [colorId, setColorId] = useState(product.colors[0]!.id);
   const [size, setSize] = useState<string | null>(product.sizes.length === 1 ? product.sizes[0]! : null);
   const [qty, setQty] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +69,9 @@ export function ProductExperience({
   const purchase = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const imgSlot = useRef<HTMLDivElement>(null);
+  const inspectRef = useRef<HTMLDivElement>(null);
+  useDialog(inspectRef, inspect, () => setInspect(false));
+  const modelOptions = product.model.options ?? NO_OPTIONS;
 
   const chapters = [
     { title: 'The silhouette', text: product.short },
@@ -78,9 +81,12 @@ export function ProductExperience({
   useEffect(() => {
     pushRecent(product.slug);
     setPending(null);
+    // ?color= deep links (read after mount so the page itself stays statically rendered)
+    const wanted = new URLSearchParams(window.location.search).get('color');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (wanted && product.colors.some((c) => c.id === wanted)) setColorId(wanted);
     try {
       const c = document.createElement('canvas');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWebgl(!!(c.getContext('webgl2') ?? c.getContext('webgl')));
     } catch {
       setWebgl(false);
@@ -172,7 +178,7 @@ export function ProductExperience({
   const addToCart = (buyNow = false) => {
     if (!size) {
       setError('Please choose a size.');
-      document.getElementById('size-group')?.focus();
+      document.querySelector<HTMLInputElement>('input[name="pdp-size"]')?.focus();
       return false;
     }
     setError(null);
@@ -193,7 +199,7 @@ export function ProductExperience({
         <div ref={stage} className="sticky top-0 h-[100svh] overflow-hidden" style={{ background: 'radial-gradient(90% 60% at 50% 45%, #FFFFFF, #F1EFE9 70%)' }}>
           <div className="absolute inset-x-0 top-[56px] bottom-[18svh] lg:bottom-0 lg:top-[64px]">
             {mode === '3d' && webgl ? (
-              <ProductViewer kind={product.model.kind} options={product.model.options ?? {}} palette={color.palette} state={viewer} inspect={false} yawRef={yaw} />
+              <ProductViewer kind={product.model.kind} options={modelOptions} palette={color.palette} state={viewer} inspect={false} yawRef={yaw} />
             ) : (
               <div className="relative h-full w-full">
                 <ProductImage slug={product.slug} colorId={colorId} angle={angles[chapter % angles.length]} alt={`${brandName} ${product.name}`} priority sizes="(max-width:1024px) 100vw, 55vw" />
@@ -236,7 +242,7 @@ export function ProductExperience({
               </button>
             </div>
           )}
-          <p className="eyebrow pointer-events-none absolute bottom-[19svh] left-1/2 -translate-x-1/2 text-ink/45 lg:bottom-6">
+          <p className="eyebrow pointer-events-none absolute bottom-[19svh] left-1/2 -translate-x-1/2 text-ink/70 lg:bottom-6">
             {mode === '3d' ? 'Drag to rotate' : `View ${chapter + 1} of ${angles.length}`}
           </p>
         </div>
@@ -281,32 +287,36 @@ export function ProductExperience({
               </legend>
               <div className="mt-3 flex flex-wrap gap-2">
                 {product.colors.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    aria-pressed={c.id === colorId}
-                    aria-label={c.name}
-                    onClick={() => setColorId(c.id)}
-                    className="h-11 w-11 rounded-full border-2 p-0.5 transition-transform aria-pressed:scale-110 aria-pressed:border-ink"
-                    style={{ borderColor: c.id === colorId ? undefined : 'var(--color-line)' }}
-                  >
-                    <span className="block h-full w-full rounded-full" style={{ background: `conic-gradient(${c.swatch[0]} 0 50%, ${c.swatch[1] ?? c.swatch[0]} 50% 75%, ${c.swatch[2] ?? c.swatch[0]} 75%)` }} />
-                  </button>
+                  <label key={c.id} className="cursor-pointer">
+                    <input type="radio" name="pdp-colour" value={c.id} checked={c.id === colorId} onChange={() => setColorId(c.id)} className="peer sr-only" />
+                    <span className="sr-only">{c.name}</span>
+                    <span
+                      aria-hidden
+                      className={`block h-11 w-11 rounded-full border-2 p-0.5 transition-transform peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${
+                        c.id === colorId ? 'scale-110 border-ink' : 'border-line'
+                      }`}
+                    >
+                      <span className="block h-full w-full rounded-full" style={{ background: `conic-gradient(${c.swatch[0]} 0 50%, ${c.swatch[1] ?? c.swatch[0]} 50% 75%, ${c.swatch[2] ?? c.swatch[0]} 75%)` }} />
+                    </span>
+                  </label>
                 ))}
               </div>
             </fieldset>
 
             <fieldset className="mt-6">
               <legend className="eyebrow text-muted">Size {size ? <span className="text-ink">— {size}</span> : null}</legend>
-              <div id="size-group" tabIndex={-1} className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6" role="radiogroup" aria-label="Size" aria-invalid={!!error}>
+              <div id="size-group" tabIndex={-1} className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6" aria-invalid={!!error} aria-describedby={error ? 'size-error' : undefined}>
                 {product.sizes.map((s) => (
-                  <button key={s} type="button" role="radio" aria-checked={size === s} onClick={() => setSize(s)} className="chip h-11 justify-center px-1 text-[13px]" data-active={size === s}>
-                    {s}
-                  </button>
+                  <label key={s} className="cursor-pointer">
+                    <input type="radio" name="pdp-size" value={s} checked={size === s} onChange={() => setSize(s)} className="peer sr-only" />
+                    <span className="chip h-11 w-full justify-center px-1 text-[13px] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink" data-active={size === s}>
+                      {s}
+                    </span>
+                  </label>
                 ))}
               </div>
               {error && (
-                <p role="alert" className="mt-2 text-[14px] text-red-700">
+                <p id="size-error" role="alert" className="mt-2 text-[14px] text-red-700">
                   {error}
                 </p>
               )}
@@ -331,7 +341,7 @@ export function ProductExperience({
                 type="button"
                 className="grid h-12 w-12 place-items-center border border-line"
                 aria-pressed={hydrated ? wished : false}
-                aria-label={hydrated && wished ? 'Remove from wishlist' : 'Save to wishlist'}
+                aria-label="Save to wishlist"
                 onClick={() => toggleWish(product.slug)}
               >
                 <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-orange' : ''} />
@@ -433,8 +443,8 @@ export function ProductExperience({
       </div>
 
       {inspect && (
-        <div role="dialog" aria-modal="true" aria-label="Inspect product in 3D" className="fixed inset-0 z-[90] bg-[#F4F2EC]">
-          <ProductViewer kind={product.model.kind} options={product.model.options ?? {}} palette={color.palette} state={viewer} inspect yawRef={yaw} />
+        <div ref={inspectRef} role="dialog" aria-modal="true" aria-label="Inspect product in 3D" className="fixed inset-0 z-[90] bg-[#F4F2EC]">
+          <ProductViewer kind={product.model.kind} options={modelOptions} palette={color.palette} state={viewer} inspect yawRef={yaw} />
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
             <p className="eyebrow text-muted">Drag to orbit · pinch or scroll to zoom</p>
             <button type="button" className="btn btn-ink h-11 px-4" onClick={() => setInspect(false)} autoFocus>

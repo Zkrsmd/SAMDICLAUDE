@@ -1,6 +1,7 @@
 'use client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@/components/ui/Icon';
 import { FAMILY_SWATCH } from '@/lib/color';
 import { useDialog } from '@/hooks/useDialog';
@@ -21,6 +22,11 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const sheet = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
   useDialog(sheet, open, () => setOpen(false));
 
   const get = (k: string) => (params.get(k) ?? '').split(',').filter(Boolean);
@@ -94,6 +100,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
           <label className="sr-only" htmlFor="pmin">Minimum price</label>
           <input
             id="pmin"
+            key={`min-${active.min}`}
             inputMode="decimal"
             placeholder={String(Math.floor(facets.priceRange[0] / 100))}
             defaultValue={active.min}
@@ -104,6 +111,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
           <label className="sr-only" htmlFor="pmax">Maximum price</label>
           <input
             id="pmax"
+            key={`max-${active.max}`}
             inputMode="decimal"
             placeholder={String(Math.ceil(facets.priceRange[1] / 100))}
             defaultValue={active.max}
@@ -151,6 +159,8 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
         </div>
       )}
 
+      {mounted &&
+        createPortal(
       <div aria-hidden={!open} inert={!open} className={`fixed inset-0 z-[75] ${open ? '' : 'pointer-events-none'}`}>
         <div className={`absolute inset-0 bg-ink/30 transition-opacity duration-500 ${open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setOpen(false)} />
         <div
@@ -179,7 +189,9 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+          document.body,
+        )}
     </div>
   );
 }

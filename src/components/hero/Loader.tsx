@@ -29,8 +29,9 @@ export function Loader({ progress, onDone, active }: { progress: number; onDone:
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) minMs.current = 0;
   }, []);
 
-  // smooth counter
+  // smooth counter (stops once the loader has finished)
   useEffect(() => {
+    if (gone) return;
     let raf = 0;
     const loop = () => {
       setShown((s) => {
@@ -43,7 +44,7 @@ export function Loader({ progress, onDone, active }: { progress: number; onDone:
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [gone]);
 
   const finish = (skip: boolean) => {
     if (done.current) return;
@@ -63,8 +64,7 @@ export function Loader({ progress, onDone, active }: { progress: number; onDone:
   return (
     <div
       role="status"
-      aria-live="polite"
-      aria-label={`Loading ${pct}%`}
+      aria-label="Loading"
       className={`fixed inset-0 z-[95] flex flex-col overflow-hidden bg-[#F6F4EE] transition-opacity duration-[900ms] ease-[var(--ease-expo)] ${
         leaving ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
@@ -124,8 +124,12 @@ export function Loader({ progress, onDone, active }: { progress: number; onDone:
 
       <div className="container-x relative pb-8">
         <div className="flex items-end justify-between">
-          <span className="display text-[64px] leading-none text-ink tabular-nums">{String(pct).padStart(3, '0')}</span>
-          <span className="eyebrow pb-2 text-muted">{progress < 1 ? 'Preparing the studio' : 'Entering'}</span>
+          <span aria-hidden className="display text-[64px] leading-none text-ink tabular-nums">
+            {String(pct).padStart(3, '0')}
+          </span>
+          <span className="eyebrow pb-2 text-muted" aria-live="polite">
+            {progress < 1 ? 'Preparing the studio' : 'Entering'}
+          </span>
         </div>
         <div className="mt-3 h-px w-full bg-ink/10">
           <div className="h-px bg-ink" style={{ width: `${pct}%` }} />

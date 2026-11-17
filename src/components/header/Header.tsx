@@ -48,7 +48,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
     <>
       <header
         data-over-hero={overHero}
-        className={`fixed inset-x-0 top-0 z-50 transition-[transform,background-color,box-shadow] duration-500 ease-[var(--ease-expo)] ${
+        className={`fixed inset-x-0 top-0 z-50 transition-[transform,background-color,box-shadow] duration-500 ease-[var(--ease-expo)] focus-within:translate-y-0 ${
           hidden ? '-translate-y-full' : 'translate-y-0'
         } ${overHero ? 'bg-transparent' : 'bg-bg/85 shadow-[0_1px_0_rgb(23_26_24/0.08)] backdrop-blur-xl'}`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -125,8 +125,8 @@ export function Header({ nav }: { nav: NavSport[] }) {
 function Badge({ n, accent }: { n: number; accent?: boolean }) {
   return (
     <span
-      className={`mono absolute right-1 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-semibold text-white ${
-        accent ? 'bg-orange' : 'bg-ink'
+      className={`mono absolute right-1 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold ${
+        accent ? 'bg-orange text-ink' : 'bg-ink text-white'
       }`}
     >
       {n > 99 ? '99' : n}
