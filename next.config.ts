@@ -47,6 +47,8 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 90],
     deviceSizes: [360, 414, 640, 828, 1080, 1280, 1600, 1920],
+    // static snapshot (scripts/snapshot.mjs) has no image optimizer: serve the files as they are
+    unoptimized: process.env.SMADI_STATIC === '1',
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

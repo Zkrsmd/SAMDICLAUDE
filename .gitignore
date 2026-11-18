@@ -28,3 +28,6 @@ npm-debug.log*
 # local tooling
 .venv-tools/
 /media-src/
+
+# artifact preview snapshot
+/.snapshot/
