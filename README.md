@@ -1,14 +1,21 @@
 # SMADI — immersive sports store (prototype)
 
-A mobile-first sports equipment store presented like a cinematic campaign. A holographic loader
-(SMADI hand mark, live counter) splits open and fog clears over a full-bleed hero. The hero has three
-sports (football, boxing, swimming) on real media: AI video when supplied, campaign stills until
-then. Slides change with slanted wipes and light sweeps, the sport word slams in letter by letter, and
-the real product floats in front.
+A mobile-first sports equipment store presented like a cinematic campaign, in a bright, white-led studio look.
+A holographic loader (SMADI hand mark, live counter) splits open, and the hand mark flies into the header.
+The hero then plays four **coded films**: real product cut-outs choreographed in canvas 2D, with no video files and no 3D.
+- **Football:** the strike, through turf.
+- **Boxing:** the hook, with sweat in slow motion.
+- **Swimming:** the dive and splash.
+- **Basketball:** the bounce, with a floor reflection.
 
-Below the hero: a glossy-ink drip, the official brand logos, "Choose your arena" sport worlds, a lit
-showroom wall, product pages with a floating photo stage, and a full shopping flow. The flow has a
-server-priced cart, search, filters, wishlist and a **demonstration** checkout.
+Each film uses camera moves, shake, slow-motion impacts, closed-form particle physics, light shafts and specular sweeps. A giant white embossed sport word rolls behind the product.
+
+Below the hero:
+- glossy holo liquid that drips with real gooey merging and specular lighting
+- official brand logos
+- "Choose your arena" cards that light up with the campaign photo
+- tilt plates and best sellers
+- the full shopping flow, with a **demonstration** checkout
 
 ## Quick start
 
@@ -38,12 +45,12 @@ npx next start -p 3100
 E2E_BASE_URL=http://localhost:3100 npm run test:e2e
 ```
 
-## Adding the hero videos
+## The hero films
 
-1. Copy the generated clips (see `VIDEO_PROMPTS.md`) into `public/media/`, e.g. `football-strike.mp4`.
-2. Set `video` (and optionally `videoMobile`) for the slide in `src/config/hero.ts`.
-
-The still `poster` stays as the first frame and as the fallback. Category cards read `categoryMedia` in the same file.
+Each film lives in `src/components/hero/cinema/scenes.ts` as a pure function of time, so any frame can be scrubbed.
+The projector is `Cinema.tsx` and the toolkit is `core.ts`; slides are listed in `src/config/hero.ts`.
+In development, set `window.__heroT = 0.7` in the console to freeze a frame.
+`node scripts/film-frames.mjs --out=dir` renders frame strips of all four films for review.
 
 ## Adding your own products
 
@@ -66,8 +73,8 @@ py -3 -m venv .venv-tools
 
 ## What's inside
 
-- **Hero** (`src/components/hero/*`, `src/config/hero.ts`): media layers, clip-path wipes, autoplay chapter bars,
-  swipe (direction-locked, vertical scroll stays native), arrows, keys, pointer parallax, scroll zoom.
+- **Hero** (`src/components/hero/*`, `src/config/hero.ts`): coded canvas films, whip-pan cuts, word reel, viewfinder + timecode,
+  autoplay chapter bars, swipe (direction-locked, vertical scroll stays native), arrows, keys, pointer parallax, scroll zoom.
 - **Effects** (`src/app/globals.css`, `src/components/layout/Effects.tsx`): holographic conic borders, holo buttons and text,
   frosted glass, film grain, cursor spotlight, scroll reveals.
 - **Header**: a floating glass pill with an animated holo glow. It follows on scroll and tightens; the bag count pops.
@@ -82,7 +89,7 @@ py -3 -m venv .venv-tools
 
 - 129 example products from 8 brands are listed, with official product photos and list prices from the brands' own stores.
   They exist to fill the demo; replace them with your own products, prices and photos before launch. See `ASSET_MANIFEST.md`.
-- The hero and category media are AI-generated stills supplied by the owner. The hero videos are pending.
+- The category card photos are AI-generated stills supplied by the owner. The hero needs no video: its films are code.
 - No payment provider is integrated; the checkout is clearly labelled as a demonstration.
 
 Docs: `CLAUDE.md`, `DECISIONS.md`, `RESEARCH.md`, `SECURITY.md`, `ASSET_MANIFEST.md`, `VIDEO_PROMPTS.md`.

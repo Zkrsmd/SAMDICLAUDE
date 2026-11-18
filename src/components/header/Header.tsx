@@ -50,7 +50,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
     <>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
         <div
-          className={`holo-border glass pointer-events-auto flex w-full items-center gap-2 rounded-full pl-4 pr-1.5 transition-all duration-700 ease-[var(--ease-expo)] ${
+          className={`holo-border glass-strong pointer-events-auto flex w-full items-center gap-2 rounded-full pl-4 pr-1.5 transition-all duration-700 ease-[var(--ease-expo)] ${
             scrolled ? 'h-14 max-w-[1040px]' : 'h-16 max-w-[1240px]'
           }`}
           style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}
@@ -68,7 +68,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
                   href={`/${s.slug}`}
                   aria-current={active ? 'page' : undefined}
                   className={`group relative rounded-full px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                    active ? 'bg-ink text-white' : 'text-ink/75 hover:text-ink'
+                    active ? 'bg-white text-ink shadow-[0_4px_14px_-6px_rgba(23,26,24,0.4)] ring-1 ring-ink/10' : 'text-ink/75 hover:text-ink'
                   }`}
                 >
                   <span className="relative z-10">{s.name}</span>
@@ -91,7 +91,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
             <button
               type="button"
               id="cart-button"
-              className={`relative grid h-11 w-11 place-items-center rounded-full bg-ink text-white transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
+              className={`holo-border relative grid h-11 w-11 place-items-center rounded-full bg-white text-ink shadow-[0_8px_20px_-10px_rgba(23,26,24,0.45)] transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
               aria-label={`Open bag${hydrated ? `, ${cartCount} items` : ''}`}
               onClick={() => set({ cartOpen: true })}
             >

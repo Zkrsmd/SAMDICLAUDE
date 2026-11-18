@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import type { BrandEntry } from '@/types/catalog';
 
-type B = BrandEntry & { logo?: string };
+type B = BrandEntry & { logo?: string; keepColor?: boolean };
 
 /**
  * Official brand marks drifting in two counter-rows; scroll velocity speeds them up.
@@ -45,7 +45,7 @@ export function Brands({ brands }: { brands: B[] }) {
           src={b.logo}
           alt=""
           draggable={false}
-          className="relative h-9 w-auto max-w-[150px] object-contain opacity-80 transition-all duration-500 [filter:grayscale(1)_brightness(0)] group-hover:scale-110 group-hover:opacity-100 group-hover:[filter:none] md:h-12 md:max-w-[190px]"
+          className={`relative h-9 w-auto max-w-[150px] object-contain opacity-80 transition-all duration-500 group-hover:scale-110 group-hover:opacity-100 group-hover:[filter:none] md:h-12 md:max-w-[190px] ${b.keepColor ? '' : '[filter:grayscale(1)_brightness(0)]'}`}
         />
       ) : (
         <span

@@ -6,8 +6,8 @@ campaign and a real store at once. Real product photos (background removed) and 
 (the owner rejected the procedural/"comic" look).
 
 ## Non-negotiable visual rules
-- Page is predominantly **bright** (`#FAFAF7`, white, stone, ink `#171A18`); cinematic dark media lives only inside
-  the hero, category headers and image cards. Never a dark/neon site overall.
+- Page is **white-led** (`#FAFAF7`, white, stone, ink `#171A18` for text only). Buttons, header and hero are light; dark
+  photography appears only in category headers and when a card lights up. Never a dark/neon site.
 - Effects language: animated holographic conic borders (`.holo-border`, `.holo-ring`), `.btn-holo`, `.holo-text`,
   frosted `.glass`, film grain, cursor spotlight, `[data-reveal]` scroll reveals. Use these, don't invent new gradients.
 - Type: Unbounded (display, uppercase, heavy), Sora (body), Geist Mono (labels). No Inter/Arial.
@@ -18,7 +18,8 @@ campaign and a real store at once. Real product photos (background removed) and 
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
-- Hero/category media and video slots: `src/config/hero.ts` (drop MP4s in `public/media/`).
+- Hero = coded canvas films (`src/components/hero/cinema/*`, pure functions of time; `window.__heroT` freezes a frame in dev,
+  `scripts/film-frames.mjs` renders strips). Slides + category photos: `src/config/hero.ts`.
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 

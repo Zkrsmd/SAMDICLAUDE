@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11-18 (later) — White-led homepage and coded hero films
+The owner asked for a lighter, white-led palette, "cinematic-level" hero motion (crazy movement, drops, sweat, lighting)
+for football, boxing, swimming and basketball, and asked whether the videos could be made purely in code. They can:
+- **Hero = coded films.** Each scene is a pure function of time drawing real cut-outs in canvas 2D. It has an ACTION intro (impact frame, slow-motion
+  warp, camera punch, handheld shake via value noise, white flash, anamorphic streak) and then settles into an idle EXHIBIT loop
+  (float, light sweep, glints, drips, dribble, jabs).
+  - Particles are closed-form (position = p0 + v·t + ½·g·t²), so frames can be scrubbed and no state is kept per frame.
+  - Motion blur is drawn as ghost copies with increasing canvas blur.
+  - Chosen over WebGL because it keeps the real photos crisp, needs no 3D models, works with WebGL disabled and is light on phones.
+- **Cuts** whip-pan the outgoing film off-screen under racing light bands. The word slams in on each film's impact frame (`wordAt`).
+- **Word** = raised white letters (pearl gradient + studio shadow + a breath of sport colour) on a slow reel. It gives drama from light, not black.
+- **Drip** = holo liquid with real gooey merging (SVG blur + alpha threshold) and an feSpecularLighting gloss pass. Drops neck and let go.
+  The earlier solid-colour canvas drips read as cartoon goo.
+- **Cards** stay bright. The campaign photo "switches on" as a circle from the cursor (on touch: when centred), and the icon plates tilt with glare.
+- **Buttons/header** went white: holo-edged white pills instead of black.
+
 ## 2026-11-18 — Pivot: real products and real media, no 3D
 The owner rejected the procedural 3D look ("looks like comics") and asked for realistic product photos, AI/stock video,
 real brand logos, ~20 example products per brand, a stronger opening, a floating glowing header, the name **SMADI**

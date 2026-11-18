@@ -1,25 +1,38 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { heroSlides, type HeroSlide } from '@/config/hero';
+import { heroIds, heroSlides } from '@/config/hero';
 import { Icon } from '@/components/ui/Icon';
+import { HandMark } from '@/components/ui/Wordmark';
 import { Loader } from './Loader';
-import { renderUrl } from '@/lib/format';
+import { Cinema, CUT_DELAY, filmAssets } from './cinema/Cinema';
+import { SCENES } from './cinema/scenes';
 import { useReducedMotion } from '@/hooks/useHydrated';
 
-const AUTOPLAY_MS = 8000;
-const WIPE_MS = 1200;
-const HERO_ASSETS = heroSlides.flatMap((s) => [s.poster, renderUrl(s.product.slug)]);
+const AUTOPLAY_MS = 7600;
+const HERO_ASSETS = filmAssets(heroIds);
+
+/** studio light per sport, cross-faded under the film */
+const TINT: Record<string, string> = {
+  football:
+    'radial-gradient(70% 45% at 58% 102%, rgba(93,187,63,.24), transparent 70%), radial-gradient(45% 42% at 88% 4%, rgba(255,196,130,.5), transparent 70%)',
+  boxing:
+    'radial-gradient(42% 62% at 62% -6%, rgba(232,186,96,.55), transparent 70%), radial-gradient(90% 50% at 50% 106%, rgba(120,88,48,.16), transparent 70%)',
+  swimming:
+    'radial-gradient(55% 45% at 25% 6%, rgba(150,235,240,.6), transparent 70%), linear-gradient(180deg, transparent 55%, rgba(46,197,211,.14))',
+  basketball:
+    'radial-gradient(55% 45% at 14% 4%, rgba(255,176,100,.48), transparent 70%), linear-gradient(180deg, transparent 62%, rgba(196,140,90,.16))',
+};
 
 /**
- * Cinematic three-sport hero on real media (video when supplied, still otherwise).
- * Slides change with a slanted clip-path wipe and a light sweep; the sport word slams in
- * letter by letter and the product cut-out flies in. Vertical scroll stays native (pan-y).
+ * Cinematic hero: a bright studio where each sport plays a coded film of the real product
+ * (strike, hook, dive, bounce) with camera moves, slow motion, sweat, splashes and light sweeps,
+ * then settles into a floating exhibit. Vertical scroll stays native (touch-action: pan-y);
+ * arrows, chapter buttons, ←/→ keys and swipes change sport.
  */
 export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, index: number) => void }) {
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [prev, setPrev] = useState<number | null>(null);
   const [dir, setDir] = useState<1 | -1>(1);
   const [ready, setReady] = useState(false);
   const [hover, setHover] = useState(false);
@@ -27,6 +40,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
   const [tick, setTick] = useState(0);
   const section = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const timecode = useRef<HTMLSpanElement>(null);
   const indexRef = useRef(0);
   indexRef.current = index;
   const paused = hover || offscreen || reduced;
@@ -35,28 +49,19 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
     const n = (to + heroSlides.length) % heroSlides.length;
     if (n === indexRef.current) return;
     setDir(d ?? (n > indexRef.current ? 1 : -1));
-    setPrev(indexRef.current);
     setIndex(n);
     setTick((t) => t + 1);
   }, []);
   const next = useCallback(() => go(indexRef.current + 1, 1), [go]);
   const back = useCallback(() => go(indexRef.current - 1, -1), [go]);
 
-  // autoplay
   useEffect(() => {
     if (!ready || paused) return;
     const t = window.setTimeout(next, AUTOPLAY_MS);
     return () => window.clearTimeout(t);
   }, [ready, paused, tick, next]);
 
-  // drop the outgoing layer once the wipe has covered it
-  useEffect(() => {
-    if (prev === null) return;
-    const t = window.setTimeout(() => setPrev(null), WIPE_MS + 100);
-    return () => window.clearTimeout(t);
-  }, [prev, tick]);
-
-  // scroll progress, offscreen pause, pointer parallax (CSS variables — no React state per frame)
+  // scroll progress + offscreen pause (CSS variables, no React state per frame)
   useEffect(() => {
     const el = section.current;
     const st = stage.current;
@@ -73,19 +78,12 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
         onScrollProgress?.(p, indexRef.current);
       });
     };
-    const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return;
-      st.style.setProperty('--px', (e.clientX / window.innerWidth - 0.5).toFixed(3));
-      st.style.setProperty('--py', (e.clientY / window.innerHeight - 0.5).toFixed(3));
-    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('pointermove', onMove, { passive: true });
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('pointermove', onMove);
     };
   }, [onScrollProgress]);
 
@@ -133,13 +131,16 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
 
   const slide = heroSlides[index]!;
   const animate = ready && !reduced;
+  // the word slams in on the film's impact frame
+  const wordDelay = (SCENES[slide.id]?.wordAt ?? 0.5) + (tick > 0 ? CUT_DELAY : 0);
+  const uiDelay = wordDelay + 0.25;
 
   return (
     <section
       ref={section}
       aria-roledescription="carousel"
       aria-label="Featured sports"
-      className="relative h-[165svh] bg-[#07080A]"
+      className="relative h-[165svh] bg-bg"
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight') {
           e.preventDefault();
@@ -150,147 +151,102 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
         }
       }}
     >
-      <h1 className="sr-only">SMADI — sports equipment for football, boxing and swimming</h1>
+      <h1 className="sr-only">SMADI — sports equipment for football, boxing, swimming and basketball</h1>
       <div
         ref={stage}
         data-testid="hero-stage"
-        className="sticky top-0 h-[100svh] w-full select-none overflow-hidden text-white"
+        className="sticky top-0 h-[100svh] w-full select-none overflow-hidden text-ink"
         style={{ touchAction: 'pan-y' }}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
-        {/* media layers: outgoing darkens and drifts, incoming wipes in on a slant */}
-        <div className="absolute inset-0" style={{ transform: 'scale(calc(1 + var(--sp, 0) * 0.12))', transformOrigin: '50% 30%' }}>
-          {heroSlides.map((s, i) => {
-            const isActive = i === index;
-            const isPrev = i === prev;
-            if (!isActive && !isPrev) return null;
-            return (
-              <div
-                key={isActive ? `${s.id}-in-${tick}` : `${s.id}-out-${tick}`}
-                aria-hidden
-                className="absolute inset-0"
-                style={{
-                  zIndex: isActive ? 2 : 1,
-                  animation:
-                    animate && prev !== null
-                      ? isActive
-                        ? `hero-wipe-${dir > 0 ? 'l' : 'r'} ${WIPE_MS}ms cubic-bezier(.77,0,.18,1) both`
-                        : `hero-out ${WIPE_MS}ms cubic-bezier(.77,0,.18,1) both`
-                      : undefined,
-                }}
-              >
-                <Media slide={s} active={isActive} animate={animate} />
-              </div>
-            );
-          })}
-        </div>
+        {/* bright studio cyclorama, lit per sport */}
+        <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(120% 95% at 58% 42%, #FFFFFF 0%, #F7F5F0 44%, #E6E1D6 100%)' }} />
+        {heroSlides.map((s, i) => (
+          <div key={s.id} aria-hidden className="absolute inset-0 transition-opacity duration-[1200ms] ease-out" style={{ background: TINT[s.id], opacity: i === index ? 1 : 0 }} />
+        ))}
 
-        {/* light sweep riding the wipe edge */}
-        {animate && prev !== null && (
+        <div className="absolute inset-0" style={{ transform: 'scale(calc(1 + var(--sp, 0) * 0.1))', transformOrigin: '60% 50%' }}>
+          {/* the sport word as a moving set piece behind the product */}
           <div
-            key={`sweep-${tick}`}
             aria-hidden
-            className="pointer-events-none absolute inset-y-[-10%] left-0 z-[3] w-[28vw]"
-            style={{
-              background: `linear-gradient(90deg, transparent, ${slide.glow}, rgba(255,255,255,.85), ${slide.glow}, transparent)`,
-              filter: 'blur(18px)',
-              mixBlendMode: 'screen',
-              animation: `hero-sweep ${WIPE_MS}ms cubic-bezier(.77,0,.18,1) both`,
-              transform: dir > 0 ? undefined : 'scaleX(-1)',
-            }}
-          />
-        )}
-
-        {/* legibility, vignette, accent glow, grain */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(0,0,0,0.55)_0%,transparent_26%,transparent_50%,rgba(0,0,0,0.8)_100%)]" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-[3] transition-[background] duration-1000"
-          style={{ background: `radial-gradient(55% 45% at 68% 48%, ${slide.glow}, transparent 70%)`, mixBlendMode: 'soft-light' }}
-        />
-
-        {/* giant sport word, behind the product */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-[15%] z-[4] px-2 md:top-[12%]"
-          style={{ transform: 'translate3d(calc(var(--px, 0) * -24px), calc(var(--sp, 0) * -140px), 0)' }}
-        >
-          <WordBlast key={`${slide.id}-${tick}-${ready}`} word={slide.word} animate={animate} />
+            className="pointer-events-none absolute inset-x-0 top-[47%] z-[2] -translate-y-1/2 overflow-hidden md:top-[52%]"
+            style={{ translate: 'var(--shx, 0) var(--shy, 0)' }}
+          >
+            <WordReel key={`${slide.id}-${tick}-${ready}`} word={slide.word} delay={wordDelay} animate={animate} accent={slide.accent} />
+          </div>
+          <Cinema ids={heroIds} index={index} dir={dir} ready={ready} reduced={reduced} stage={stage} timecode={timecode} />
         </div>
 
-        {/* product cut-out */}
-        <div
-          className="pointer-events-none absolute inset-x-[4%] top-[27%] bottom-[33%] z-[5] md:inset-x-auto md:bottom-[14%] md:right-[5%] md:top-[20%] md:w-[46%]"
-          style={{ transform: 'translate3d(calc(var(--px, 0) * 34px), calc(var(--py, 0) * 22px + var(--sp, 0) * -80px), 0)' }}
-        >
-          <div
-            key={`p-${slide.id}-${tick}-${ready}`}
-            className="h-full w-full"
-            style={{ animation: animate ? 'product-in 1.5s .3s cubic-bezier(.16,1,.3,1) both' : undefined, opacity: ready ? undefined : 0 }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={renderUrl(slide.product.slug)}
-              alt=""
-              className="float-product h-full w-full object-contain"
-              style={{ filter: `drop-shadow(0 30px 50px ${slide.glow}) drop-shadow(0 24px 24px rgba(0,0,0,.55))` }}
-              draggable={false}
-            />
-          </div>
+        {/* viewfinder frame */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-3 bottom-3 top-[84px] z-[6] md:inset-x-6 md:bottom-6 md:top-[96px]">
+          {['left-0 top-0 border-l border-t', 'right-0 top-0 border-r border-t', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'].map((c) => (
+            <span key={c} className={`absolute h-5 w-5 border-ink/25 ${c}`} />
+          ))}
         </div>
 
         {/* UI */}
-        <div className="absolute inset-0 z-[6] flex flex-col" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 96px)' }}>
-          <div className="container-x flex items-center justify-between gap-4">
-            <p key={`k-${tick}-${ready}`} className="mono text-[11px] uppercase tracking-[0.22em] text-white/85" style={{ animation: animate ? 'rise-in .8s .2s var(--ease-expo) both' : undefined }}>
-              <span className="holo-text font-bold">{String(index + 1).padStart(2, '0')}</span>
-              <span className="text-white/50"> / {String(heroSlides.length).padStart(2, '0')}</span> — {slide.kicker.split('— ')[1]}
+        <div className="absolute inset-0 z-[7] flex flex-col" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
+          <div className="container-x flex items-start justify-between gap-4">
+            <p key={`k-${tick}-${ready}`} className="mono text-[11px] uppercase tracking-[0.22em] text-ink/70" style={{ animation: animate ? `rise-in .8s ${uiDelay}s var(--ease-expo) both` : undefined }}>
+              <span className="font-bold text-ink">Scene {String(index + 1).padStart(2, '0')}</span>
+              <span className="text-ink/40"> / {String(heroSlides.length).padStart(2, '0')}</span> — {slide.kicker}
             </p>
-            <Link
-              href={`/product/${slide.product.slug}`}
-              className="mono hidden text-[11px] uppercase tracking-[0.18em] text-white/70 underline-offset-4 transition-colors hover:text-white hover:underline md:block"
-            >
-              {slide.product.name}
-            </Link>
+            <p className="mono flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-ink/55" aria-hidden>
+              <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: slide.accent }} />
+              <span ref={timecode} className="tabular-nums">00:00:00:00</span>
+            </p>
           </div>
 
           <div className="flex-1" />
 
-          <div className="container-x pb-[max(22px,env(safe-area-inset-bottom))]" style={{ opacity: ready ? 1 : 0, transition: 'opacity .8s .5s' }}>
-            <div aria-live="polite" aria-atomic="true">
-              <h2 className="sr-only">{slide.word}</h2>
-              <p key={`t-${tick}-${ready}`} className="max-w-[16ch] text-[26px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[40px]" style={{ animation: animate ? 'rise-in .9s .45s var(--ease-expo) both' : undefined }}>
-                {slide.tagline}
-              </p>
+          <div className="container-x pb-[max(22px,env(safe-area-inset-bottom))]">
+            <div className="flex items-end justify-between gap-6">
+              <div aria-live="polite" aria-atomic="true">
+                <h2 className="sr-only">{slide.word}</h2>
+                <p
+                  key={`t-${tick}-${ready}`}
+                  className="max-w-[15ch] text-[28px] font-semibold leading-[1.02] tracking-[-0.03em] md:text-[44px]"
+                  style={{ animation: animate ? `rise-in .9s ${uiDelay}s var(--ease-expo) both` : undefined, opacity: ready ? undefined : 0 }}
+                >
+                  {slide.tagline}
+                </p>
+              </div>
+              <Link
+                href={`/product/${slide.product.slug}`}
+                key={`pl-${tick}-${ready}`}
+                className="glass group hidden max-w-[300px] shrink-0 items-center gap-4 rounded-2xl p-4 pr-5 transition-transform hover:-translate-y-1 lg:flex"
+                style={{ animation: animate ? `rise-in .9s ${uiDelay + 0.1}s var(--ease-expo) both` : undefined }}
+              >
+                <span className="h-10 w-1 rounded-full" style={{ background: slide.accent }} />
+                <span>
+                  <span className="mono block text-[10px] uppercase tracking-[0.18em] text-muted">Featured · {slide.product.brand}</span>
+                  <span className="mt-1 block text-[14px] font-semibold leading-snug">{slide.product.name}</span>
+                  <span className="mono mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em]">
+                    View product <Icon name="arrow-right" size={12} className="transition-transform group-hover:translate-x-1" />
+                  </span>
+                </span>
+              </Link>
             </div>
             <div className="mt-6 flex items-center gap-2.5">
               <Link href={slide.href} className="btn-holo h-14 flex-1 sm:flex-none sm:px-9">
                 {slide.cta} <Icon name="arrow-right" size={18} />
               </Link>
-              <button type="button" onClick={back} aria-label="Previous sport" className="btn-glassy h-14 w-14 shrink-0 !px-0">
+              <button type="button" onClick={back} aria-label="Previous sport" className="btn-glass-light h-14 w-14 shrink-0">
                 <Icon name="arrow-left" size={18} />
               </button>
-              <button type="button" onClick={next} aria-label="Next sport" className="btn-glassy h-14 w-14 shrink-0 !px-0">
+              <button type="button" onClick={next} aria-label="Next sport" className="btn-glass-light h-14 w-14 shrink-0">
                 <Icon name="arrow-right" size={18} />
               </button>
             </div>
 
-            {/* chapter bars with autoplay progress */}
-            <div className="mt-5 flex items-center gap-3" role="group" aria-label="Choose sport">
+            <div className="mt-5 grid grid-cols-4 gap-2.5" role="group" aria-label="Choose sport">
               {heroSlides.map((s, i) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => go(i)}
-                  aria-label={s.word}
-                  aria-current={i === index ? 'true' : undefined}
-                  className="group flex-1 py-2 text-left"
-                >
-                  <span className={`mono mb-2 block text-[10px] uppercase tracking-[0.2em] transition-colors ${i === index ? 'text-white' : 'text-white/45 group-hover:text-white/80'}`}>
-                    {s.word}
+                <button key={s.id} type="button" onClick={() => go(i)} aria-label={s.word} aria-current={i === index ? 'true' : undefined} className="group py-2 text-left">
+                  <span className={`mono mb-2 block truncate text-[9.5px] uppercase tracking-[0.18em] transition-colors md:text-[10px] ${i === index ? 'text-ink' : 'text-ink/40 group-hover:text-ink/75'}`}>
+                    {String(i + 1).padStart(2, '0')} {s.word}
                   </span>
-                  <span className="block h-[3px] overflow-hidden rounded-full bg-white/20">
+                  <span className="block h-[3px] overflow-hidden rounded-full bg-ink/10">
                     <span
                       key={`${s.id}-${tick}-${paused}-${ready}`}
                       className="block h-full rounded-full"
@@ -312,52 +268,43 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
   );
 }
 
-function Media({ slide, active, animate }: { slide: HeroSlide; active: boolean; animate: boolean }) {
-  const [failed, setFailed] = useState(false);
-  const hasVideo = Boolean(slide.video || slide.videoMobile) && !failed;
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      {hasVideo ? (
-        <video className="h-full w-full object-cover" autoPlay muted loop playsInline preload="auto" poster={slide.poster} onError={() => setFailed(true)}>
-          {slide.videoMobile && <source src={slide.videoMobile} media="(max-width: 767px)" type="video/mp4" />}
-          {slide.video && <source src={slide.video} type="video/mp4" />}
-        </video>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={slide.poster}
-          alt=""
-          className="h-full w-full object-cover"
-          style={{ animation: active && animate ? 'ken-burns 16s ease-out both' : undefined, transformOrigin: '60% 45%' }}
-          draggable={false}
-        />
-      )}
-    </div>
-  );
-}
-
-/** The sport word slams in letter by letter: outlined, with a white-to-glass fill. */
-function WordBlast({ word, animate }: { word: string; animate: boolean }) {
+/**
+ * The sport word repeated on a slow reel: raised white letters (pearl gradient, soft studio
+ * shadow, a breath of the sport's colour at the foot) — drama from light, not from black.
+ * The first visible pass slams in letter by letter on the film's impact frame.
+ */
+function WordReel({ word, delay, animate, accent }: { word: string; delay: number; animate: boolean; accent: string }) {
   const letters = word.toUpperCase().split('');
+  const fill = `linear-gradient(180deg, #FFFFFF 6%, #EEEAE2 42%, #D3CCBF 74%, ${accent} 128%)`;
   return (
-    <div className="[container-type:inline-size]">
-      <div className="display whitespace-nowrap text-center leading-[0.82]" style={{ filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.35))', fontSize: `${Math.min(20, 96 / letters.length)}cqw` }}>
-        {letters.map((ch, i) => (
-          <span
-            key={i}
-            className="inline-block"
-            style={{
-              animation: animate ? `letter-slam .95s ${0.12 + i * 0.055}s cubic-bezier(.16,1,.3,1) both` : undefined,
-              color: 'transparent',
-              backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, rgba(255,255,255,0.92) 40%, rgba(255,255,255,0.25) 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-            }}
-          >
-            {ch}
-          </span>
-        ))}
-      </div>
+    <div
+      className="display flex w-max whitespace-nowrap leading-[0.8]"
+      style={{
+        fontSize: 'clamp(150px, 30svh, 330px)',
+        animation: animate ? `reel 60s ${delay}s linear infinite` : undefined,
+        filter: 'drop-shadow(0 28px 34px rgba(23,26,24,0.22)) drop-shadow(0 3px 2px rgba(23,26,24,0.14))',
+      }}
+    >
+      {[0, 1, 2, 3].map((c) => (
+        <span key={c} className="flex items-center">
+          {letters.map((ch, i) => (
+            <span
+              key={i}
+              className="inline-block"
+              style={{
+                color: 'transparent',
+                backgroundImage: c % 2 ? 'linear-gradient(180deg, rgba(23,26,24,0.09), rgba(23,26,24,0.04))' : fill,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                animation: animate ? `letter-slam .85s ${delay + (c === 0 ? i * 0.045 : 0.35 + i * 0.02)}s cubic-bezier(.16,1,.3,1) both` : undefined,
+              }}
+            >
+              {ch}
+            </span>
+          ))}
+          <HandMark className="mx-[0.2em] h-[0.42em] w-[0.42em] opacity-90" glow={false} />
+        </span>
+      ))}
     </div>
   );
 }

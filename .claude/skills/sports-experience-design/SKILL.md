@@ -10,10 +10,10 @@ Any UI, layout, typography, colour or motion change in `src/components`, `src/ap
 
 ## Standards
 - Bright first: bg `#FAFAF7`, white, stone `#EFEEE8`, ink `#171A18`. No dark sections beyond small ink elements.
-- Each sport has a material world (`.world-turf`, `.world-gym`, `.world-water`, …). Accent = light/material, not boxes.
-- Display type: Big Shoulders, uppercase, fitted to its container (use `cqw`). The word is part of the composition.
-- Labels: Geist Mono `.eyebrow`. Body: Instrument Sans. Never Inter/Arial.
-- Sharp 2px corners, hairlines, `.placard`. Vary card sizes; avoid identical rounded card grids.
+- Each sport has a light, not a colour box: studio tints in the hero, coded light shafts, accent glows. Cards are bright panels whose photo lights up on hover/centre.
+- Display type: Unbounded, uppercase, fitted to its container (use `cqw`); giant words are raised white/pearl, not black. The word is part of the composition.
+- Labels: Geist Mono `.eyebrow`. Body: Sora. Never Inter/Arial.
+- White holo-edged pills (`.btn-holo`), light glass (`.btn-glass-light`, `.glass-strong`), `.arena` light-up cards, `.tilt` plates. Vary card sizes.
 - Story pattern: ACTION → EXHIBIT. Products must stay recognisable and unobstructed.
 - Motion ≤ 900 ms for UI, skippable intros, `prefers-reduced-motion` respected, swipe never the only control.
 

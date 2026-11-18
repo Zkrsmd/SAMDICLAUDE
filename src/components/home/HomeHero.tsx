@@ -4,11 +4,9 @@ import { Hero } from '@/components/hero/Hero';
 import { HeroDrip } from './HeroDrip';
 import { heroSlides } from '@/config/hero';
 
-type Sport = (typeof heroSlides)[number]['id'];
-
-/** Hero + the sport-specific "drip" edge that spills onto the white page below. */
+/** Hero + the liquid holo edge that oozes onto the white page below. */
 export function HomeHero() {
-  const sport = useRef<Sport>('football');
+  const sport = useRef<string>('football');
   const onScroll = useCallback((_p: number, i: number) => {
     sport.current = heroSlides[i]?.id ?? 'football';
   }, []);

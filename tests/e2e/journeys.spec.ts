@@ -6,13 +6,16 @@ test.describe('core shopping journeys', () => {
     await openHome(page);
     await expect(page.getByRole('heading', { level: 1, name: /SMADI/ })).toBeAttached();
     const current = page.getByRole('group', { name: 'Choose sport' }).locator('[aria-current="true"]');
-    await expect(current).toHaveAttribute('aria-label', 'Football');
-    await page.getByRole('button', { name: 'Next sport' }).click();
-    await expect(current).toHaveAttribute('aria-label', 'Boxing');
-    await expect(page.getByRole('link', { name: /Explore boxing/i })).toBeVisible();
-    await page.getByRole('button', { name: 'Next sport' }).click();
-    await expect(current).toHaveAttribute('aria-label', 'Swimming');
-    await expect(page.getByRole('link', { name: /Explore swimming/i })).toBeVisible();
+    // hovering the stage pauses the autoplay, so only our clicks change the sport
+    await page.getByTestId('hero-stage').hover({ position: { x: 40, y: 300 } });
+    const order = ['Football', 'Boxing', 'Swimming', 'Basketball'];
+    for (let n = 0; n < 2; n++) {
+      const now = (await current.getAttribute('aria-label')) ?? 'Football';
+      const want = order[(order.indexOf(now) + 1) % order.length]!;
+      await page.getByRole('button', { name: 'Next sport' }).click();
+      await expect(current).toHaveAttribute('aria-label', want);
+      await expect(page.getByRole('link', { name: new RegExp(`Explore ${want}`, 'i') })).toBeVisible();
+    }
     // native vertical scroll must pass straight through the hero (no scroll trap)
     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 1.95));
     await expect(page.getByRole('heading', { name: /brands behind the performance/i })).toBeInViewport({ timeout: 15_000 });

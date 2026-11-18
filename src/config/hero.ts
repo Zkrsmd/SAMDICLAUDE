@@ -1,55 +1,54 @@
 /**
- * Hero slides. Drop the AI videos into public/media/ and set `video` / `videoMobile`
- * (MP4, H.264). Until then the still `poster` is used, with motion added in CSS.
+ * Hero slides. Each slide plays a coded film (src/components/hero/cinema/scenes.ts) with the
+ * same id — real product cut-outs choreographed in canvas, no video files needed.
  */
 export const heroSlides = [
   {
     id: 'football',
     word: 'Football',
-    kicker: '01 — The strike',
+    kicker: 'The strike',
     tagline: 'Built for every decisive moment.',
     cta: 'Explore football',
     href: '/football',
-    product: { slug: 'adidas-f50-hyperfast-elite-fg-soccer-cleats', name: 'adidas F50 Hyperfast Elite FG' },
-    poster: '/media/cat-football.webp',
-    video: null as string | null,
-    videoMobile: null as string | null,
-    accent: '#FF6A2B',
-    glow: 'rgba(255,106,43,0.55)',
+    product: { slug: 'adidas-f50-hyperfast-elite-fg-soccer-cleats', brand: 'adidas', name: 'F50 Hyperfast Elite FG' },
+    accent: '#4FAE3A',
   },
   {
     id: 'boxing',
     word: 'Boxing',
-    kicker: '02 — The hook',
+    kicker: 'The hook',
     tagline: 'Power in every round.',
     cta: 'Explore boxing',
     href: '/boxing',
-    product: { slug: 'venum-giant-20-mike-tyson-pro-boxing-gloves-blackgold', name: 'Venum Giant 2.0 — Black/Gold' },
-    poster: '/media/cat-boxing.webp',
-    video: null as string | null,
-    videoMobile: null as string | null,
-    accent: '#E7B85A',
-    glow: 'rgba(231,184,90,0.55)',
+    product: { slug: 'venum-giant-20-mike-tyson-pro-boxing-gloves-blackgold', brand: 'Venum', name: 'Giant 2.0 Mike Tyson Pro — Black/Gold' },
+    accent: '#C99A3E',
   },
   {
     id: 'swimming',
     word: 'Swimming',
-    kicker: '03 — The fly',
+    kicker: 'The dive',
     tagline: 'Move beyond your limits.',
     cta: 'Explore swimming',
     href: '/swimming',
-    product: { slug: 'speedo-fastskin-speed-socket-20-mirrored-goggles-orangegold', name: 'Speedo Fastskin Speed Socket 2.0' },
-    poster: '/media/cat-swimming.webp',
-    video: null as string | null,
-    videoMobile: null as string | null,
-    accent: '#5EE7DF',
-    glow: 'rgba(94,231,223,0.55)',
+    product: { slug: 'speedo-fastskin-speed-socket-20-mirrored-goggles-orangegold', brand: 'Speedo', name: 'Fastskin Speed Socket 2.0 Mirrored' },
+    accent: '#1FB5C9',
+  },
+  {
+    id: 'basketball',
+    word: 'Basketball',
+    kicker: 'The bounce',
+    tagline: 'Own the paint. Own the moment.',
+    cta: 'Explore basketball',
+    href: '/basketball',
+    product: { slug: 'wilson-evolution-game-basketball', brand: 'Wilson', name: 'Evolution Game Basketball' },
+    accent: '#E8792A',
   },
 ] as const;
 
 export type HeroSlide = (typeof heroSlides)[number];
+export const heroIds: string[] = heroSlides.map((s) => s.id);
 
-/** Category card media (stills now; swap for looping videos later). */
+/** Category card media (owner-supplied AI stills; swap for looping videos later). */
 export const categoryMedia: Record<string, string> = {
   football: '/media/cat-football.webp',
   boxing: '/media/cat-boxing.webp',
