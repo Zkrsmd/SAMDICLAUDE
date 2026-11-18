@@ -6,7 +6,7 @@ type B = BrandEntry & { logo?: string; keepColor?: boolean };
 
 /**
  * Official brand marks drifting in two counter-rows; scroll velocity speeds them up.
- * Marks sit in ink and light up to full colour with a holo glow on hover.
+ * Marks sit in ink and light up to full colour with a soft chrome glow on hover.
  */
 export function Brands({ brands }: { brands: B[] }) {
   const r0 = useRef<HTMLUListElement>(null);
@@ -38,7 +38,7 @@ export function Brands({ brands }: { brands: B[] }) {
 
   const mark = (b: B, k: string) => (
     <li key={k} className="group relative flex h-24 shrink-0 items-center px-8 md:h-32 md:px-14">
-      <span aria-hidden className="absolute inset-4 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-50" style={{ background: 'var(--holo-conic)' }} />
+      <span aria-hidden className="absolute inset-4 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-50" style={{ background: 'radial-gradient(closest-side, rgba(43,89,255,.35), rgba(160,172,188,.2), transparent)' }} />
       {b.logo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

@@ -47,7 +47,7 @@ export function FloatingCollection({ items, title }: { items: CardData[]; title:
               </div>
               <div className="mt-4 text-center">
                 <p className="eyebrow text-muted">{p.brandName}</p>
-                <p className="mt-1 text-[15px] font-medium group-hover:text-orange">{p.name}</p>
+                <p className="mt-1 text-[15px] font-medium group-hover:text-cobalt">{p.name}</p>
                 <p className="mono text-[13px]">{formatPrice(p.price)}</p>
               </div>
             </Link>

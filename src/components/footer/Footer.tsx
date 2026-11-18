@@ -17,16 +17,16 @@ export function Footer({ nav }: { nav: NavSport[] }) {
         <FooterCol title="Sports">
           {nav.map((s) => (
             <li key={s.slug}>
-              <Link href={`/${s.slug}`} className="hover:text-orange">
+              <Link href={`/${s.slug}`} className="hover:text-cobalt">
                 {s.name}
               </Link>
             </li>
           ))}
         </FooterCol>
         <FooterCol title="Shop">
-          <li><Link href="/search" className="hover:text-orange">Search</Link></li>
-          <li><Link href="/wishlist" className="hover:text-orange">Wishlist</Link></li>
-          <li><Link href="/cart" className="hover:text-orange">Bag</Link></li>
+          <li><Link href="/search" className="hover:text-cobalt">Search</Link></li>
+          <li><Link href="/wishlist" className="hover:text-cobalt">Wishlist</Link></li>
+          <li><Link href="/cart" className="hover:text-cobalt">Bag</Link></li>
           <li><span className="text-muted">Delivery info (placeholder)</span></li>
           <li><span className="text-muted">Returns (placeholder)</span></li>
         </FooterCol>
@@ -35,7 +35,7 @@ export function Footer({ nav }: { nav: NavSport[] }) {
           <li className="text-muted">{brand.contact.phone}</li>
           {brand.social.map((s) => (
             <li key={s.label}>
-              <a href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-orange">
+              <a href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-cobalt">
                 {s.label}
               </a>
             </li>

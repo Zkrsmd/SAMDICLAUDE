@@ -1,7 +1,7 @@
 import { brand } from '@/config/brand';
 
 /**
- * SMADI hand mark: an open palm with speed-cut fingers, filled with the holographic gradient.
+ * SMADI hand mark: an open palm with speed-cut fingers in graphite-to-chrome, like polished steel.
  * Replace with a final designed logo file when available.
  */
 export function HandMark({ className = '', glow = true }: { className?: string; glow?: boolean }) {
@@ -9,13 +9,13 @@ export function HandMark({ className = '', glow = true }: { className?: string; 
     <svg viewBox="0 0 48 48" className={className} aria-hidden>
       <defs>
         <linearGradient id="smadi-holo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#FF6A2B" />
-          <stop offset="0.35" stopColor="#FFC53D" />
-          <stop offset="0.65" stopColor="#5EE7DF" />
-          <stop offset="1" stopColor="#8B5CF6" />
+          <stop offset="0" stopColor="#0F1216" />
+          <stop offset="0.45" stopColor="#3A4350" />
+          <stop offset="0.72" stopColor="#9AA5B2" />
+          <stop offset="1" stopColor="#2B59FF" />
         </linearGradient>
         <filter id="smadi-glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2.2" result="b" />
+          <feGaussianBlur stdDeviation="1.2" result="b" />
           <feMerge>
             <feMergeNode in="b" />
             <feMergeNode in="SourceGraphic" />
@@ -34,7 +34,7 @@ export function HandMark({ className = '', glow = true }: { className?: string; 
         <path d="M13.6 22.3h24.6l-.9 9.6c-.6 6.3-5.9 11.1-12.2 11.1h-.3c-5.5 0-10.3-3.7-11.6-9.1Z" />
       </g>
       {/* speed cuts */}
-      <g stroke="#0B0D10" strokeWidth="1.6" strokeLinecap="round" opacity="0.9">
+      <g stroke="#F3F4F6" strokeWidth="1.6" strokeLinecap="round" opacity="0.95">
         <path d="M18 30.5h12.5" />
         <path d="M20.5 35h9" />
       </g>

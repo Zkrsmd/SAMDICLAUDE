@@ -159,7 +159,7 @@ export function Showroom({ items, mount, sport }: { items: ShowItem[]; mount: Mo
 
       {zoom && (
         <div aria-hidden className="fixed inset-0 z-[90]">
-          <div className="absolute inset-0 transition-[background,backdrop-filter] duration-500" style={{ background: zoom.go ? 'rgba(250,250,247,.96)' : 'rgba(250,250,247,0)', backdropFilter: zoom.go ? 'blur(12px)' : 'none' }} />
+          <div className="absolute inset-0 transition-[background,backdrop-filter] duration-500" style={{ background: zoom.go ? 'rgba(243,244,246,.96)' : 'rgba(243,244,246,0)', backdropFilter: zoom.go ? 'blur(12px)' : 'none' }} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={renderUrl(zoom.slug)}

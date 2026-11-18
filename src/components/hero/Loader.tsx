@@ -7,11 +7,11 @@ const VISITED_KEY = 'smadi-visited-v1';
 const SPORTS = ['Football', 'Boxing', 'Swimming', 'Running', 'Basketball', 'Fitness'];
 
 /**
- * Opening sequence: the holographic hand draws in, SMADI rises letter by letter, a counter
- * tracks real progress (fonts + hero media), then the panel splits and a fog layer clears
+ * Opening sequence: the chrome hand draws in, SMADI rises letter by letter, a counter
+ * tracks real progress (fonts + product photos + the WebGL stage compiling), then the panel splits and a fog layer clears
  * over the hero. Skippable; ~0.7s for returning visitors; instant with reduced motion.
  */
-export function Loader({ assets, onDone }: { assets: string[]; onDone: () => void }) {
+export function Loader({ assets, gate, onDone }: { assets: string[]; gate?: Promise<unknown>; onDone: () => void }) {
   const [phase, setPhase] = useState<'load' | 'exit' | 'fog' | 'gone'>('load');
   const counter = useRef<HTMLSpanElement>(null);
   const bar = useRef<HTMLDivElement>(null);
@@ -44,13 +44,13 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
       );
     }
     // the film starts once the panels have opened, so its first frames are seen
-    window.setTimeout(() => onDoneRef.current(), 620);
+    window.setTimeout(() => onDoneRef.current(), 380);
     window.setTimeout(() => setPhase('fog'), 1000);
     window.setTimeout(() => setPhase('gone'), 1700);
   };
 
   useEffect(() => {
-    let minMs = 2600;
+    let minMs = 1800;
     try {
       if (localStorage.getItem(VISITED_KEY)) minMs = 700;
       localStorage.setItem(VISITED_KEY, '1');
@@ -60,11 +60,19 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) minMs = 0;
 
     let loaded = 0;
-    const total = assets.length + 1;
+    const total = assets.length + 1 + (gate ? 2 : 0);
     const bump = () => {
       loaded += 1;
     };
     document.fonts?.ready.then(bump, bump);
+    // the 3D stage counts double: shaders compiling is the slow part
+    gate?.then(() => {
+      bump();
+      bump();
+    }, () => {
+      bump();
+      bump();
+    });
     const imgs = assets.map((src) => {
       const img = new Image();
       img.onload = bump;
@@ -103,7 +111,7 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
       window.clearTimeout(safety);
       imgs.forEach((i) => (i.onload = i.onerror = null));
     };
-  }, [assets]);
+  }, [assets, gate]);
 
   if (phase === 'gone') return null;
   const exiting = phase !== 'load';
@@ -125,7 +133,7 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
               height: '60vmax',
               left: `${[-30, 20, -10][i]}%`,
               top: `${[10, 40, 60][i]}%`,
-              background: 'radial-gradient(closest-side, rgba(250,250,247,.95), rgba(250,250,247,0))',
+              background: 'radial-gradient(closest-side, rgba(243,244,246,.95), rgba(243,244,246,0))',
               animation: `fog-drift ${6 + i * 2}s ${i * 0.4}s ease-in-out infinite alternate`,
             }}
           />
@@ -139,7 +147,7 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
             <div
               key={half}
               aria-hidden
-              className="absolute inset-x-0 bg-[#FAFAF7]"
+              className="absolute inset-x-0 bg-bg"
               style={{
                 top: half === 'top' ? 0 : '50%',
                 bottom: half === 'top' ? '50%' : 0,
@@ -156,7 +164,7 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
               paddingBottom: 'env(safe-area-inset-bottom)',
             }}
           >
-            <div aria-hidden className="absolute inset-0 opacity-80 transition-opacity duration-500" style={{ opacity: exiting ? 0 : undefined, background: 'radial-gradient(60% 45% at 50% 45%, rgba(139,92,246,.10), rgba(94,231,223,.08) 40%, transparent 70%)' }} />
+            <div aria-hidden className="absolute inset-0 opacity-80 transition-opacity duration-500" style={{ opacity: exiting ? 0 : undefined, background: 'radial-gradient(60% 45% at 50% 45%, rgba(43,89,255,.07), rgba(160,172,188,.10) 40%, transparent 70%)' }} />
             <div className="container-x relative flex h-16 items-center justify-between" style={{ opacity: exiting ? 0 : 1, filter: exiting ? 'blur(8px)' : 'none', transition: 'opacity .45s, filter .45s' }}>
               <span className="eyebrow text-muted">Season 2026 — Collection</span>
               <button type="button" onClick={() => finish.current()} className="eyebrow rounded-full px-4 py-2 text-ink transition-colors hover:bg-ink/5">
@@ -177,7 +185,7 @@ export function Loader({ assets, onDone }: { assets: string[]; onDone: () => voi
                 ))}
               </h2>
               <p className="mono mt-5 flex items-center gap-2 text-[12px] uppercase tracking-[0.2em] text-muted" style={{ animation: 'rise-in 1s .9s var(--ease-expo) both', opacity: exiting ? 0 : undefined, transition: 'opacity .3s' }}>
-                Gear for <span ref={word} className="holo-text inline-block min-w-[11ch] font-bold">Football</span>
+                Gear for <span ref={word} className="inline-block min-w-[11ch] font-bold text-cobalt">Football</span>
               </p>
             </div>
 

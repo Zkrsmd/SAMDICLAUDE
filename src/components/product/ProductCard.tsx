@@ -56,14 +56,14 @@ export function ProductCard({
         onClick={() => toggle(p.slug)}
         aria-pressed={hydrated ? wished : false}
         aria-label={`Save ${p.name} to wishlist`}
-        className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-full text-ink/70 transition-colors hover:text-orange"
+        className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-full text-ink/70 transition-colors hover:text-cobalt"
       >
-        <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-orange' : ''} />
+        <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
       </button>
       <div className="flex flex-1 flex-col pt-3">
         <span className="eyebrow text-muted">{p.brandName}</span>
         <h3 className={`mt-1 font-medium leading-snug ${size === 'lg' ? 'text-[18px]' : 'text-[15px]'}`}>
-          <Link href={`/product/${p.slug}`} className="hover:text-orange">
+          <Link href={`/product/${p.slug}`} className="hover:text-cobalt">
             {p.name}
           </Link>
         </h3>

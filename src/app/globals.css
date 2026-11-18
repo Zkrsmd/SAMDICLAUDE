@@ -1,17 +1,21 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #fafaf7;
+  --color-bg: #f3f4f6;
   --color-surface: #ffffff;
-  --color-stone: #efeee8;
-  --color-grey: #e1e3de;
-  --color-ink: #171a18;
-  --color-ink-2: #2b2f2c;
-  --color-muted: #6b726d;
-  --color-line: rgb(23 26 24 / 0.12);
+  --color-stone: #e8ebef;
+  --color-grey: #d9dde3;
+  --color-ink: #0f1216;
+  --color-ink-2: #262b31;
+  --color-muted: #66707c;
+  --color-line: rgb(15 18 22 / 0.12);
   --color-grass: #89c94a;
   --color-grass-deep: #4f8a2a;
   --color-orange: #f36a32;
+  --color-cobalt: #2b59ff;
+  --color-cobalt-deep: #1a3fd6;
+  --color-steel: #8e99a8;
+  --color-frost: #dfe4ea;
   --color-gold: #c8a451;
   --color-gold-deep: #9a7a2e;
   --color-aqua: #64d7d1;
@@ -44,7 +48,7 @@
     overflow-x: clip;
   }
   ::selection {
-    background: var(--color-orange);
+    background: var(--color-cobalt);
     color: #fff;
   }
   :focus-visible {
@@ -418,8 +422,9 @@
   inherits: false;
 }
 :root {
-  --holo: linear-gradient(115deg, #ff6a2b 0%, #ffc53d 22%, #5ee7df 48%, #6aa8ff 68%, #8b5cf6 84%, #ff6a2b 100%);
-  --holo-conic: conic-gradient(from var(--a), #ff6a2b, #ffc53d, #5ee7df, #6aa8ff, #8b5cf6, #ff6a2b);
+  /* chrome / ice: brushed silver with a single cobalt glint (replaces the old rainbow) */
+  --holo: linear-gradient(115deg, #ffffff 0%, #c9d0da 18%, #7d8896 34%, #eef2f6 50%, #2b59ff 64%, #c9d0da 78%, #ffffff 100%);
+  --holo-conic: conic-gradient(from var(--a), #ffffff, #b9c2ce 18%, #5f6b7a 30%, #ffffff 46%, #2b59ff 58%, #9aa6b4 70%, #ffffff);
 }
 @keyframes spin-a {
   to {
@@ -457,8 +462,9 @@
   line-height: 0.9;
 }
 
+/* chrome text for light pages: graphite steel with a travelling cobalt glint */
 .holo-text {
-  background: var(--holo);
+  background: linear-gradient(115deg, #0f1216 0%, #4a5563 26%, #8e99a8 38%, #2b59ff 50%, #0f1216 64%, #5f6b7a 82%, #0f1216 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -543,7 +549,7 @@
   box-shadow:
     0 1px 0 rgb(255 255 255) inset,
     0 14px 34px -14px rgb(23 26 24 / 0.35),
-    0 10px 40px -18px rgb(139 92 246 / 0.45);
+    0 10px 40px -18px rgb(43 89 255 / 0.35);
 }
 .btn-holo::before {
   content: '';
@@ -566,7 +572,7 @@
   top: 0;
   bottom: 0;
   width: 45%;
-  background: linear-gradient(90deg, transparent, rgb(255 197 61 / 0.22), rgb(94 231 223 / 0.3), rgb(139 92 246 / 0.22), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.9), rgb(201 208 218 / 0.5), transparent);
   animation: shine 3.2s ease-in-out infinite;
   pointer-events: none;
   z-index: -1;
@@ -576,7 +582,7 @@
   box-shadow:
     0 1px 0 rgb(255 255 255) inset,
     0 20px 44px -14px rgb(23 26 24 / 0.35),
-    0 18px 60px -12px rgb(255 106 43 / 0.45);
+    0 18px 60px -12px rgb(43 89 255 / 0.4);
 }
 .btn-holo:active {
   transform: scale(0.97);
@@ -672,7 +678,7 @@
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  background: radial-gradient(500px circle at var(--mx, -999px) var(--my, -999px), rgb(255 197 61 / 0.1), transparent 60%);
+  background: radial-gradient(500px circle at var(--mx, -999px) var(--my, -999px), rgb(43 89 255 / 0.06), transparent 60%);
 }
 
 /* scroll reveal */

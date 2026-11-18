@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 // Runs with WebGL disabled: the store is built on real photos/video and must not depend on it.
-test('with WebGL disabled the hero, showroom and product page still work', async ({ page }) => {
+test('with WebGL disabled the hero falls back and the store still works', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('status', { name: 'Loading' })).toHaveCount(0, { timeout: 30_000 });
-  // the hero films are plain canvas 2D: they must still be playing with WebGL disabled
-  await expect(page.locator('section[aria-roledescription="carousel"] canvas')).toHaveCount(1);
+  // without WebGL the crystal stage falls back to a still, frosted composition of the product
+  await expect(page.locator('section[aria-roledescription="carousel"] canvas')).toHaveCount(0);
+  await expect(page.getByTestId('hero-stage').locator('img').first()).toBeVisible();
   await page.getByRole('link', { name: /Explore football/i }).click();
   await expect(page).toHaveURL(/\/football$/);
   await page.goto('/football/boots');

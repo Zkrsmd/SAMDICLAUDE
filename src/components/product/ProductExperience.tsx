@@ -337,7 +337,7 @@ export function ProductExperience({
                 aria-label="Save to wishlist"
                 onClick={() => toggleWish(product.slug)}
               >
-                <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-orange' : ''} />
+                <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
               </button>
             </div>
             <button type="button" className="btn btn-line mt-3 h-12 w-full" onClick={() => addToCart(true)}>
@@ -393,7 +393,7 @@ export function ProductExperience({
               <ul className="mt-6 space-y-2 text-[15px]">
                 {product.features.map((f) => (
                   <li key={f} className="flex gap-3">
-                    <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
+                    <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cobalt" />
                     {f}
                   </li>
                 ))}

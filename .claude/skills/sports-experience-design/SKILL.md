@@ -9,7 +9,7 @@ description: Use when designing or changing any visual surface of this sports st
 Any UI, layout, typography, colour or motion change in `src/components`, `src/app`, `src/app/globals.css`.
 
 ## Standards
-- Bright first: bg `#FAFAF7`, white, stone `#EFEEE8`, ink `#171A18`. No dark sections beyond small ink elements.
+- Glacier palette: frost `#F3F4F6`, white, stone `#E8EBEF`, steel `#8E99A8`, ink `#0F1216`, one accent cobalt `#2B59FF`. No rainbow colours. Hero = cool atmospheric grey; rest of the site frost-white.
 - Each sport has a light, not a colour box: studio tints in the hero, coded light shafts, accent glows. Cards are bright panels whose photo lights up on hover/centre.
 - Display type: Unbounded, uppercase, fitted to its container (use `cqw`); giant words are raised white/pearl, not black. The word is part of the composition.
 - Labels: Geist Mono `.eyebrow`. Body: Sora. Never Inter/Arial.

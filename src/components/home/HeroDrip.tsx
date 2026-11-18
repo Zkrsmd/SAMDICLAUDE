@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
+// liquid chrome: steel tones, the specular pass does the rest
 const STOPS: [number, [number, number, number]][] = [
-  [0, [255, 106, 43]],
-  [0.33, [255, 197, 61]],
-  [0.66, [94, 231, 223]],
-  [1, [139, 92, 246]],
+  [0, [176, 186, 198]],
+  [0.3, [112, 123, 138]],
+  [0.55, [196, 204, 214]],
+  [0.8, [96, 108, 124]],
+  [1, [168, 178, 190]],
 ];
 function holoAt(x: number) {
   for (let i = 0; i < STOPS.length - 1; i++) {
@@ -16,7 +18,7 @@ function holoAt(x: number) {
       return `rgb(${ca.map((v, j) => Math.round(v + (cb[j]! - v) * k)).join(',')})`;
     }
   }
-  return 'rgb(139,92,246)';
+  return 'rgb(168,178,190)';
 }
 
 interface Drip {
@@ -28,7 +30,7 @@ interface Drip {
 }
 
 /**
- * Liquid holo that oozes out of the hero's bottom edge as you scroll: real gooey merging
+ * Liquid chrome that oozes out of the hero's bottom edge as you scroll: real gooey merging
  * (SVG blur + alpha threshold) with a specular lighting pass so it reads as glossy liquid,
  * drips stretching, necking and letting go of droplets. Driven by scroll — no scroll hijacking.
  */
@@ -142,7 +144,7 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
             <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
             <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11" result="goo" />
             <feGaussianBlur in="goo" stdDeviation="3.5" result="soft" />
-            <feSpecularLighting in="soft" surfaceScale="7" specularConstant="1.15" specularExponent="26" lightingColor="#ffffff" result="spec">
+            <feSpecularLighting in="soft" surfaceScale="7" specularConstant="1.35" specularExponent="34" lightingColor="#ffffff" result="spec">
               <feDistantLight azimuth="235" elevation="52" />
             </feSpecularLighting>
             <feComposite in="spec" in2="goo" operator="in" result="gloss" />
@@ -151,7 +153,7 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
         </defs>
       </svg>
       <div ref={wrap} className="absolute inset-0" style={{ filter: 'url(#smadi-liquid)' }}>
-        <div className="absolute inset-x-0 top-0 h-[18px]" style={{ background: 'linear-gradient(90deg, #FF6A2B, #FFC53D 33%, #5EE7DF 66%, #8B5CF6)' }} />
+        <div className="absolute inset-x-0 top-0 h-[18px]" style={{ background: 'linear-gradient(90deg, #B0BAC6, #707B8A 30%, #C4CCD6 55%, #606C7C 80%, #A8B2BE)' }} />
       </div>
     </div>
   );

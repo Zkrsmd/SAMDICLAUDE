@@ -119,7 +119,7 @@ function Badge({ n, accent }: { n: number; accent?: boolean }) {
   return (
     <span
       className={`mono absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold ${
-        accent ? 'bg-orange text-ink' : 'bg-ink text-white'
+        accent ? 'bg-cobalt text-ink' : 'bg-ink text-white'
       }`}
     >
       {n > 99 ? '99' : n}

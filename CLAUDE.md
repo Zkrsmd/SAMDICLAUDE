@@ -6,10 +6,12 @@ campaign and a real store at once. Real product photos (background removed) and 
 (the owner rejected the procedural/"comic" look).
 
 ## Non-negotiable visual rules
-- Page is **white-led** (`#FAFAF7`, white, stone, ink `#171A18` for text only). Buttons, header and hero are light; dark
-  photography appears only in category headers and when a card lights up. Never a dark/neon site.
-- Effects language: animated holographic conic borders (`.holo-border`, `.holo-ring`), `.btn-holo`, `.holo-text`,
-  frosted `.glass`, film grain, cursor spotlight, `[data-reveal]` scroll reveals. Use these, don't invent new gradients.
+- Palette "glacier": frost `#F3F4F6`, white, mist/stone `#E8EBEF`, steel `#8E99A8`, ink `#0F1216` (text), ONE accent
+  cobalt `#2B59FF`. **No rainbow/holographic colours** (owner rejected them). The hero is a cool, atmospheric grey world
+  (igloo.inc-inspired); the rest of the site is frost-white. Never a dark/neon site.
+- Effects language (class names kept from the old holo era, now chrome): `.holo-border`/`.holo-ring` = travelling
+  chrome edge with a cobalt glint, `.btn-holo` white pill, `.holo-text` dark steel text with a cobalt glint, `.glass`,
+  film grain, `[data-reveal]`. Liquid elements are chrome (mercury). Use these, don't invent new gradients.
 - Type: Unbounded (display, uppercase, heavy), Sora (body), Geist Mono (labels). No Inter/Arial.
   Unbounded is very wide — size giant words with container units (`cqw`) and check at 375px.
 - The sport word is composition (behind objects, on walls, on pool floors), not a caption.
@@ -18,8 +20,11 @@ campaign and a real store at once. Real product photos (background removed) and 
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
-- Hero = coded canvas films (`src/components/hero/cinema/*`, pure functions of time; `window.__heroT` freezes a frame in dev,
-  `scripts/film-frames.mjs` renders strips). Slides + category photos: `src/config/hero.ts`.
+- Hero = three.js "crystal" stage (`src/components/hero/crystal/*`): each sport's real product photo frozen inside its own
+  crystal (ice shard / cracked glass / water orb / cut gem) with a survey network, HUD callouts and one post pass.
+  The only 3D is glass + environment — products stay real photos. three is code-split (client only) with a still fallback
+  without WebGL 2. `window.__crystalT` freezes the opening in dev; `scripts/hero-frames.mjs` renders frames.
+  Slides + category photos: `src/config/hero.ts`.
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 

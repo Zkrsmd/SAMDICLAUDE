@@ -23,6 +23,7 @@ test.describe('core shopping journeys', () => {
 
   test('6–9: football category → boot wall → product detail', async ({ page }) => {
     await openHome(page);
+    await page.getByRole('group', { name: 'Choose sport' }).getByRole('button', { name: 'Football' }).click();
     await page.getByRole('link', { name: /Explore football/i }).click();
     await expect(page).toHaveURL(/\/football$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Football' })).toBeVisible();

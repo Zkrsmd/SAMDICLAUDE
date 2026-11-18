@@ -24,12 +24,12 @@ const CURTAIN: Record<SportSlug, string> = {
   outdoor: '#1B2A22',
 };
 const GLOW: Partial<Record<SportSlug, string>> = {
-  football: 'rgba(255,106,43,.55)',
-  boxing: 'rgba(231,184,90,.6)',
-  swimming: 'rgba(94,231,223,.55)',
-  running: 'rgba(255,90,60,.5)',
-  fitness: 'rgba(170,180,200,.5)',
-  basketball: 'rgba(255,150,60,.5)',
+  football: 'rgba(120,160,130,.5)',
+  boxing: 'rgba(176,146,98,.5)',
+  swimming: 'rgba(96,150,196,.5)',
+  running: 'rgba(150,120,112,.5)',
+  fitness: 'rgba(130,142,158,.5)',
+  basketball: 'rgba(170,128,96,.5)',
 };
 
 function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm'; index: number }) {

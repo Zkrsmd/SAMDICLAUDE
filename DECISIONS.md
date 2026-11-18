@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-11-18 (evening) — igloo.inc-style opening, glacier palette
+The owner pointed at igloo.inc ("exactly what I'm looking for") and lusion.co. They asked for that style, personalised per sport,
+for "speed and smoothness", and for the rainbow colours to go.
+- **Studied igloo.inc:**
+  - A wireframe constellation of lines and tiny numbers resolves into a photoreal frozen object.
+  - Portfolio items sit in rotating ice crystals with HUD callouts (`PORTFOLIO_CO_01`, `TEMP`, `CLICK TO EXPLORE`).
+  - Mono corner type, a cool grey atmosphere, and zoom-blur + RGB-split transitions.
+- **Studied lusion.co:** a restrained palette (white, black, one blue) and glossy physical materials.
+- **SMADI take:** the *real product photo* is frozen inside a WebGL crystal (MeshPhysicalMaterial transmission, dispersion,
+  procedural frost / crack / ripple normal maps), and the matter changes per sport (ice shard, cracked glass, water orb, cut gem).
+  - The sport word is painted on the sky and refracted through the crystal.
+  - The survey network, the wireframe → flash → materialise opening and the HUD come from igloo's grammar, with our own content.
+  - This is not the rejected procedural-product 3D: only glass and environment are 3D, the products stay real photos.
+- **Speed (Intel UHD laptop as the test device):**
+  - A custom softbox rig replaced the RoomEnvironment PMREM: engine set-up went from 2.2 s to 0.1 s.
+  - three.js is fetched as soon as the island loads.
+  - The other worlds build in idle time after the intro.
+  - Transmission renders at about CSS-pixel resolution.
+  - An adaptive ladder steps MSAA 4→2→0, then the pixel ratio (never below 1).
+  - Result: a locked 60 fps steady state on phone, landscape and desktop layouts.
+  - Loader: about 4.5 s on desktop, including shader compile.
+- **Palette "glacier":** frost white, steel, graphite and one cobalt accent. Holo gradients became chrome, and the drip became liquid chrome.
+- The 2D canvas films from earlier the same day were removed; they are kept in git history.
+
 ## 2026-11-18 (later) — White-led homepage and coded hero films
 The owner asked for a lighter, white-led palette, "cinematic-level" hero motion (crazy movement, drops, sweat, lighting)
 for football, boxing, swimming and basketball, and asked whether the videos could be made purely in code. They can:

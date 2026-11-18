@@ -59,7 +59,7 @@ export function Bundle({ items }: { items: BundleItem[] }) {
             </label>
             <div className="min-w-0 flex-1">
               <p className="eyebrow text-muted">{i.brandName}</p>
-              <Link href={`/product/${i.slug}`} className="text-[14px] font-medium leading-snug hover:text-orange">
+              <Link href={`/product/${i.slug}`} className="text-[14px] font-medium leading-snug hover:text-cobalt">
                 {i.name}
               </Link>
               <p className="mono text-[13px]">{formatPrice(i.price)}</p>

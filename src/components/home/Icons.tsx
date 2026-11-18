@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { formatPrice } from '@/lib/format';
 import type { CardData } from '@/lib/catalog';
 
-const GLOW = ['rgba(255,106,43,.6)', 'rgba(231,184,90,.6)', 'rgba(94,231,223,.6)'];
+const GLOW = ['rgba(120,160,130,.55)', 'rgba(176,146,98,.55)', 'rgba(96,150,196,.55)'];
 
 /** The three researched flagship products, presented as editorial plates. */
 export function Icons({ items }: { items: CardData[] }) {
@@ -33,7 +33,7 @@ export function Icons({ items }: { items: CardData[] }) {
               <div className="mt-4 flex items-start justify-between gap-4">
                 <div>
                   <p className="eyebrow text-muted">{p.brandName}</p>
-                  <h3 className="mt-1 text-[18px] font-medium leading-snug group-hover:text-orange">{p.name}</h3>
+                  <h3 className="mt-1 text-[18px] font-medium leading-snug group-hover:text-cobalt">{p.name}</h3>
                   <p className="mt-1 text-[14px] text-muted">{p.short}</p>
                 </div>
                 <span className="mono shrink-0 text-[14px] font-semibold">{formatPrice(p.price)}</span>

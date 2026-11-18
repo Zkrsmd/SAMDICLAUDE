@@ -37,7 +37,7 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
           </Link>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="eyebrow text-muted">{l.brandName}</span>
-            <Link href={`/product/${l.slug}`} className="mt-1 text-[15px] font-medium leading-snug hover:text-orange">
+            <Link href={`/product/${l.slug}`} className="mt-1 text-[15px] font-medium leading-snug hover:text-cobalt">
               {l.name}
             </Link>
             <span className="mt-1 text-[13px] text-muted">

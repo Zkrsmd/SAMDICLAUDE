@@ -4,12 +4,12 @@ import { categoryMedia } from '@/config/hero';
 import type { SportSlug } from '@/types/catalog';
 
 const GLOW: Partial<Record<SportSlug, string>> = {
-  football: 'rgba(255,106,43,.55)',
-  boxing: 'rgba(231,184,90,.6)',
-  swimming: 'rgba(94,231,223,.55)',
-  running: 'rgba(255,90,60,.5)',
-  fitness: 'rgba(170,180,200,.5)',
-  basketball: 'rgba(255,150,60,.5)',
+  football: 'rgba(120,160,130,.5)',
+  boxing: 'rgba(176,146,98,.5)',
+  swimming: 'rgba(96,150,196,.5)',
+  running: 'rgba(150,120,112,.5)',
+  fitness: 'rgba(130,142,158,.5)',
+  basketball: 'rgba(170,128,96,.5)',
 };
 
 /** Category header: the sport's campaign still, the word as architecture, the hero product floating. */
@@ -73,7 +73,7 @@ export function CategoryHero({
             {description}
           </p>
           <p className="mono text-[12px] uppercase tracking-[0.16em] text-white/80">
-            <span className="holo-text font-bold">{count}</span> products
+            <span className="font-bold text-white">{count}</span> products
           </p>
         </div>
       </div>

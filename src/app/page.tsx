@@ -44,7 +44,7 @@ export default function Home() {
               Best sellers
             </h2>
           </div>
-          <Link href="/search" className="eyebrow inline-flex shrink-0 items-center gap-2 pb-3 hover:text-orange">
+          <Link href="/search" className="eyebrow inline-flex shrink-0 items-center gap-2 pb-3 hover:text-cobalt">
             Shop all <Icon name="arrow-right" size={14} />
           </Link>
         </div>
