@@ -901,94 +901,151 @@
   }
 }
 
-/* ── light-up cards: bright panel; the campaign photo switches on from the cursor ── */
+/* ── arena cards: coded field-of-play art, markings draw in, a calm lift on hover ── */
 .arena {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-radius: 26px;
-  background: radial-gradient(120% 90% at 50% 28%, #ffffff, #f4f1eb 58%, #e6e1d7);
+  border-radius: 28px;
+  background: #eef0f3;
   box-shadow:
     0 1px 0 #fff inset,
-    0 0 0 1px rgb(23 26 24 / 0.05),
-    0 26px 60px -38px rgb(23 26 24 / 0.55);
-  color: #171a18;
+    0 0 0 1px rgb(15 18 22 / 0.05),
+    0 24px 60px -40px rgb(15 18 22 / 0.5);
+  color: var(--color-ink);
+  transition:
+    transform 0.8s var(--ease-expo),
+    box-shadow 0.8s var(--ease-expo);
 }
-.arena-photo {
+.arena-art {
   position: absolute;
   inset: 0;
-  z-index: -1;
-  clip-path: circle(0% at var(--cx, 50%) var(--cy, 62%));
-  transition: clip-path 1.1s var(--ease-expo);
-}
-.arena-photo img {
+  z-index: -2;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transform: scale(1.12);
+  transform: scale(1.001);
   transition: transform 1.6s var(--ease-expo);
 }
-.arena-photo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.42), transparent 38%, transparent 55%, rgb(0 0 0 / 0.72));
+.arena-lines {
+  opacity: 0.8;
+  transition: opacity 0.8s var(--ease-expo);
 }
-.arena-word,
-.arena-word-lit {
+.arena-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 2.4s var(--ease-expo) calc(var(--d, 0ms) + 250ms + var(--i, 0) * 90ms);
+}
+.arena.in .arena-draw {
+  stroke-dashoffset: 0;
+}
+.arena-glow {
+  opacity: 0.75;
+  transition: opacity 0.8s var(--ease-expo);
+}
+.arena-word {
   position: absolute;
   white-space: nowrap;
   line-height: 0.8;
-  transition: opacity 0.6s var(--ease-expo);
-}
-.arena-word {
   color: transparent;
-  background-image: linear-gradient(180deg, #ffffff 4%, #ece7de 44%, #cfc7b9 82%);
+  background-image: linear-gradient(180deg, #ffffff 6%, #f1f3f5 46%, #d6dbe2 86%);
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 16px 18px rgb(23 26 24 / 0.2)) drop-shadow(0 2px 1px rgb(23 26 24 / 0.12));
-}
-.arena-word-lit {
-  color: #fff;
-  opacity: 0;
-  text-shadow: 0 10px 40px rgb(0 0 0 / 0.35);
-}
-.arena-copy {
-  transition: color 0.6s var(--ease-expo);
+  filter: drop-shadow(0 14px 16px rgb(15 18 22 / 0.16)) drop-shadow(0 1px 1px rgb(15 18 22 / 0.12));
 }
 .arena-chip {
-  background: rgb(255 255 255 / 0.75);
-  border: 1px solid rgb(23 26 24 / 0.1);
+  background: rgb(255 255 255 / 0.8);
+  border: 1px solid rgb(15 18 22 / 0.08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition:
-    background 0.4s,
-    color 0.4s;
+    background 0.5s var(--ease-expo),
+    color 0.5s var(--ease-expo);
+}
+.arena-arrow {
+  transition: transform 0.6s var(--ease-expo);
 }
 .arena-product {
-  transition: transform 0.9s var(--ease-expo);
+  transition: transform 1s var(--ease-expo);
 }
-.arena:is(:hover, .lit) .arena-photo {
-  clip-path: circle(150% at var(--cx, 50%) var(--cy, 62%));
+.arena-product img {
+  filter: drop-shadow(0 22px 22px rgb(15 18 22 / 0.2)) drop-shadow(0 4px 6px rgb(15 18 22 / 0.12));
+  animation: float-y 7s ease-in-out infinite;
 }
-.arena:is(:hover, .lit) .arena-photo img {
-  transform: scale(1.02);
+.arena-shadow {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: -6%;
+  height: 9%;
+  border-radius: 50%;
+  background: rgb(15 18 22 / 0.18);
+  filter: blur(14px);
+  transition:
+    transform 1s var(--ease-expo),
+    opacity 1s var(--ease-expo);
 }
-.arena:is(:hover, .lit) .arena-word {
-  opacity: 0;
+.arena:is(:hover, .lit) {
+  transform: translate3d(0, -3px, 0);
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 0 0 1px rgb(15 18 22 / 0.06),
+    0 40px 80px -42px rgb(15 18 22 / 0.55);
 }
-.arena:is(:hover, .lit) .arena-word-lit {
+.arena:is(:hover, .lit) .arena-art {
+  transform: scale(1.05);
+}
+.arena:is(:hover, .lit) .arena-lines,
+.arena:is(:hover, .lit) .arena-glow {
   opacity: 1;
 }
-.arena:is(:hover, .lit) .arena-copy {
-  color: #fff;
+.arena:is(:hover, .lit) .arena-product {
+  transform: translate3d(0, -4%, 0) scale(1.07) rotate(-3deg);
+}
+.arena:is(:hover, .lit) .arena-shadow {
+  transform: scale(0.82);
+  opacity: 0.55;
 }
 .arena:is(:hover, .lit) .arena-chip {
-  background: #fff;
-  color: #171a18;
+  background: var(--color-ink);
+  color: #fff;
 }
-.arena:is(:hover, .lit) .arena-product {
-  transform: translate3d(0, -4%, 0) scale(1.1) rotate(-4deg);
+.arena:is(:hover, .lit) .arena-arrow {
+  transform: translateX(3px);
+}
+
+/* ── quick add: a small + that becomes a tick; the size sheet is frosted glass ── */
+.quick-add {
+  background: var(--color-ink);
+  color: #fff;
+  box-shadow: 0 10px 22px -12px rgb(15 18 22 / 0.6);
+  transition:
+    transform 0.5s var(--ease-expo),
+    background 0.4s var(--ease-expo);
+}
+.quick-add:hover {
+  transform: scale(1.08);
+}
+.quick-add:active {
+  transform: scale(0.94);
+}
+.quick-add.is-done {
+  background: var(--color-cobalt);
+}
+.size-sheet {
+  border-radius: 22px;
+  background: rgb(255 255 255 / 0.82);
+  border: 1px solid rgb(15 18 22 / 0.08);
+  box-shadow: 0 30px 60px -28px rgb(15 18 22 / 0.45);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  transform-origin: 100% 100%;
+  animation: sheet-in 0.45s var(--ease-expo) both;
+}
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
 }
 
 /* ── tilt plates with moving glare ── */
@@ -1012,10 +1069,18 @@
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .arena-photo,
-  .arena-photo img,
+  .arena,
+  .arena-art,
   .arena-product,
+  .arena-shadow,
   .tilt {
+    transition: none;
+  }
+  .arena-product img {
+    animation: none;
+  }
+  .arena-draw {
+    stroke-dashoffset: 0;
     transition: none;
   }
 }

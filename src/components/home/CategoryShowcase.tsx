@@ -1,8 +1,8 @@
 import { CurtainLink } from '@/components/layout/RouteCurtain';
 import { Icon } from '@/components/ui/Icon';
 import { renderUrl } from '@/lib/format';
-import { categoryMedia } from '@/config/hero';
 import type { SportSlug } from '@/types/catalog';
+import { ArenaArt } from './ArenaArt';
 
 export interface ShowcaseSport {
   slug: SportSlug;
@@ -23,18 +23,7 @@ const CURTAIN: Record<SportSlug, string> = {
   basketball: '#2B1708',
   outdoor: '#1B2A22',
 };
-const GLOW: Partial<Record<SportSlug, string>> = {
-  football: 'rgba(120,160,130,.5)',
-  boxing: 'rgba(176,146,98,.5)',
-  swimming: 'rgba(96,150,196,.5)',
-  running: 'rgba(150,120,112,.5)',
-  fitness: 'rgba(130,142,158,.5)',
-  basketball: 'rgba(170,128,96,.5)',
-};
-
 function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm'; index: number }) {
-  const media = categoryMedia[s.slug];
-  const glow = GLOW[s.slug] ?? 'rgba(255,255,255,.4)';
   const fs = `${Math.min(size === 'sm' ? 24 : 22, (size === 'sm' ? 86 : 92) / s.name.length)}cqw`;
   const pos = size === 'sm' ? 'left-4 top-4' : 'left-5 top-5';
   return (
@@ -51,36 +40,21 @@ function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm';
       data-light=""
       style={{ ['--d' as string]: `${index * 90}ms` }}
     >
-      {/* the campaign photo, switched on from the cursor */}
-      {media && (
-        <span aria-hidden className="arena-photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={media} alt="" loading="lazy" />
-        </span>
-      )}
-      <span aria-hidden className="pointer-events-none absolute inset-0 -z-[2]" style={{ background: `radial-gradient(55% 45% at 50% 62%, ${glow.replace(/[\d.]+\)$/, '0.22)')}, transparent 70%)` }} />
+      <ArenaArt sport={s.slug} />
       <span aria-hidden className={`display arena-word ${pos}`} style={{ fontSize: fs }}>
         {s.name}
       </span>
-      <span aria-hidden className={`display arena-word-lit ${pos}`} style={{ fontSize: fs }}>
-        {s.name}
-      </span>
 
-      <div className={`arena-product absolute ${size === 'sm' ? 'inset-x-[12%] bottom-[20%] top-[30%]' : 'inset-x-[12%] bottom-[18%] top-[28%]'}`}>
+      <div className={`arena-product absolute ${size === 'sm' ? 'inset-x-[12%] bottom-[20%] top-[30%]' : 'inset-x-[10%] bottom-[18%] top-[26%]'}`}>
+        <span aria-hidden className="arena-shadow" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={renderUrl(s.hero.slug)}
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-contain"
-          style={{ animation: `float-y ${5 + index}s ease-in-out infinite`, filter: `drop-shadow(0 28px 30px rgba(23,26,24,.28)) drop-shadow(0 10px 30px ${glow})` }}
-        />
+        <img src={renderUrl(s.hero.slug)} alt="" loading="lazy" decoding="async" className="relative h-full w-full object-contain" />
       </div>
 
       <div className="arena-copy absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 md:p-5">
-        {size !== 'sm' ? <p className="max-w-[20ch] text-[16px] font-semibold leading-tight md:text-[18px]">{s.tagline}</p> : <span />}
+        {size !== 'sm' ? <p className="max-w-[20ch] text-[16px] font-semibold leading-tight tracking-[-0.01em] md:text-[18px]">{s.tagline}</p> : <span />}
         <span className="arena-chip mono inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.14em]">
-          {s.count} <span className="hidden sm:inline">products</span> <Icon name="arrow-right" size={14} />
+          {s.count} <span className="hidden sm:inline">products</span> <Icon name="arrow-right" size={14} className="arena-arrow" />
         </span>
       </div>
     </CurtainLink>
@@ -99,7 +73,7 @@ export function CategoryShowcase({ sports }: { sports: ShowcaseSport[] }) {
             Choose your <span className="holo-text">arena</span>
           </h2>
         </div>
-        <p className="hidden max-w-xs text-[15px] text-muted md:block">Every sport has its own world. Point at one and the lights come on.</p>
+        <p className="hidden max-w-xs text-[15px] text-muted md:block">Every sport has its own field of play. Pick yours.</p>
       </div>
       <div className="mt-10 grid gap-3 md:grid-cols-[1.25fr_1fr] md:grid-rows-2">
         {major.map((s, i) => (

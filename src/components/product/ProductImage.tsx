@@ -38,6 +38,7 @@ export function ProductImage({
       fill
       sizes={sizes}
       priority={priority}
+      quality={90}
       className={`object-contain ${className}`}
       onError={() => setFailed(true)}
       draggable={false}

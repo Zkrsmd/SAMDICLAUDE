@@ -9,6 +9,7 @@ type Name =
   | 'arrow-left'
   | 'chevron-down'
   | 'plus'
+  | 'check'
   | 'minus'
   | 'rotate'
   | 'expand'
@@ -62,6 +63,7 @@ const paths: Record<Name, React.ReactNode> = {
       <path d="M5 12h14" />
     </>
   ),
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   minus: <path d="M5 12h14" />,
   rotate: (
     <>

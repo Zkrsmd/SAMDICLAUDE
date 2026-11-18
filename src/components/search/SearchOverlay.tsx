@@ -9,7 +9,7 @@ import { useDialog } from '@/hooks/useDialog';
 import { formatPrice } from '@/lib/format';
 import type { SearchIndexEntry } from '@/lib/catalog';
 
-const SUGGESTIONS = ['F50', 'Venum gloves', 'mirror goggles', 'shin guards', 'Fastskin cap', 'hand wraps'];
+const SUGGESTIONS = ['Mercurial', 'Venum gloves', 'mirror goggles', 'shin guards', 'Fastskin cap', 'hand wraps'];
 
 export function SearchOverlay({ index }: { index: SearchIndexEntry[] }) {
   const open = useUi((s) => s.searchOpen);

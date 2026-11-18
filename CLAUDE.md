@@ -20,11 +20,16 @@ campaign and a real store at once. Real product photos (background removed) and 
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
-- Hero = three.js "crystal" stage (`src/components/hero/crystal/*`): each sport's real product photo frozen inside its own
-  crystal (ice shard / cracked glass / water orb / cut gem) with a survey network, HUD callouts and one post pass.
+- Hero = three.js "crystal" stage (`src/components/hero/crystal/*`): each sport's real product photo forms inside its own
+  crystal (ice shard / glass slab / water orb / cut gem), then the crystal BREAKS — pre-fractured Voronoi shards (droplets
+  for water) flown in the vertex shader (`burst.ts`, one draw call) with a shockwave + camera hit — and the product floats
+  free. Backdrops are coded sets painted in `textures.ts` (floodlit bowl, ring, pool wall, gym) plus additive light shafts.
+  Survey network, HUD callouts and one post pass (zoom blur, shockwave, light sharpen, grain).
   The only 3D is glass + environment — products stay real photos. three is code-split (client only) with a still fallback
   without WebGL 2. `window.__crystalT` freezes the opening in dev; `scripts/hero-frames.mjs` renders frames.
-  Slides + category photos: `src/config/hero.ts`.
+  Slides, arena-card product picks (`arenaPicks`) and category photos: `src/config/hero.ts`.
+- Homepage arena cards draw coded SVG field-of-play art (`src/components/home/ArenaArt.tsx`), no photos. Object cards
+  show name + price + a quick-add `+` (`QuickAdd.tsx`: one size adds at once, otherwise a size sheet).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 

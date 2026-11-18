@@ -51,7 +51,7 @@ const COPY: Record<string, (r: Row) => string> = {
 
 /** Hero / flagship products and best sellers (by slug). */
 export const FEATURED = [
-  'adidas-f50-hyperfast-elite-fg-soccer-cleats',
+  'nike-mercurial-vapor-17-elite-vini-jr-fg',
   'venum-giant-20-mike-tyson-pro-boxing-gloves-blackgold',
   'speedo-fastskin-speed-socket-20-mirrored-goggles-orangegold',
 ];

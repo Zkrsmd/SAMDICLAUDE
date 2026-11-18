@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import { crystalGeometry, crystalMaterial, environment, network, particles, WORLDS, type WorldSpec } from './worlds';
 import { backdropTex, glowTex } from './textures';
+import { droplets, fracture, shardMaterial, spray } from './burst';
 
 /**
  * SMADI hero engine (three.js). One renderer, four worlds, a single post pass.
- * Opening: a survey network and the crystal's wireframe draw themselves, a flash, and the
- * crystal materialises with the real product frozen inside. Cuts between sports use a radial
- * zoom blur + chromatic split. Drag spins the crystal, holding it thaws the ice, a click
- * explores. HUD labels/lines are positioned from projected 3D anchors every frame (no React).
+ * Opening: a survey network and the crystal's wireframe draw themselves, a flash, the crystal
+ * materialises around the real product, strains — and breaks: solid shards (or droplets) fly
+ * out with drag, gravity and spin, a shockwave refracts the frame, the camera takes the hit,
+ * and the product is left floating free. Cuts between sports zoom-blur and replay the break.
+ * Drag turns the product, a click explores. HUD labels follow projected 3D anchors (no React).
  */
 
 export interface EngineOptions {
@@ -37,7 +39,17 @@ interface World {
   backAspect?: number;
   base: { roughness: number; normal: number; dispersion: number };
   orb?: { pos: Float32Array; nrm: Float32Array };
+  shards: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  shardU: ReturnType<typeof shardMaterial>['uniforms'];
+  spray: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  sprayU: ReturnType<typeof spray>['uniforms'];
+  beams: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[];
+  broke: boolean;
 }
+
+/** opening beats (seconds): the crystal forms, then breaks */
+const FORM = 0.9;
+const BREAK = 1.85;
 
 const POST_VS = /* glsl */ `
   varying vec2 vUv;
@@ -51,11 +63,24 @@ const POST_FS = /* glsl */ `
   uniform float uFlash;
   uniform float uFade;
   uniform vec3 uFadeColor;
+  uniform vec4 uShock;
+  uniform float uSharp;
   varying vec2 vUv;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
   void main() {
-    vec2 c = vUv - 0.5;
-    float ab = 0.0016 + uWarp * 0.02;
+    vec2 uv = vUv;
+    // shockwave: a refracting ring racing out from the break
+    if (uShock.w > 0.001) {
+      vec2 d = uv - uShock.xy;
+      d.x *= uRes.x / uRes.y;
+      float r = length(d);
+      float ring = exp(-pow((r - uShock.z) * 13.0, 2.0)) * uShock.w;
+      vec2 dir = d / max(r, 1e-4);
+      dir.x *= uRes.y / uRes.x;
+      uv -= dir * ring * 0.04;
+    }
+    vec2 c = uv - 0.5;
+    float ab = 0.0011 + uWarp * 0.02;
     vec3 col;
     if (uWarp > 0.002) {
       col = vec3(0.0);
@@ -69,25 +94,30 @@ const POST_FS = /* glsl */ `
       col /= 12.0;
     } else {
       col.r = texture2D(tScene, 0.5 + c * (1.0 + ab * dot(c, c) * 4.0)).r;
-      col.g = texture2D(tScene, vUv).g;
+      col.g = texture2D(tScene, uv).g;
       col.b = texture2D(tScene, 0.5 + c * (1.0 - ab * dot(c, c) * 4.0)).b;
+      // crisp edges: a light unsharp mask at device-pixel scale
+      vec2 q = 1.0 / uRes;
+      vec3 nb = texture2D(tScene, uv + vec2(q.x, 0.0)).rgb + texture2D(tScene, uv - vec2(q.x, 0.0)).rgb
+              + texture2D(tScene, uv + vec2(0.0, q.y)).rgb + texture2D(tScene, uv - vec2(0.0, q.y)).rgb;
+      col = max(col + (col - nb * 0.25) * uSharp, 0.0);
     }
-    // soft glow from the brightest highlights (specular on the crystal)
+    // soft glow from the brightest highlights (specular on glass, flying shards)
     vec2 px = 1.0 / uRes;
     vec3 glow = vec3(0.0);
     for (int i = 0; i < 8; i++) {
       float a = float(i) * 0.785398;
       vec2 o = vec2(cos(a), sin(a));
-      glow += max(texture2D(tScene, vUv + o * px * 9.0).rgb - 0.9, 0.0);
-      glow += max(texture2D(tScene, vUv + o * px * 22.0).rgb - 0.9, 0.0) * 0.6;
+      glow += max(texture2D(tScene, uv + o * px * 9.0).rgb - 0.9, 0.0);
+      glow += max(texture2D(tScene, uv + o * px * 22.0).rgb - 0.9, 0.0) * 0.6;
     }
     col += glow * 0.16;
     col = mix(col, vec3(1.25), uFlash);
-    col *= 1.0 - dot(c, c) * 0.62;
+    col *= 1.0 - dot(c, c) * 0.58;
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
-    gl_FragColor.rgb += (hash(vUv * uRes + fract(uTime) * 91.7) - 0.5) * 0.045;
+    gl_FragColor.rgb += (hash(vUv * uRes + fract(uTime) * 91.7) - 0.5) * 0.03;
     gl_FragColor.rgb = mix(gl_FragColor.rgb, uFadeColor, uFade);
   }
 `;
@@ -159,8 +189,7 @@ export class CrystalEngine {
   private pointer = new THREE.Vector2();
   private pointerT = new THREE.Vector2();
   private spin = 0;
-  private thaw = 0;
-  private thawT = 0;
+  private tilt = 0;
   private drag: { x: number; y: number; t: number; moved: boolean } | null = null;
   private ray = new THREE.Raycaster();
   private v = new THREE.Vector3();
@@ -206,6 +235,8 @@ export class CrystalEngine {
           uFlash: { value: 0 },
           uFade: { value: o.reduced ? 0 : 1 },
           uFadeColor: { value: new THREE.Color('#F3F4F6') },
+          uShock: { value: new THREE.Vector4(0.5, 0.5, 0, 0) },
+          uSharp: { value: 0.32 },
         },
         depthTest: false,
         depthWrite: false,
@@ -221,6 +252,7 @@ export class CrystalEngine {
     this.io = new IntersectionObserver(([e]) => (this.visible = !!e?.isIntersecting));
     this.io.observe(o.canvas);
 
+    if (process.env.NODE_ENV !== 'production') (window as Window & { __crystal?: unknown }).__crystal = this; // QA hook
     o.canvas.addEventListener('pointerdown', this.onDown);
     window.addEventListener('pointermove', this.onMove, { passive: true });
     window.addEventListener('pointerup', this.onUp);
@@ -234,11 +266,14 @@ export class CrystalEngine {
     performance.mark('crystal:built');
     if (this.disposed) return;
     this.activate(first);
+    // shards are hidden until the break: show them for the compile so the break never stalls
+    first.shards.visible = first.spray.visible = true;
     try {
       await this.renderer.compileAsync(this.scene, this.camera);
     } catch {
       /* compile on first draw instead */
     }
+    first.shards.visible = first.spray.visible = false;
     performance.mark('crystal:compiled');
     this.renderFrame(0);
     this.o.onReady();
@@ -258,13 +293,19 @@ export class CrystalEngine {
       if (this.worlds.has(id)) continue;
       await idle();
       const w = await this.build(id);
+      if (this.active === w) continue;
+      // compile off-stage: detached from the scene so it can never flash over the live world
+      this.scene.remove(w.group);
       w.group.visible = true;
+      w.shards.visible = w.spray.visible = true;
       try {
         await this.renderer.compileAsync(w.group, this.camera, this.scene);
       } catch {
         /* ignore */
       }
-      if (this.active !== w) w.group.visible = false;
+      w.shards.visible = w.spray.visible = false;
+      w.group.visible = this.active === w;
+      this.scene.add(w.group);
     }
   }
 
@@ -368,6 +409,17 @@ export class CrystalEngine {
       const parts = particles(spec);
       group.add(parts);
 
+      // the break: pre-fractured glass (droplets for water), one mesh, flown in the shader
+      const pieces = spec.crystal === 'orb' ? droplets(1.18, spec.burst, 11) : fracture(geo, spec.burst, spec.id.length * 31 + 5);
+      const sm = shardMaterial(mat, spec.burst, spec.crystal !== 'orb');
+      const shards = new THREE.Mesh(pieces, sm.material);
+      shards.visible = false;
+      shards.frustumCulled = false;
+      group.add(shards);
+      const sp = spray(spec.burst, spec.id.length * 7 + 3);
+      sp.points.visible = false;
+      group.add(sp.points);
+
       const world: World = {
         spec,
         group,
@@ -381,6 +433,12 @@ export class CrystalEngine {
         caustics: envr.caustics,
         back: envr.back,
         base: { roughness: mat.roughness, normal: mat.normalScale.x, dispersion: mat.dispersion },
+        shards,
+        shardU: sm.uniforms,
+        spray: sp.points,
+        sprayU: sp.uniforms,
+        beams: envr.beams,
+        broke: false,
       };
       if (spec.crystal === 'orb') {
         const pos = geo.attributes.position!;
@@ -424,9 +482,11 @@ export class CrystalEngine {
     const aspect = Math.round(this.camera.aspect * 10) / 10;
     if (w.backAspect !== aspect) {
       w.backAspect = aspect;
+      // where the floor (y = -1.75) meets this plane, as a fraction from its top edge
+      const horizon = (w.back.position.y + visH / 2 + 1.75) / visH;
       const mat = w.back.material as THREE.MeshBasicMaterial;
       mat.map?.dispose();
-      mat.map = backdropTex(w.spec.word, [w.spec.sky[0], w.spec.fog], this.o.fontFamily, w.spec.id.length * 17, aspect);
+      mat.map = backdropTex(w.spec.word, [w.spec.sky[0], w.spec.fog], this.o.fontFamily, w.spec.id.length * 17, aspect, w.spec.id, horizon);
       mat.needsUpdate = true;
     }
   }
@@ -437,14 +497,13 @@ export class CrystalEngine {
     if (!this.active) return false;
     const r = this.o.canvas.getBoundingClientRect();
     this.ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), this.camera);
-    return this.ray.intersectObject(this.active.crystal, false).length > 0;
+    return this.ray.intersectObject(this.active.crystal.visible ? this.active.crystal : this.active.product, false).length > 0;
   }
 
   private onDown = (e: PointerEvent) => {
     if (!this.hits(e.clientX, e.clientY)) return;
-    e.stopPropagation(); // the crystal owns this gesture — no sport swipe
+    e.stopPropagation(); // the object owns this gesture — no sport swipe
     this.drag = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
-    this.thawT = 1;
   };
   private onMove = (e: PointerEvent) => {
     if (e.pointerType === 'mouse') this.pointerT.set(e.clientX / window.innerWidth - 0.5, e.clientY / window.innerHeight - 0.5);
@@ -452,6 +511,7 @@ export class CrystalEngine {
       const dx = e.clientX - this.drag.x;
       if (Math.abs(dx) > 6) this.drag.moved = true;
       this.spin += dx * 0.012;
+      this.tilt = clamp(this.tilt + dx * 0.009, -0.95, 0.95);
       this.drag.x = e.clientX;
     }
     if (e.pointerType === 'mouse') this.o.canvas.style.cursor = this.hits(e.clientX, e.clientY) ? 'grab' : '';
@@ -460,7 +520,6 @@ export class CrystalEngine {
     if (!this.drag) return;
     const quick = performance.now() - this.drag.t < 260 && !this.drag.moved;
     this.drag = null;
-    this.thawT = 0;
     if (quick) this.o.onExplore();
   };
 
@@ -471,7 +530,9 @@ export class CrystalEngine {
     this.w = Math.max(1, c.clientWidth);
     this.h = Math.max(1, c.clientHeight);
     this.mobile = this.w < 768;
-    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, this.mobile ? 1.6 : 1.5) * this.dprScale);
+    // native sharpness up to 2x, capped at ~4.2 MP so big retina screens stay smooth
+    const cap = Math.sqrt(4.2e6 / (this.w * this.h));
+    this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, this.mobile ? 1.75 : 2, cap) * this.dprScale);
     // refraction rendered at roughly CSS-pixel resolution: crisp product, half the cost on retina
     this.renderer.transmissionResolutionScale = Math.min(1, 1.1 / this.dpr);
     this.renderer.setPixelRatio(this.dpr);
@@ -504,8 +565,13 @@ export class CrystalEngine {
     this.frameCheck += raw;
     if (this.frameCheck > 1.2) {
       this.frameCheck = 0;
+      const a = this.active;
+      if (a && (a.shards.visible || this.cutAt >= 0)) {
+        this.frameAvg = 1 / 60; // the break and cuts are allowed to be heavy for a moment
+        return;
+      }
       // quality ladder: MSAA 4 → 2 → 0, then pixel ratio down to 0.75 of native
-      if (this.frameAvg > 1 / 42) {
+      if (this.frameAvg > 1 / 50) {
         if (this.rt.samples > 0) {
           this.rt.samples = this.rt.samples > 2 ? 2 : 0;
           this.rt.dispose();
@@ -538,7 +604,7 @@ export class CrystalEngine {
           this.swapped = true;
           this.cutAt = t;
           this.spin += this.cutDir * 3.2;
-          this.introAt = t - 1.15; // replay the tail of the opening: wire flash + materialise
+          this.introAt = t - 0.8; // replay the tail of the opening: form + break
         }
       } else {
         warp = 1 - outExpo(seg(k, 0, 0.6));
@@ -546,48 +612,75 @@ export class CrystalEngine {
       }
     }
 
-    // ---- opening choreography
-    const draw = ti < 0 ? 0 : seg(ti, 0, 1.25);
-    const mat = ti < 0 ? 0 : seg(ti, 1.3, 2.2);
-    const flash = ti < 0 ? 0 : Math.max(0, 1 - Math.abs(ti - 1.32) / 0.16) * 0.85;
-    w.crystal.visible = ti >= 1.3;
-    w.product.visible = ti >= 1.3;
+    // ---- opening choreography: draw → flash → the crystal forms around the product → it breaks
+    const B = w.spec.burst;
+    const draw = ti < 0 ? 0 : seg(ti, 0, FORM);
+    const mat = ti < 0 ? 0 : seg(ti, FORM, FORM + 0.6);
+    const age = ti - BREAK;
+    const formed = ti >= FORM;
+    const intact = formed && age < 0;
+    const charge = intact ? seg(ti, FORM + 0.4, BREAK) : 0;
+    const flashForm = ti < 0 ? 0 : Math.max(0, 1 - Math.abs(ti - FORM - 0.02) / 0.14) * 0.7;
+    const hit = age >= 0 && !reduced ? Math.exp(-age * 7) : 0;
+    const flash = Math.max(flashForm, (age >= 0 && !reduced ? Math.exp(-age * 14) : 0) * 0.6);
+    w.crystal.visible = intact;
+    w.product.visible = formed;
+    w.wire.visible = !formed || intact;
+    const live = !reduced && age >= 0 && age < B.life + 0.3;
+    if (age < 0) w.broke = false;
+    else if (!w.broke) {
+      // the moment of the break: pieces start exactly where the crystal is
+      w.broke = true;
+      w.shards.position.copy(w.pivot.position);
+      w.shards.quaternion.copy(w.pivot.quaternion);
+      w.shards.scale.copy(w.pivot.scale);
+      const inv = w.pivot.quaternion.clone().invert();
+      w.shardU.uBias.value.set(...B.bias).applyQuaternion(inv);
+      w.shardU.uGrav.value.set(0, -B.gravity, 0).applyQuaternion(inv);
+      w.spray.position.copy(w.pivot.position);
+    }
+    w.shards.visible = live;
+    w.spray.visible = live;
+    w.shardU.uAge.value = age;
+    w.sprayU.uAge.value = age;
+    w.sprayU.uPixel.value = this.h * this.dpr * 0.5;
     const pop = outBack(mat, 2.2);
-    w.pivot.scale.setScalar(ti >= 1.3 ? THREE.MathUtils.lerp(1.28, 1, pop) : 1);
-    w.wire.material.opacity = ti < 0 ? 0 : ti < 1.3 ? 0.9 * seg(ti, 0, 0.3) : 0.9 * (1 - mat) + (w.spec.crystal === 'orb' ? 0.05 : 0.2);
+    w.pivot.scale.setScalar(formed ? THREE.MathUtils.lerp(1.28, 1, pop) * (1 + charge * charge * 0.05) : 1);
+    w.wire.material.opacity = ti < 0 ? 0 : ti < FORM ? 0.9 * seg(ti, 0, 0.3) : 0.9 * (1 - mat) + (w.spec.crystal === 'orb' ? 0.05 : 0.2);
     const wirePos = w.wire.geometry.attributes.position!;
-    w.wire.geometry.setDrawRange(0, Math.floor(wirePos.count * (ti < 1.3 ? draw : 1)));
+    w.wire.geometry.setDrawRange(0, Math.floor(wirePos.count * (ti < FORM ? draw : 1)));
     w.net.lines.geometry.setDrawRange(0, Math.floor(w.net.segments * 2 * draw));
     w.net.lines.material.opacity = 0.6 - 0.3 * mat;
-    u.uFade!.value = reduced ? 0 : Math.max(1 - seg(ti, 0, 0.7), this.scroll > 0.7 ? seg(this.scroll, 0.7, 1) : 0);
+    u.uFade!.value = reduced ? 0 : Math.max(1 - seg(ti, 0, 0.6), this.scroll > 0.7 ? seg(this.scroll, 0.7, 1) : 0);
     if (ti < 0) u.uFade!.value = 1;
 
     // ---- idle life
     this.pointer.lerp(this.pointerT, 0.06);
-    this.thaw += (this.thawT - this.thaw) * 0.08;
     this.spin *= 0.94;
+    if (!this.drag) this.tilt *= 0.92;
     const idle = reduced ? 0 : 1;
     w.pivot.rotation.y += (0.22 * idle + this.spin) * dt;
     w.pivot.rotation.x = Math.sin(t * 0.3) * 0.08 * idle + this.pointer.y * 0.25;
     w.pivot.rotation.z = Math.sin(t * 0.21) * 0.05 * idle;
     const bob = Math.sin(t * 0.8) * 0.07 * idle;
-    w.pivot.position.y = 0.15 + bob;
+    const strain = charge * charge * 0.035 * idle;
+    w.pivot.position.set((Math.random() - 0.5) * strain, 0.15 + bob + (Math.random() - 0.5) * strain, 0);
     w.product.position.y = 0.15 + bob;
-    w.product.rotation.y = Math.sin(t * 0.45) * 0.16 * idle + this.pointer.x * 0.35;
+    w.product.rotation.y = Math.sin(t * 0.45) * 0.16 * idle + this.pointer.x * 0.35 + this.tilt;
     w.product.rotation.z = Math.sin(t * 0.33) * 0.03 * idle;
+    w.product.scale.setScalar(1 + hit * 0.12 * Math.sin(Math.min(age, 0.5) * 6.3 + 0.6));
     const m = w.crystal.material;
-    m.roughness = THREE.MathUtils.lerp(w.base.roughness, 0, this.thaw);
-    m.normalScale.setScalar(THREE.MathUtils.lerp(w.base.normal, w.base.normal * 0.12, this.thaw));
-    m.dispersion = THREE.MathUtils.lerp(w.base.dispersion, w.base.dispersion * 0.3, this.thaw);
-    m.thickness = (w.spec.material.thickness ?? 1) * (1 - this.thaw * 0.5);
-    if (w.orb && !reduced) {
+    m.normalScale.setScalar(w.base.normal * (1 + charge * 1.6));
+    m.roughness = w.base.roughness + charge * 0.06;
+    if (w.orb && !reduced && intact) {
       const pos = w.crystal.geometry.attributes.position as THREE.BufferAttribute;
       const { pos: b, nrm: n } = w.orb;
+      const amp = 1 + charge * 2.2;
       for (let i = 0; i < pos.count; i++) {
         const x = b[i * 3]!;
         const y = b[i * 3 + 1]!;
         const z = b[i * 3 + 2]!;
-        const d = Math.sin(x * 3.1 + t * 1.7) * Math.sin(y * 2.7 - t * 1.3) * 0.045 + Math.sin(z * 4.0 + t * 2.3) * 0.02;
+        const d = (Math.sin(x * 3.1 + t * 1.7) * Math.sin(y * 2.7 - t * 1.3) * 0.045 + Math.sin(z * 4.0 + t * 2.3) * 0.02) * amp;
         pos.setXYZ(i, x + n[i * 3]! * d, y + n[i * 3 + 1]! * d, z + n[i * 3 + 2]! * d);
       }
       pos.needsUpdate = true;
@@ -597,18 +690,36 @@ export class CrystalEngine {
     w.parts.material.uniforms.uPixel!.value = this.h * this.dpr * 0.5;
     w.parts.material.uniforms.uOpacity!.value = 0.35 + 0.65 * draw;
     w.net.lines.rotation.y = t * 0.025;
-    w.halo.material.opacity = 0.45 + Math.sin(t * 1.2) * 0.08 + flash * 0.4;
+    w.halo.material.opacity = 0.45 + Math.sin(t * 1.2) * 0.08 + flash * 0.4 + charge * 0.25;
     w.caustics.forEach((c, i) => {
       const map = (c.material as THREE.MeshBasicMaterial).map!;
       map.offset.set(t * (i ? -0.011 : 0.008), t * (i ? 0.006 : -0.01));
     });
+    w.beams.forEach((b, i) => {
+      const base = b.userData.base as { tilt: number; a: number };
+      b.rotation.z = base.tilt + Math.sin(t * 0.23 + i * 1.7) * 0.03 * idle;
+      b.material.opacity = base.a * (0.82 + 0.18 * Math.sin(t * 0.8 + i * 2.3)) * (0.4 + 0.6 * draw) + hit * 0.12;
+    });
 
-    // ---- camera: slow orbit, pointer parallax, scroll dolly
+    // ---- camera: slow orbit, pointer parallax, scroll dolly, and it takes the hit
     const sc = this.scroll;
     const orbit = Math.sin(t * 0.12) * 0.25 * idle;
-    const dist = this.dist * (1 - sc * 0.32) * (ti >= 0 && ti < 2.4 ? THREE.MathUtils.lerp(1.12, 1, outExpo(seg(ti, 0.2, 2.4))) : 1);
-    this.camera.position.set(Math.sin(orbit) * dist * 0.15 + this.pointer.x * 0.6, 0.55 + this.pointer.y * -0.3 + sc * 0.4, dist);
+    const intro = ti >= 0 && ti < 2.4 ? THREE.MathUtils.lerp(1.12, 1, outExpo(seg(ti, 0.2, 2.4))) : 1;
+    const dist = this.dist * (1 - sc * 0.32) * intro * (1 - charge * 0.035 + hit * 0.05);
+    const shake = (hit * B.shake + strain * 0.4) * idle;
+    this.camera.position.set(
+      Math.sin(orbit) * dist * 0.15 + this.pointer.x * 0.6 + Math.sin(t * 73) * shake,
+      0.55 + this.pointer.y * -0.3 + sc * 0.4 + Math.cos(t * 61) * shake,
+      dist,
+    );
     this.camera.lookAt(0, this.mobile ? -0.55 : -0.05, 0);
+
+    // shockwave from the break point, in screen space
+    if (hit > 0.01) {
+      const [sx, sy] = this.project(w.pivot.position.x, w.pivot.position.y, w.pivot.position.z, w.group);
+      u.uShock!.value.set(sx / this.w, 1 - sy / this.h, age * 1.5, Math.min(1, age * 30) * hit * 1.1);
+    } else u.uShock!.value.w = 0;
+    warp = Math.max(warp, (age >= 0 && !reduced ? Math.exp(-age * 9) : 0) * 0.3 * Math.min(1, age * 25));
 
     // ---- render
     u.uTime!.value = t;
@@ -646,7 +757,7 @@ export class CrystalEngine {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     // callouts need room: hidden on short (landscape phone) screens
-    const show = (ti >= 1.45 || this.o.reduced) && this.h >= 560 ? 1 : 0;
+    const show = (ti >= BREAK + 0.45 || this.o.reduced) && this.h >= 560 ? 1 : 0;
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.lineWidth = 1;

@@ -1,6 +1,6 @@
 /**
- * Hero slides. Each slide plays a coded film (src/components/hero/cinema/scenes.ts) with the
- * same id — real product cut-outs choreographed in canvas, no video files needed.
+ * Hero slides. Each slide is a three.js world with the same id (src/components/hero/crystal):
+ * the real product cut-out breaks out of its own crystal.
  */
 export const heroSlides = [
   {
@@ -10,7 +10,7 @@ export const heroSlides = [
     tagline: 'Built for every decisive moment.',
     cta: 'Explore football',
     href: '/football',
-    product: { slug: 'adidas-f50-hyperfast-elite-fg-soccer-cleats', brand: 'adidas', name: 'F50 Hyperfast Elite FG' },
+    product: { slug: 'nike-mercurial-vapor-17-elite-vini-jr-fg', brand: 'Nike', name: 'Mercurial Vapor 17 Elite FG' },
     accent: '#4FAE3A',
   },
   {
@@ -40,7 +40,7 @@ export const heroSlides = [
     tagline: 'Own the paint. Own the moment.',
     cta: 'Explore basketball',
     href: '/basketball',
-    product: { slug: 'wilson-evolution-game-basketball', brand: 'Wilson', name: 'Evolution Game Basketball' },
+    product: { slug: 'wilson-2026-nba-finals-championship-basketball-new-york-knicks', brand: 'Wilson', name: 'NBA Finals Championship Ball' },
     accent: '#E8792A',
   },
 ] as const;
@@ -48,7 +48,17 @@ export const heroSlides = [
 export type HeroSlide = (typeof heroSlides)[number];
 export const heroIds: string[] = heroSlides.map((s) => s.id);
 
-/** Category card media (owner-supplied AI stills; swap for looping videos later). */
+/** The product that stands on each sport's arena card on the homepage. */
+export const arenaPicks: Record<string, string> = {
+  football: 'adidas-predator-elite-fg-soccer-cleats-white',
+  boxing: 'everlast-powerlock-og-pro-training-glove-lace-up',
+  swimming: 'speedo-fastskin-speed-socket-20-mirrored-goggles-smokeblue',
+  basketball: 'nike-lebron-xxiv-stars-basketball-shoes',
+  running: 'nike-apex-road-racing-shoes',
+  fitness: 'everlast-1910-pro-leather-medicine-ball',
+};
+
+/** Category page header media (owner-supplied AI stills; swap for looping videos later). */
 export const categoryMedia: Record<string, string> = {
   football: '/media/cat-football.webp',
   boxing: '/media/cat-boxing.webp',

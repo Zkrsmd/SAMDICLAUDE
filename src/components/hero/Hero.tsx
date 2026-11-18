@@ -20,8 +20,8 @@ function deferred() {
 }
 
 /**
- * The opening: each sport's product frozen inside its own crystal (ice shard, cracked glass,
- * water orb, cut gem) in a cool, atmospheric world, read by a HUD — survey network, specimen
+ * The opening: each sport's product breaks out of its own crystal (ice shard, glass slab,
+ * water orb, cut gem) in a coded, atmospheric set, read by a HUD — survey network, specimen
  * callouts, live readouts. Mono corner type, an index to jump between sports, a single CTA.
  */
 export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, index: number) => void }) {
@@ -171,7 +171,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
               <p>{'// SMADI © 2026'}</p>
               <p className="mt-2 text-white/80">
                 Season 01 —<br />
-                Frozen in motion.
+                Break the ice.
               </p>
             </div>
             <nav aria-label="Sports index" className="pointer-events-auto ml-auto text-right">
@@ -234,7 +234,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
               <p className="mono ml-auto hidden text-right text-[10.5px] uppercase leading-[1.6] tracking-[0.14em] text-white/80 md:block">
                 Scroll down to discover.
                 <br />
-                Hold the crystal to thaw it.
+                Drag to turn it. Click to explore.
               </p>
             </div>
           </div>

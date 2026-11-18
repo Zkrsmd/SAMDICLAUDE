@@ -6,13 +6,14 @@ import { Icons } from '@/components/home/Icons';
 import { ProductGrid, RecentlyViewed } from '@/components/product/ProductRail';
 import { Icon } from '@/components/ui/Icon';
 import { brands } from '@/data/brands';
+import { arenaPicks } from '@/config/hero';
 import { bestSellers, countFor, featuredProducts, getAllProducts, getSports, productsFor, toCard } from '@/lib/catalog';
 
 
 export default function Home() {
   const sports: ShowcaseSport[] = getSports().map((s) => {
     const list = productsFor(s.slug);
-    const hero = list.find((p) => p.featured) ?? list.find((p) => p.bestSeller) ?? list[0]!;
+    const hero = list.find((p) => p.slug === arenaPicks[s.slug]) ?? list.find((p) => p.featured) ?? list.find((p) => p.bestSeller) ?? list[0]!;
     return {
       slug: s.slug,
       name: s.name,

@@ -1,15 +1,16 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { backdropTex, causticTex, concreteGround, crackNormal, frostGround, frostNormal, rippleNormal, shadowTex, tileGround, woodGround } from './textures';
+import { backdropTex, beamTex, causticTex, concreteGround, crackNormal, frostGround, frostNormal, rippleNormal, shadowTex, tileGround, woodGround } from './textures';
+import type { BurstSpec } from './burst';
 
 /**
- * The four worlds. Same grammar — a real product frozen inside a crystal, a survey network of
- * points around it, an atmosphere — but each sport gets its own matter:
- *   football   PERMAFROST  ice shard over a frozen pitch, snow
- *   boxing     IMPACT      a cracked slab of smoked glass in a concrete gym, falling glass dust
- *   swimming   ABYSS       a living water orb over a pool floor with caustics, bubbles
- *   basketball COURT       a cut gem with heavy dispersion over hardwood, court lines, dust
+ * The four worlds. Same grammar — a real product frozen inside a crystal that then BREAKS,
+ * a survey network, a coded set and light through haze — but each sport gets its own matter:
+ *   football   PERMAFROST  an ice shard bursts in a floodlit bowl, snow and powder
+ *   boxing     IMPACT      a glass slab is punched out toward you under the ring rig, glass dust
+ *   swimming   ABYSS       a water orb pops into droplets under the surface, god rays, bubbles
+ *   basketball COURT       a cut gem bounces apart in a morning gym, sparks
  */
 
 export type ParticleKind = 'snow' | 'dust' | 'bubbles' | 'motes';
@@ -29,6 +30,9 @@ export interface WorldSpec {
   productWidth: number;
   particles: { kind: ParticleKind; count: number; size: number; color: string };
   readout: { label: string; base: [number, number]; unit: string };
+  burst: BurstSpec;
+  /** additive light shafts in the scene: source x/y/z, tilt, width, length, strength */
+  beams: [number, number, number, number, number, number, number][];
 }
 
 export const WORLDS: Record<string, WorldSpec> = {
@@ -36,7 +40,7 @@ export const WORLDS: Record<string, WorldSpec> = {
     id: 'football',
     word: 'Football',
     code: 'PERMAFROST',
-    product: 'adidas-f50-hyperfast-elite-fg-soccer-cleats',
+    product: 'nike-mercurial-vapor-17-elite-vini-jr-fg',
     sky: ['#6E7884', '#B3BBC6'],
     fog: '#A3ACB8',
     light: '#EAF2FF',
@@ -44,9 +48,15 @@ export const WORLDS: Record<string, WorldSpec> = {
     groundTint: '#A9B3BF',
     crystal: 'shard',
     material: { ior: 1.31, thickness: 0.32, roughness: 0.07, attenuationColor: new THREE.Color('#D6E8F4'), attenuationDistance: 3.2, dispersion: 0.12, normal: 'frost' },
-    productWidth: 1.45,
+    productWidth: 1.7,
     particles: { kind: 'snow', count: 420, size: 0.05, color: '#FFFFFF' },
     readout: { label: 'TEMP', base: [-4.12, 1.36], unit: '°C' },
+    burst: { pieces: 30, power: 3.4, drag: 1.5, gravity: 3.2, spin: 7, bias: [0, 0.35, 0.6], stretch: 0, impact: [0.15, 0.4, 0.3], spray: '#FFFFFF', shake: 0.07, life: 2.2 },
+    beams: [
+      [-5.6, 5.4, -5, 0.6, 2.8, 13, 0.22],
+      [5.6, 5.4, -5, -0.6, 2.8, 13, 0.22],
+      [-4.2, 5.8, -7, 0.35, 1.6, 13, 0.12],
+    ],
   },
   boxing: {
     id: 'boxing',
@@ -63,6 +73,12 @@ export const WORLDS: Record<string, WorldSpec> = {
     productWidth: 1.25,
     particles: { kind: 'dust', count: 320, size: 0.035, color: '#FFE9C8' },
     readout: { label: 'FORCE', base: [3.84, 0.42], unit: 'kN' },
+    burst: { pieces: 34, power: 4.0, drag: 1.7, gravity: 3.4, spin: 8, bias: [0, 0.15, 0.95], stretch: 0, impact: [0.1, 0.3, 0.3], spray: '#FFE7C6', shake: 0.13, life: 2.0 },
+    beams: [
+      [0, 6.2, -1.6, 0, 4.6, 9.5, 0.24],
+      [-0.9, 6.2, -2.4, 0.12, 2.2, 9.5, 0.1],
+      [0.9, 6.2, -2.4, -0.12, 2.2, 9.5, 0.1],
+    ],
   },
   swimming: {
     id: 'swimming',
@@ -79,12 +95,20 @@ export const WORLDS: Record<string, WorldSpec> = {
     productWidth: 1.5,
     particles: { kind: 'bubbles', count: 220, size: 0.075, color: '#FFFFFF' },
     readout: { label: 'DEPTH', base: [2.4, 0.18], unit: 'M' },
+    burst: { pieces: 110, power: 2.9, drag: 1.3, gravity: 5.5, spin: 2, bias: [0, 0.9, 0.3], stretch: 0.32, impact: [0, 0, 0], spray: '#E6FBFF', shake: 0.05, life: 2.2 },
+    beams: [
+      [-4.4, 6, -6.5, 0.1, 1.2, 14, 0.12],
+      [-2.2, 6, -6, 0.05, 1.8, 14, 0.14],
+      [0.2, 6, -6.4, -0.02, 1.4, 14, 0.12],
+      [2.4, 6, -6, -0.06, 2, 14, 0.14],
+      [4.6, 6, -6.5, -0.1, 1.2, 14, 0.12],
+    ],
   },
   basketball: {
     id: 'basketball',
     word: 'Basketball',
     code: 'COURT',
-    product: 'wilson-evolution-game-basketball',
+    product: 'wilson-2026-nba-finals-championship-basketball-new-york-knicks',
     sky: ['#7C7268', '#BDB3A6'],
     fog: '#ADA397',
     light: '#FFF0E0',
@@ -95,6 +119,12 @@ export const WORLDS: Record<string, WorldSpec> = {
     productWidth: 1.15,
     particles: { kind: 'motes', count: 260, size: 0.03, color: '#FFF4E4' },
     readout: { label: 'RIM', base: [3.05, 0.0], unit: 'M' },
+    burst: { pieces: 24, power: 3.8, drag: 1.3, gravity: 5.2, spin: 10, bias: [0, 1.0, 0.25], stretch: 0, impact: [0, -0.7, 0.2], spray: '#FFF0D8', shake: 0.09, life: 2.3 },
+    beams: [
+      [-6.4, 6.4, -7, 0.62, 1.6, 15, 0.16],
+      [-4.6, 6.4, -7, 0.62, 1.6, 15, 0.14],
+      [-2.8, 6.4, -7, 0.62, 1.6, 15, 0.12],
+    ],
   },
 };
 
@@ -305,10 +335,26 @@ export function environment(spec: WorldSpec, fontFamily: string) {
   const group = new THREE.Group();
   const back = new THREE.Mesh(
     new THREE.PlaneGeometry(64, 32),
-    new THREE.MeshBasicMaterial({ map: backdropTex(spec.word, [spec.sky[0], spec.fog], fontFamily, spec.id.length * 17), fog: false, toneMapped: false }),
+    new THREE.MeshBasicMaterial({ map: backdropTex(spec.word, [spec.sky[0], spec.fog], fontFamily, spec.id.length * 17, 2, spec.id), fog: false, toneMapped: false }),
   );
   back.position.set(0, 1.6, -12);
   group.add(back);
+
+  // light through haze: additive shafts with real parallax against the set
+  const bt = beamTex();
+  const beams = spec.beams.map(([x, y, z, tilt, w, len, a]) => {
+    const g = new THREE.PlaneGeometry(w, len);
+    g.translate(0, -len / 2, 0);
+    const m = new THREE.Mesh(
+      g,
+      new THREE.MeshBasicMaterial({ map: bt, color: spec.light, transparent: true, opacity: a, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide }),
+    );
+    m.position.set(x, y, z);
+    m.rotation.z = tilt;
+    m.userData.base = { tilt, a };
+    group.add(m);
+    return m;
+  });
 
   const groundTex = spec.ground();
   const ground = new THREE.Mesh(
@@ -364,5 +410,5 @@ export function environment(spec: WorldSpec, fontFamily: string) {
     ]);
     group.add(new THREE.Line(key, new THREE.LineBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.55 })));
   }
-  return { group, caustics, shadow, back };
+  return { group, caustics, shadow, back, beams };
 }

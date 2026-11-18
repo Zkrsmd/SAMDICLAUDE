@@ -97,3 +97,19 @@ bright, makes the showroom wall a literal extension of the hero, and turns trans
 | Mobile GPU load | Tiers, runtime degrade, pause offscreen, poster fallback |
 | Product facts | Only researched items marked verified; demo flags elsewhere |
 | Brand logos | Typographic word-marks until official files are supplied |
+
+## Break the ice (hero v3) and Apple-calm cards
+- **The crystal breaks.** The owner did not want products sitting inside objects, so each crystal now forms, strains and
+  breaks: a 3D Voronoi of its convex hull (denser at a per-sport impact point) gives solid shards; the water orb becomes
+  droplets. All pieces share one mesh and fly in the vertex shader from one age uniform (drag, gravity, spin, stretch),
+  so the explosion is a single draw call. A screen-space shockwave, zoom-blur punch and camera hit sell the impact.
+  After the break there is no transmission pass, so the product renders at native sharpness (DPR up to 2, 4.2 MP cap).
+- **Per sport:** ice bursts upward in a floodlit bowl; glass is punched out toward the viewer under the ring rig; water
+  pops into droplets under the surface; the gem bounces apart in a morning gym.
+- **Hero products:** football is the Nike Mercurial Vapor 17 Elite (the most recognised boot; the black F50 was
+  rejected); basketball is the gold NBA Finals ball.
+- **Coded backdrops:** sets painted in canvas at build time (stands + floodlight masts, ring + rig, pool wall + lane T,
+  gym windows + hoop), light painted at 1/8 resolution and stretched as a free wide blur, plus additive 3D light shafts.
+- **Arena cards:** the AI photos and the cursor "light switch" are gone. Each card draws vector field-of-play markings
+  (pitch, ring, pool, court, track, plate) that draw in on reveal; hover is a calm lift, slight zoom and product float.
+- **Object cards:** name + price + a quick-add `+`. One-size items add at once; others open a small frosted size sheet.

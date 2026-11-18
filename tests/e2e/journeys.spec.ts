@@ -21,6 +21,23 @@ test.describe('core shopping journeys', () => {
     await expect(page.getByRole('heading', { name: /brands behind the performance/i })).toBeInViewport({ timeout: 15_000 });
   });
 
+  test('quick add: the + on a homepage object puts it in the bag (size sheet when needed)', async ({ page }) => {
+    await openHome(page);
+    const before = await cartCount(page);
+    const icons = page.locator('section[aria-labelledby="icons-title"]');
+    await icons.scrollIntoViewIfNeeded();
+    // goggles come in one size: the + adds straight away
+    await icons.getByRole('button', { name: /^Add Fastskin Speed Socket.* to bag$/ }).click();
+    await expect.poll(() => cartCount(page)).toBe(before + 1);
+    // boots need a size: the + opens a size sheet first
+    await icons.getByRole('button', { name: /^Add Mercurial Vapor.* to bag$/ }).click();
+    const sheet = icons.getByRole('group', { name: /Choose a size for Mercurial Vapor/ });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('button', { name: 'UK 9' }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect.poll(() => cartCount(page)).toBe(before + 2);
+  });
+
   test('6–9: football category → boot wall → product detail', async ({ page }) => {
     await openHome(page);
     await page.getByRole('group', { name: 'Choose sport' }).getByRole('button', { name: 'Football' }).click();

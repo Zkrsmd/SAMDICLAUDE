@@ -26,6 +26,7 @@ export interface CardData {
   price: number;
   short: string;
   colors: { id: string; name: string; swatch: string[] }[];
+  sizes: string[];
   bestSeller: boolean;
   isNew: boolean;
   verified: boolean;
@@ -42,6 +43,7 @@ export const toCard = (p: Product): CardData => ({
   price: p.price,
   short: p.short,
   colors: p.colors.map(({ id, name, swatch }) => ({ id, name, swatch })),
+  sizes: p.sizes,
   bestSeller: !!p.bestSeller,
   isNew: !!p.isNew,
   verified: p.verified,
