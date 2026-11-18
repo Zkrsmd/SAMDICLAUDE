@@ -65,7 +65,8 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
       dripEls = drips.map((d) => {
         const e = document.createElement('div');
         e.dataset.drip = '';
-        e.style.cssText = `position:absolute;top:0;left:${d.x - d.w / 2}px;width:${d.w}px;height:0;border-radius:0 0 ${d.w}px ${d.w}px;background:${holoAt(d.x / w)};will-change:height`;
+        // full-length drip parked above the band and slid down with a transform: no layout per frame
+        e.style.cssText = `position:absolute;top:${-d.max * 1.2}px;left:${d.x - d.w / 2}px;width:${d.w}px;height:${d.max * 1.2 + 18}px;border-radius:0 0 ${d.w}px ${d.w}px;background:${holoAt(d.x / w)};will-change:transform`;
         el.appendChild(e);
         return e;
       });
@@ -84,7 +85,17 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
     ro.observe(el);
 
     let visible = false;
-    const io = new IntersectionObserver(([e]) => (visible = !!e?.isIntersecting), { rootMargin: '200px 0px' });
+    // where the band sits in the page, measured when it comes near (never inside the frame loop)
+    let docTop = 0;
+    const measure = () => (docTop = el.getBoundingClientRect().top + window.scrollY);
+    const io = new IntersectionObserver(
+      ([e]) => {
+        visible = !!e?.isIntersecting;
+        if (e) docTop = e.boundingClientRect.top + window.scrollY;
+      },
+      { rootMargin: '200px 0px' },
+    );
+    window.addEventListener('resize', measure);
     io.observe(el);
     let raf = 0;
     let last = 0;
@@ -92,14 +103,14 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
       raf = requestAnimationFrame(frame);
       if (!visible || now - last < 30) return;
       last = now;
-      const top = el.getBoundingClientRect().top;
+      const top = docTop - window.scrollY;
       const p = Math.min(1, Math.max(0, (window.innerHeight - top) / (window.innerHeight * 0.8)));
       const grow = reduced ? (p > 0.15 ? 1 : 0) : p * p * (3 - 2 * p);
       const t = now / 1000;
       drips.forEach((d, i) => {
         const wob = reduced ? 0 : Math.sin(t * d.sp + d.ph) * 0.1 + Math.sin(t * d.sp * 2.3 + d.ph) * 0.04;
         const L = Math.max(0, d.max * grow * (0.9 + wob));
-        dripEls[i]!.style.height = `${(L + 18).toFixed(1)}px`;
+        dripEls[i]!.style.transform = `translate3d(0,${Math.min(L, d.max * 1.2).toFixed(1)}px,0)`;
         // let a droplet go from long drips: it starts attached, so the goo stretches a neck before it snaps
         if (!reduced && grow > 0.85 && L > d.max * 0.8) {
           const free = drops.find((o) => o.d < 0);
@@ -133,6 +144,7 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
+      window.removeEventListener('resize', measure);
     };
   }, [sport]);
 

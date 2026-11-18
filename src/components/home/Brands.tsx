@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import type { BrandEntry } from '@/types/catalog';
+import { SplitWords } from '@/components/ui/SplitWords';
 
 type B = BrandEntry & { logo?: string; keepColor?: boolean };
 
@@ -13,27 +14,47 @@ export function Brands({ brands }: { brands: B[] }) {
   const r1 = useRef<HTMLUListElement>(null);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const rows = [r0, r1];
+    const els = [r0.current, r1.current].filter((e): e is HTMLUListElement => !!e);
+    if (!els.length) return;
+    // widths are measured once and on resize, never inside the frame (no forced layout per frame)
+    const halves = els.map((el) => el.scrollWidth / 2);
+    const ro = new ResizeObserver(() => els.forEach((el, i) => (halves[i] = el.scrollWidth / 2)));
+    els.forEach((el) => ro.observe(el));
     let raf = 0;
     let x = 0;
     let lastY = window.scrollY;
     let boost = 0;
-    const loop = () => {
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(50, now - last) / 16.67; // same speed at any refresh rate
+      last = now;
       const y = window.scrollY;
       boost = boost * 0.92 + Math.abs(y - lastY) * 0.06;
       lastY = y;
-      x += 0.4 + Math.min(boost, 7);
-      rows.forEach((r, i) => {
-        const el = r.current;
-        if (!el) return;
-        const half = el.scrollWidth / 2;
+      x += (0.4 + Math.min(boost, 7)) * dt;
+      els.forEach((el, i) => {
+        const half = halves[i]!;
+        if (!half) return;
         const off = (x % half) * (i === 0 ? -1 : 1) - (i === 1 ? half : 0);
-        el.style.transform = `translate3d(${off}px,0,0)`;
+        el.style.transform = `translate3d(${off.toFixed(1)}px,0,0)`;
       });
       raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    // only run while the strip is on screen
+    const io = new IntersectionObserver(([e]) => {
+      cancelAnimationFrame(raf);
+      if (e?.isIntersecting) {
+        last = performance.now();
+        lastY = window.scrollY;
+        raf = requestAnimationFrame(loop);
+      }
+    });
+    io.observe(els[0]!.parentElement ?? els[0]!);
+    return () => {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      ro.disconnect();
+    };
   }, []);
 
   const mark = (b: B, k: string) => (
@@ -64,8 +85,8 @@ export function Brands({ brands }: { brands: B[] }) {
     <section aria-labelledby="brands-title" className="relative overflow-hidden bg-bg pb-16 pt-[26vh] md:pt-[30vh]">
       <div className="container-x" data-reveal>
         <p className="eyebrow text-muted">Brands we carry</p>
-        <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(36px,9.4vw,128px)]">
-          The brands behind the <span className="holo-text">performance</span>
+        <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(36px,9.4vw,128px)]" data-reveal="words">
+          <SplitWords text="The brands behind the" /> <SplitWords text="performance" className="holo-text" from={4} />
         </h2>
         <p className="mt-4 max-w-md text-[15px] text-muted">Official products from the manufacturers we stock. Logos are trademarks of their owners; no partnership is implied.</p>
       </div>

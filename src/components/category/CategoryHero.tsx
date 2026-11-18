@@ -59,13 +59,15 @@ export function CategoryHero({
             className="pointer-events-none absolute inset-x-[6%] top-[32%] bottom-[26%] md:inset-x-auto md:bottom-[10%] md:right-[5%] md:top-[18%] md:w-[44%]"
             style={{ animation: 'product-in 1.5s .3s cubic-bezier(.16,1,.3,1) both' }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={renderUrl(hero.slug)}
-              alt={hero.name}
-              className="float-product h-full w-full object-contain"
-              style={{ filter: `drop-shadow(0 30px 50px ${glow}) drop-shadow(0 20px 20px rgba(0,0,0,.5))` }}
-            />
+            <div className="float-wrap h-full w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={renderUrl(hero.slug)}
+                alt={hero.name}
+                className="float-product h-full w-full object-contain"
+                style={{ filter: `drop-shadow(0 30px 50px ${glow}) drop-shadow(0 20px 20px rgba(0,0,0,.5))` }}
+              />
+            </div>
           </div>
         )}
         <div className="mt-auto flex flex-col gap-4 md:max-w-md">

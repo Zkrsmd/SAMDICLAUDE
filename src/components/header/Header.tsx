@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Wordmark } from '@/components/ui/Wordmark';
+import { HoloEdge } from '@/components/ui/HoloEdge';
 import { Icon } from '@/components/ui/Icon';
 import { useCartCount } from '@/stores/cart';
 import { useWishlist } from '@/stores/lists';
@@ -31,10 +32,17 @@ export function Header({ nav }: { nav: NavSport[] }) {
   const [bump, setBump] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    // a 1px marker 40px down the page: no scroll handler, no layout reads while scrolling
+    const mark = document.createElement('div');
+    mark.setAttribute('aria-hidden', 'true');
+    mark.style.cssText = 'position:absolute;top:40px;left:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
+    document.body.prepend(mark);
+    const io = new IntersectionObserver(([e]) => setScrolled(!!e && !e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(mark);
+    return () => {
+      io.disconnect();
+      mark.remove();
+    };
   }, []);
 
   // little pop whenever the bag count changes
@@ -54,7 +62,9 @@ export function Header({ nav }: { nav: NavSport[] }) {
             scrolled ? 'h-14 max-w-[1040px]' : 'h-16 max-w-[1240px]'
           }`}
           style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}
+          data-edge=""
         >
+          <HoloEdge />
           <Link href="/" className="text-[19px] md:text-[21px]" aria-label="SMADI home">
             <Wordmark />
           </Link>
@@ -94,7 +104,9 @@ export function Header({ nav }: { nav: NavSport[] }) {
               className={`holo-border relative grid h-11 w-11 place-items-center rounded-full bg-white text-ink shadow-[0_8px_20px_-10px_rgba(23,26,24,0.45)] transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
               aria-label={`Open bag${hydrated ? `, ${cartCount} items` : ''}`}
               onClick={() => set({ cartOpen: true })}
+              data-edge=""
             >
+              <HoloEdge />
               <Icon name="bag" size={19} />
               {hydrated && cartCount > 0 && <Badge n={cartCount} accent />}
             </button>

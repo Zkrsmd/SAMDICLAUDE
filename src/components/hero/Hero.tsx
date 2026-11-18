@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { heroSlides } from '@/config/hero';
 import { Icon } from '@/components/ui/Icon';
+import { HoloEdge } from '@/components/ui/HoloEdge';
 import { Loader } from './Loader';
 import { CrystalHero, type CrystalApi } from './crystal/CrystalHero';
 import { WORLDS } from './crystal/worlds';
 import { renderUrl } from '@/lib/format';
 import { useReducedMotion } from '@/hooks/useHydrated';
+import { SplitWords } from '@/components/ui/SplitWords';
 
 const AUTOPLAY_MS = 8200;
 const HERO_ASSETS = heroSlides.map((s) => renderUrl(s.product.slug));
@@ -62,11 +64,21 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
     const io = new IntersectionObserver(([e]) => setOffscreen(!e?.isIntersecting));
     io.observe(el);
     let raf = 0;
+    // geometry measured on resize only, so scrolling never forces a layout
+    let top = 0;
+    let span = 1;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      top = r.top + window.scrollY;
+      span = Math.max(1, r.height - window.innerHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const r = el.getBoundingClientRect();
-        const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - window.innerHeight)));
+        const p = Math.min(1, Math.max(0, (window.scrollY - top) / span));
         api.current?.setScroll(p);
         stage.current?.style.setProperty('--sp', p.toFixed(4));
         onScrollProgress?.(p, indexRef.current);
@@ -77,6 +89,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
+      ro.disconnect();
       window.removeEventListener('scroll', onScroll);
     };
   }, [onScrollProgress]);
@@ -213,22 +226,19 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
               <p key={`w-${tick}`} className="mono text-[10.5px] uppercase tracking-[0.18em] text-white/85" style={{ animation: ready ? 'rise-in .7s .15s var(--ease-expo) both' : undefined }}>
                 {String(index + 1).padStart(2, '0')} — {slide.word} / {world.code}
               </p>
-              <p
-                key={`t-${tick}`}
-                className="display mt-3 max-w-[14ch] text-[clamp(24px,min(7.4vw,7.2svh),64px)] leading-[0.95]"
-                style={{ animation: ready ? 'rise-in .9s .25s var(--ease-expo) both' : undefined }}
-              >
-                {slide.tagline}
+              <p key={`t-${tick}`} className="display mt-3 max-w-[14ch] text-[clamp(24px,min(7.4vw,7.2svh),64px)] leading-[0.95]">
+                {ready ? <SplitWords text={slide.tagline} play /> : slide.tagline}
               </p>
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-2.5 [@media(max-height:560px)]:mt-3">
-              <Link href={slide.href} className="btn-holo h-14 flex-1 sm:flex-none sm:px-9">
+              <Link href={slide.href} className="btn-holo h-14 flex-1 sm:flex-none sm:px-9" data-edge="" data-magnetic="">
+                <HoloEdge halo={false} variant="btn" />
                 {slide.cta} <Icon name="arrow-right" size={18} />
               </Link>
-              <button type="button" onClick={back} aria-label="Previous sport" className="btn-glassy h-14 w-14 shrink-0 !px-0">
+              <button type="button" onClick={back} aria-label="Previous sport" className="btn-glassy h-14 w-14 shrink-0 !px-0" data-magnetic="">
                 <Icon name="arrow-left" size={18} />
               </button>
-              <button type="button" onClick={next} aria-label="Next sport" className="btn-glassy h-14 w-14 shrink-0 !px-0">
+              <button type="button" onClick={next} aria-label="Next sport" className="btn-glassy h-14 w-14 shrink-0 !px-0" data-magnetic="">
                 <Icon name="arrow-right" size={18} />
               </button>
               <p className="mono ml-auto hidden text-right text-[10.5px] uppercase leading-[1.6] tracking-[0.14em] text-white/80 md:block">

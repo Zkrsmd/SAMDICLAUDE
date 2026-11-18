@@ -3,6 +3,7 @@ import { ProductImage } from '@/components/product/ProductImage';
 import { QuickAdd } from '@/components/product/QuickAdd';
 import { formatPrice } from '@/lib/format';
 import type { CardData } from '@/lib/catalog';
+import { SplitWords } from '@/components/ui/SplitWords';
 
 const GLOW = ['rgba(120,160,130,.55)', 'rgba(176,146,98,.55)', 'rgba(96,150,196,.55)'];
 
@@ -13,8 +14,8 @@ export function Icons({ items }: { items: CardData[] }) {
       <div className="container-x flex items-end justify-between">
         <div>
           <p className="eyebrow text-muted">The icons</p>
-          <h2 id="icons-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]">
-            Three objects. <span className="holo-text">Three worlds.</span>
+          <h2 id="icons-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]" data-reveal="words">
+            <SplitWords text="Three objects." /> <SplitWords text="Three worlds." className="holo-text" from={2} />
           </h2>
         </div>
       </div>
@@ -28,7 +29,9 @@ export function Icons({ items }: { items: CardData[] }) {
                   <span aria-hidden className="display pointer-events-none absolute -bottom-[0.12em] left-3 text-[38cqw] leading-none text-ink/[0.05] [container-type:inline-size]">0{i + 1}</span>
                   <span className="mono absolute left-4 top-4 rounded-full border border-ink/10 bg-white/80 px-3 py-1 text-[11px] text-ink backdrop-blur">0{i + 1}</span>
                   <div className="absolute inset-[10%] transition-transform duration-[1000ms] ease-[var(--ease-expo)] [transform:translateZ(40px)] group-hover:-translate-y-3 group-hover:scale-[1.07] group-hover:-rotate-[5deg]">
-                    <ProductImage slug={p.slug} colorId={p.colors[0]!.id} alt="" sizes="(max-width:768px) 82vw, 34vw" className="float-product" />
+                    <div className="float-wrap absolute inset-0">
+                      <ProductImage slug={p.slug} colorId={p.colors[0]!.id} alt="" sizes="(max-width:768px) 82vw, 34vw" className="float-product" />
+                    </div>
                   </div>
                 </div>
               </Link>

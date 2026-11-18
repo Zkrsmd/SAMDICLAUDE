@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/Icon';
 import { brands } from '@/data/brands';
 import { arenaPicks } from '@/config/hero';
 import { bestSellers, countFor, featuredProducts, getAllProducts, getSports, productsFor, toCard } from '@/lib/catalog';
+import { SplitWords } from '@/components/ui/SplitWords';
 
 
 export default function Home() {
@@ -41,8 +42,8 @@ export default function Home() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="eyebrow text-muted">Most wanted</p>
-            <h2 id="best-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]">
-              Best sellers
+            <h2 id="best-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]" data-reveal="words">
+              <SplitWords text="Best sellers" />
             </h2>
           </div>
           <Link href="/search" className="eyebrow inline-flex shrink-0 items-center gap-2 pb-3 hover:text-cobalt">

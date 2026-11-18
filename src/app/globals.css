@@ -472,12 +472,71 @@
   animation: holo-pan 6s linear infinite;
 }
 
-/* glowing animated border (works on any rounded element) */
+/* glowing animated border (works on any rounded element).
+   The edge is drawn by <HoloEdge/>: a fixed conic gradient on an oversized square that ROTATES (compositor
+   transform), clipped to the ring by a static mask — the same look as animating the gradient's start
+   angle, without re-rasterising the gradient and its 18px blur on every frame. */
+.holo-ring,
+.holo-halo {
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  overflow: hidden;
+  container-type: size;
+}
+.holo-ring {
+  inset: -1.5px;
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 1;
+}
+.holo-halo {
+  inset: -6px;
+  filter: blur(18px);
+  opacity: 0.3;
+  animation: glow-soft 3.2s ease-in-out infinite;
+  z-index: -1;
+}
+.holo-ring > span,
+.holo-halo > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(max(100cqw, 100cqh) * 1.45);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: conic-gradient(#ffffff, #b9c2ce 18%, #5f6b7a 30%, #ffffff 46%, #2b59ff 58%, #9aa6b4 70%, #ffffff);
+  animation: spin-t var(--spin, 5s) linear infinite;
+  will-change: transform;
+}
+.holo-ring-btn {
+  inset: 0;
+  padding: 2px;
+  z-index: -1;
+  --spin: 3.5s;
+}
+@keyframes spin-t {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-ring > span,
+  .holo-halo > span,
+  .holo-halo {
+    animation: none;
+  }
+}
+/* legacy pseudo-element edge (kept for any element without <HoloEdge/>) */
 .holo-border {
   position: relative;
   isolation: isolate;
 }
-.holo-border::before {
+.holo-border:not([data-edge])::before {
   content: '';
   position: absolute;
   inset: -1.5px;
@@ -493,7 +552,7 @@
   pointer-events: none;
   z-index: 1;
 }
-.holo-border::after {
+.holo-border:not([data-edge])::after {
   content: '';
   position: absolute;
   inset: -6px;
@@ -551,7 +610,7 @@
     0 14px 34px -14px rgb(23 26 24 / 0.35),
     0 10px 40px -18px rgb(43 89 255 / 0.35);
 }
-.btn-holo::before {
+.btn-holo:not([data-edge])::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -644,8 +703,9 @@
 .grain::after {
   content: '';
   position: fixed;
-  inset: -50%;
+  inset: -8%;
   z-index: 120;
+  will-change: transform;
   pointer-events: none;
   opacity: 0.055;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
@@ -675,10 +735,15 @@
 /* cursor spotlight (desktop) */
 .spotlight {
   position: fixed;
-  inset: 0;
+  left: -500px;
+  top: -500px;
+  width: 1000px;
+  height: 1000px;
   pointer-events: none;
   z-index: 1;
-  background: radial-gradient(500px circle at var(--mx, -999px) var(--my, -999px), rgb(43 89 255 / 0.06), transparent 60%);
+  background: radial-gradient(500px circle at 50% 50%, rgb(43 89 255 / 0.06), transparent 60%);
+  transform: translate3d(-9999px, -9999px, 0);
+  will-change: transform;
 }
 
 /* scroll reveal */
@@ -696,6 +761,67 @@
   opacity: 1;
   transform: none;
   filter: none;
+}
+/* no hover churn mid-scroll (see Effects) */
+.is-scrolling .arena,
+.is-scrolling [data-tilt],
+.is-scrolling [data-light] {
+  pointer-events: none;
+}
+
+[data-magnetic] {
+  transition:
+    translate 0.6s var(--ease-expo),
+    transform 0.4s var(--ease-expo),
+    box-shadow 0.4s var(--ease-expo),
+    background 0.3s;
+}
+
+/* words rising out of a mask (<SplitWords/>): headline reveals and the hero tagline */
+.sw {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-block: 0.08em 0.14em;
+  margin-block: -0.08em -0.14em;
+}
+.sw > span {
+  display: inline-block;
+  transform: translate3d(0, 110%, 0) rotate(4deg);
+  transform-origin: 0 100%;
+  transition: transform 1.2s var(--ease-expo) calc(var(--d, 0ms) + 120ms + var(--i, 0) * 75ms);
+}
+[data-reveal='words'] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  will-change: auto;
+}
+[data-reveal='words'].in .sw > span {
+  transform: none;
+}
+.sw-play > span {
+  transform: none;
+  transition: none;
+  animation: word-up 1s var(--ease-expo) calc(0.18s + var(--i, 0) * 55ms) both;
+}
+@keyframes word-up {
+  from {
+    transform: translate3d(0, 110%, 0) rotate(4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw > span,
+  .sw-play > span {
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+}
+
+/* the reveal runs on the compositor (no repaint of blurred content per frame); released once settled */
+[data-reveal]:not([data-settled]) {
+  will-change: opacity, transform, filter;
 }
 
 /* word-by-word mask reveal */
@@ -717,8 +843,12 @@
 }
 
 /* product cut-outs float with a soft contact shadow */
-.float-product {
+/* the float moves a wrapper and the shadow sits on the image inside it: the shadow is drawn once
+   into the moving layer instead of being re-filtered by the GPU on every frame */
+.float-wrap {
   animation: float-y 6s ease-in-out infinite;
+}
+.float-product {
   filter: drop-shadow(0 40px 30px rgb(0 0 0 / 0.28));
 }
 
@@ -861,7 +991,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .float-product {
+  .float-wrap {
     animation: none;
   }
 }
@@ -921,14 +1051,21 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  width: 100%;
-  height: 100%;
+  display: block;
   transform: scale(1.001);
   transition: transform 1.6s var(--ease-expo);
 }
+.arena-art > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* the line layer gets its own GPU layer: drawing it in never repaints the ground beneath */
 .arena-lines {
   opacity: 0.8;
   transition: opacity 0.8s var(--ease-expo);
+  will-change: transform;
 }
 .arena-draw {
   stroke-dasharray: 1;
@@ -969,6 +1106,11 @@
 }
 .arena-product img {
   filter: drop-shadow(0 22px 22px rgb(15 18 22 / 0.2)) drop-shadow(0 4px 6px rgb(15 18 22 / 0.12));
+}
+.arena-float {
+  position: relative;
+  display: block;
+  height: 100%;
   animation: float-y 7s ease-in-out infinite;
 }
 .arena-shadow {
@@ -1076,7 +1218,7 @@
   .tilt {
     transition: none;
   }
-  .arena-product img {
+  .arena-float {
     animation: none;
   }
   .arena-draw {

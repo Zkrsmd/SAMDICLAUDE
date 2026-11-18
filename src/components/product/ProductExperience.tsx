@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { HoloEdge } from '@/components/ui/HoloEdge';
 import { ProductImage } from './ProductImage';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { useCart } from '@/stores/cart';
@@ -327,7 +328,8 @@ export function ProductExperience({
                   <Icon name="plus" size={16} />
                 </button>
               </div>
-              <button type="button" className="btn-holo h-12 flex-1" onClick={() => addToCart()}>
+              <button type="button" className="btn-holo h-12 flex-1" onClick={() => addToCart()} data-edge="">
+                <HoloEdge halo={false} variant="btn" />
                 Add to bag
               </button>
               <button

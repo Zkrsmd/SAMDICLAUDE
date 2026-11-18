@@ -3,6 +3,7 @@ import { Icon } from '@/components/ui/Icon';
 import { renderUrl } from '@/lib/format';
 import type { SportSlug } from '@/types/catalog';
 import { ArenaArt } from './ArenaArt';
+import { SplitWords } from '@/components/ui/SplitWords';
 
 export interface ShowcaseSport {
   slug: SportSlug;
@@ -47,8 +48,10 @@ function Panel({ s, size, index }: { s: ShowcaseSport; size: 'xl' | 'lg' | 'sm';
 
       <div className={`arena-product absolute ${size === 'sm' ? 'inset-x-[12%] bottom-[20%] top-[30%]' : 'inset-x-[10%] bottom-[18%] top-[26%]'}`}>
         <span aria-hidden className="arena-shadow" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={renderUrl(s.hero.slug)} alt="" loading="lazy" decoding="async" className="relative h-full w-full object-contain" />
+        <span className="arena-float">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={renderUrl(s.hero.slug)} alt="" loading="lazy" decoding="async" className="relative h-full w-full object-contain" />
+        </span>
       </div>
 
       <div className="arena-copy absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 md:p-5">
@@ -69,8 +72,8 @@ export function CategoryShowcase({ sports }: { sports: ShowcaseSport[] }) {
       <div className="flex items-end justify-between gap-6" data-reveal>
         <div>
           <p className="eyebrow text-muted">Shop by sport</p>
-          <h2 id="sports-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]">
-            Choose your <span className="holo-text">arena</span>
+          <h2 id="sports-title" className="display mt-3 text-[clamp(36px,9.4vw,128px)]" data-reveal="words">
+            <SplitWords text="Choose your" /> <SplitWords text="arena" className="holo-text" from={2} />
           </h2>
         </div>
         <p className="hidden max-w-xs text-[15px] text-muted md:block">Every sport has its own field of play. Pick yours.</p>

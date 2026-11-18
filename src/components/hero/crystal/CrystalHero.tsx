@@ -96,8 +96,10 @@ export function CrystalHero({
     return (
       <div className="absolute inset-0 grid place-items-center" style={{ background: 'radial-gradient(80% 60% at 50% 45%, #E3E7EC, #B4BCC6)' }}>
         <div className="glass relative grid aspect-[4/5] w-[min(70vw,380px)] place-items-center rounded-[28px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={renderUrl(slide.product.slug)} alt="" className="float-product w-[80%] object-contain" />
+          <div className="float-wrap grid w-[80%] place-items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={renderUrl(slide.product.slug)} alt="" className="float-product w-full object-contain" />
+          </div>
         </div>
       </div>
     );

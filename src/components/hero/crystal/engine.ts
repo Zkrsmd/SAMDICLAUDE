@@ -203,6 +203,8 @@ export class CrystalEngine {
   constructor(o: EngineOptions) {
     this.o = o;
     this.renderer = new THREE.WebGLRenderer({ canvas: o.canvas, antialias: false, alpha: false, powerPreference: 'high-performance', stencil: false });
+    // shader error checks force a synchronous GPU round-trip per program (~1 s of freezes per world on D3D)
+    this.renderer.debug.checkShaderErrors = process.env.NODE_ENV !== 'production';
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.98;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -269,7 +271,7 @@ export class CrystalEngine {
     // shards are hidden until the break: show them for the compile so the break never stalls
     first.shards.visible = first.spray.visible = true;
     try {
-      await this.renderer.compileAsync(this.scene, this.camera);
+      await this.compileFor(this.scene);
     } catch {
       /* compile on first draw instead */
     }
@@ -278,6 +280,18 @@ export class CrystalEngine {
     this.renderFrame(0);
     this.o.onReady();
     this.loop();
+  }
+
+  /**
+   * Compile shaders for the HalfFloat target the scene is really drawn into: compiled for the screen
+   * they'd get a different tone-mapping / colour-space variant and be rebuilt, blocking, on first draw.
+   */
+  private compileFor(obj: THREE.Object3D, scene?: THREE.Scene) {
+    const prev = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(this.rt);
+    const done = this.renderer.compileAsync(obj, this.camera, scene ?? null);
+    this.renderer.setRenderTarget(prev);
+    return done;
   }
 
   /** warm the other worlds in idle time once the opening has played (no jank during the intro) */
@@ -299,7 +313,7 @@ export class CrystalEngine {
       w.group.visible = true;
       w.shards.visible = w.spray.visible = true;
       try {
-        await this.renderer.compileAsync(w.group, this.camera, this.scene);
+        await this.compileFor(w.group, this.scene);
       } catch {
         /* ignore */
       }
@@ -807,7 +821,11 @@ export class CrystalEngine {
       const [a, b] = w.spec.readout.base;
       const j = () => (Math.random() - 0.5) * 0.08;
       const fmt = (v: number) => (v < 0 ? '−' : '+') + Math.abs(v).toFixed(2).padStart(5, '0');
-      L.readValue.textContent = `${fmt(a + j())} ${w.spec.readout.unit}  ${fmt(b + j())}`;
+      const txt = `${fmt(a + j())} ${w.spec.readout.unit}  ${fmt(b + j())}`;
+      // write into one persistent text node: no child-list mutations, no layout work for observers
+      const node = L.readValue.firstChild;
+      if (node && node.nodeType === 3) node.nodeValue = txt;
+      else L.readValue.textContent = txt;
     }
   }
 }
