@@ -3,14 +3,15 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { backdropTex, beamTex, causticTex, concreteGround, crackNormal, frostGround, frostNormal, rippleNormal, shadowTex, tileGround, woodGround } from './textures';
 import type { BurstSpec } from './burst';
+import { ConvexHull } from 'three/examples/jsm/math/ConvexHull.js';
 
 /**
  * The four worlds. Same grammar — a real product frozen inside a crystal that then BREAKS,
  * a survey network, a coded set and light through haze — but each sport gets its own matter:
- *   football   PERMAFROST  an ice shard bursts in a floodlit bowl, snow and powder
- *   boxing     IMPACT      a glass slab is punched out toward you under the ring rig, glass dust
+ *   football   PERMAFROST  a frozen football pops along its panels in a floodlit bowl: turf, grass, chalk
+ *   boxing     IMPACT      a glass slab is punched out toward you under the ring rig: sweat, blood, wraps
  *   swimming   ABYSS       a water orb pops into droplets under the surface, god rays, bubbles
- *   basketball COURT       a cut gem bounces apart in a morning gym, sparks
+ *   basketball COURT       a seamed amber glass ball cracks open in a morning gym: hardwood, leather, sparks
  */
 
 export type ParticleKind = 'snow' | 'dust' | 'bubbles' | 'motes';
@@ -25,7 +26,9 @@ export interface WorldSpec {
   light: string;
   ground: () => THREE.Texture;
   groundTint: string;
-  crystal: 'shard' | 'slab' | 'orb' | 'gem';
+  crystal: 'shard' | 'slab' | 'orb' | 'gem' | 'ball' | 'hoop';
+  /** sport matter thrown out with the glass */
+  debris?: 'turf' | 'court' | 'fight';
   material: Partial<THREE.MeshPhysicalMaterialParameters> & { normal?: 'frost' | 'cracks' | 'ripple' };
   productWidth: number;
   particles: { kind: ParticleKind; count: number; size: number; color: string };
@@ -46,12 +49,13 @@ export const WORLDS: Record<string, WorldSpec> = {
     light: '#EAF2FF',
     ground: frostGround,
     groundTint: '#A9B3BF',
-    crystal: 'shard',
-    material: { ior: 1.31, thickness: 0.32, roughness: 0.07, attenuationColor: new THREE.Color('#D6E8F4'), attenuationDistance: 3.2, dispersion: 0.12, normal: 'frost' },
+    crystal: 'ball',
+    debris: 'turf',
+    material: { ior: 1.31, thickness: 0.3, roughness: 0.05, attenuationColor: new THREE.Color('#D6E8F4'), attenuationDistance: 3.2, dispersion: 0.12, normal: 'frost' },
     productWidth: 1.7,
     particles: { kind: 'snow', count: 420, size: 0.05, color: '#FFFFFF' },
     readout: { label: 'TEMP', base: [-4.12, 1.36], unit: '°C' },
-    burst: { pieces: 30, power: 3.4, drag: 1.5, gravity: 3.2, spin: 7, bias: [0, 0.35, 0.6], stretch: 0, impact: [0.15, 0.4, 0.3], spray: '#FFFFFF', shake: 0.07, life: 2.2 },
+    burst: { pieces: 32, power: 3.6, drag: 1.5, gravity: 3.6, spin: 7, bias: [0, 0.45, 0.6], stretch: 0, impact: [0.15, 0.4, 0.3], spray: '#F4FFF0', shake: 0.09, life: 2.3 },
     beams: [
       [-5.6, 5.4, -5, 0.6, 2.8, 13, 0.22],
       [5.6, 5.4, -5, -0.6, 2.8, 13, 0.22],
@@ -69,6 +73,7 @@ export const WORLDS: Record<string, WorldSpec> = {
     ground: concreteGround,
     groundTint: '#ABA398',
     crystal: 'slab',
+    debris: 'fight',
     material: { ior: 1.52, thickness: 0.22, roughness: 0.03, attenuationColor: new THREE.Color('#E0D2B8'), attenuationDistance: 2.6, dispersion: 0.1, normal: 'cracks' },
     productWidth: 1.25,
     particles: { kind: 'dust', count: 320, size: 0.035, color: '#FFE9C8' },
@@ -114,12 +119,13 @@ export const WORLDS: Record<string, WorldSpec> = {
     light: '#FFF0E0',
     ground: woodGround,
     groundTint: '#B2A797',
-    crystal: 'gem',
-    material: { ior: 1.9, thickness: 0.28, roughness: 0.0, attenuationColor: new THREE.Color('#F2E6D6'), attenuationDistance: 5, dispersion: 0.55 },
+    crystal: 'hoop',
+    debris: 'court',
+    material: { ior: 1.45, thickness: 0.34, roughness: 0.03, attenuationColor: new THREE.Color('#F6D9B8'), attenuationDistance: 3.6, dispersion: 0.25 },
     productWidth: 1.15,
     particles: { kind: 'motes', count: 260, size: 0.03, color: '#FFF4E4' },
     readout: { label: 'RIM', base: [3.05, 0.0], unit: 'M' },
-    burst: { pieces: 24, power: 3.8, drag: 1.3, gravity: 5.2, spin: 10, bias: [0, 1.0, 0.25], stretch: 0, impact: [0, -0.7, 0.2], spray: '#FFF0D8', shake: 0.09, life: 2.3 },
+    burst: { pieces: 26, power: 3.8, drag: 1.3, gravity: 5.2, spin: 10, bias: [0, 1.0, 0.25], stretch: 0, impact: [0, -0.7, 0.2], spray: '#FFB774', shake: 0.1, life: 2.3 },
     beams: [
       [-6.4, 6.4, -7, 0.62, 1.6, 15, 0.16],
       [-4.6, 6.4, -7, 0.62, 1.6, 15, 0.14],
@@ -145,7 +151,114 @@ function rnd(seed: number) {
   return () => ((a = (a * 16807) % 2147483647) / 2147483647);
 }
 
+/* the football: a truncated icosahedron (12 pentagons, 20 hexagons) — a real ball's panel layout */
+const PHI = (1 + Math.sqrt(5)) / 2;
+const SMOKE = [0.16, 0.19, 0.24] as const;
+const ICE = [1, 1, 1] as const;
+export type Panel = { pts: THREE.Vector3[]; col: readonly number[] };
+
+function footballPanels(radius: number): Panel[] {
+  const base = [
+    [0, 1, 3 * PHI],
+    [1, 2 + PHI, 2 * PHI],
+    [PHI, 2, PHI * PHI * PHI],
+  ];
+  const pts: THREE.Vector3[] = [];
+  for (const [a, b, c] of base) {
+    for (const [x, y, z] of [
+      [a, b, c],
+      [b, c, a],
+      [c, a, b],
+    ] as const)
+      for (const sx of [-1, 1])
+        for (const sy of [-1, 1])
+          for (const sz of [-1, 1]) {
+            const v = new THREE.Vector3(x! * sx, y! * sy, z! * sz);
+            if (!pts.some((q) => q.distanceToSquared(v) < 1e-6)) pts.push(v);
+          }
+  }
+  const scale = radius / pts[0]!.length();
+  pts.forEach((v) => v.multiplyScalar(scale));
+  // group the hull's triangles into flat panels
+  const hull = new ConvexHull().setFromPoints(pts);
+  const groups: { n: THREE.Vector3; vs: THREE.Vector3[] }[] = [];
+  for (const f of hull.faces) {
+    let g = groups.find((q) => q.n.dot(f.normal) > 0.999);
+    if (!g) groups.push((g = { n: f.normal.clone(), vs: [] }));
+    let e = f.edge;
+    do {
+      const v = e.head().point;
+      if (!g.vs.some((q) => q.distanceToSquared(v) < 1e-8)) g.vs.push(v.clone());
+      e = e.next;
+    } while (e !== f.edge);
+  }
+  return groups.map(({ n, vs }) => {
+    const c = vs.reduce((s, v) => s.add(v), new THREE.Vector3()).multiplyScalar(1 / vs.length);
+    const u = vs[0]!.clone().sub(c).normalize();
+    const w = new THREE.Vector3().crossVectors(n, u);
+    vs.sort((a, b) => Math.atan2(a.clone().sub(c).dot(w), a.clone().sub(c).dot(u)) - Math.atan2(b.clone().sub(c).dot(w), b.clone().sub(c).dot(u)));
+    return { pts: vs, col: vs.length === 5 ? SMOKE : ICE };
+  });
+}
+
+/** basketball seams on the unit sphere: two great circles and the two bowed side curves */
+export function seamAt(x: number, y: number, z: number) {
+  const s = Math.min(Math.abs(x), Math.abs(y), Math.abs(Math.abs(z) - (0.62 + 0.3 * y * y)));
+  return 1 - THREE.MathUtils.smoothstep(s, 0.018, 0.034);
+}
+
+/** equirect amber-glass texture with black seams for the basketball's sphere UVs */
+function seamTex() {
+  const W = 1024;
+  const H = 512;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(W, H);
+  for (let j = 0; j < H; j++) {
+    const th = (j / H) * Math.PI;
+    for (let i = 0; i < W; i++) {
+      const ph = (i / W) * Math.PI * 2;
+      // three.js SphereGeometry: x = -cos(phi) sin(theta), y = cos(theta), z = sin(phi) sin(theta)
+      const x = -Math.cos(ph) * Math.sin(th);
+      const y = Math.cos(th);
+      const z = Math.sin(ph) * Math.sin(th);
+      const k = seamAt(x, y, z);
+      const o = (j * W + i) * 4;
+      img.data[o] = 255 - k * 236;
+      img.data[o + 1] = 205 - k * 192;
+      img.data[o + 2] = 160 - k * 150;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 export function crystalGeometry(kind: WorldSpec['crystal']): THREE.BufferGeometry {
+  if (kind === 'ball') {
+    const panels = footballPanels(1.22);
+    const pos: number[] = [];
+    const col: number[] = [];
+    for (const { pts, col: c } of panels)
+      for (let k = 1; k < pts.length - 1; k++)
+        for (const v of [pts[0]!, pts[k]!, pts[k + 1]!]) {
+          pos.push(v.x, v.y, v.z);
+          col.push(c[0]!, c[1]!, c[2]!);
+        }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.computeVertexNormals();
+    planarUV(g);
+    g.userData.panels = panels;
+    return g;
+  }
+  if (kind === 'hoop') return new THREE.SphereGeometry(1.2, 96, 64);
   if (kind === 'shard') {
     let g: THREE.BufferGeometry = new THREE.IcosahedronGeometry(1, 1);
     g.deleteAttribute('normal');
@@ -201,9 +314,11 @@ export function crystalMaterial(spec: WorldSpec, env: THREE.Texture | null) {
     clearcoat: spec.crystal === 'shard' ? 0.4 : 0.8,
     clearcoatRoughness: 0.08,
     envMap: env,
-    flatShading: spec.crystal === 'shard' || spec.crystal === 'gem',
+    flatShading: spec.crystal === 'shard' || spec.crystal === 'gem' || spec.crystal === 'ball',
+    vertexColors: spec.crystal === 'ball',
     ...m,
   });
+  if (spec.crystal === 'hoop') mat.map = seamTex();
   if (normal) {
     mat.normalMap = normal === 'frost' ? frostNormal() : normal === 'cracks' ? crackNormal() : rippleNormal();
     const s = normal === 'cracks' ? 0.75 : normal === 'frost' ? 0.3 : 0.2;

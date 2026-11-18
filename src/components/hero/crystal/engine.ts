@@ -1,7 +1,23 @@
 import * as THREE from 'three';
-import { crystalGeometry, crystalMaterial, environment, network, particles, WORLDS, type WorldSpec } from './worlds';
+import { crystalGeometry, crystalMaterial, environment, network, particles, WORLDS, type Panel, type WorldSpec } from './worlds';
 import { backdropTex, glowTex } from './textures';
-import { droplets, fracture, shardMaterial, spray } from './burst';
+import { droplets, fracture, panelShards, shardMaterial, spray } from './burst';
+import { debris, type DebrisMesh } from './debris';
+import { heroSlides } from '@/config/hero';
+
+/** wrap a sphere's equirect texture (the basketball's seams) around fractured pieces */
+function seamed(g: THREE.BufferGeometry) {
+  const p = g.attributes.position!;
+  const uv = g.attributes.uv!;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).normalize();
+    const phi = Math.atan2(v.z, -v.x);
+    uv.setXY(i, (phi < 0 ? phi + Math.PI * 2 : phi) / (Math.PI * 2), 1 - Math.acos(THREE.MathUtils.clamp(v.y, -1, 1)) / Math.PI);
+  }
+  uv.needsUpdate = true;
+  return g;
+}
 
 /**
  * SMADI hero engine (three.js). One renderer, four worlds, a single post pass.
@@ -43,6 +59,8 @@ interface World {
   shardU: ReturnType<typeof shardMaterial>['uniforms'];
   spray: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>;
   sprayU: ReturnType<typeof spray>['uniforms'];
+  /** sport matter thrown out with the glass (turf, sweat and wraps, hardwood) */
+  debris: DebrisMesh[];
   beams: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[];
   broke: boolean;
 }
@@ -65,10 +83,47 @@ const POST_FS = /* glsl */ `
   uniform vec3 uFadeColor;
   uniform vec4 uShock;
   uniform float uSharp;
+  uniform float uMelt;
+  uniform vec3 uPage;
+  uniform vec3 uTint;
   varying vec2 vUv;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+  float vnoise(float x) {
+    float i = floor(x);
+    float f = fract(x);
+    return mix(hash(vec2(i, 3.1)), hash(vec2(i + 1.0, 3.1)), f * f * (3.0 - 2.0 * f));
+  }
+  // THE MELT: how far the page's white has poured down from the top at screen x (1.0 = full height).
+  // A sheet with a wavy lip plus two families of drips with round tips that run ahead of it. It stops
+  // about two-thirds down: the floor of the world stays as a band between the white pour above and
+  // the chrome drips below, and scrolls away with the stage.
+  float meltFront(float x) {
+    float ax = x * uRes.x / uRes.y;
+    float m = uMelt;
+    float f = m * 0.56 + (vnoise(ax * 2.3) - 0.5) * 0.12 * m;
+    for (int o = 0; o < 2; o++) {
+      float fo = float(o);
+      float g = ax * (o == 0 ? 4.5 : 12.0) + fo * 7.3;
+      float id = floor(g);
+      float u = fract(g) - 0.5;
+      float w = 0.16 + hash(vec2(id, fo)) * 0.26;
+      float len = (0.08 + hash(vec2(id + 3.7, fo)) * 0.3) * (o == 0 ? 1.0 : 0.5);
+      float grow = smoothstep(0.0, 0.6, m - hash(vec2(id, 9.0 + fo)) * 0.22);
+      float tip = sqrt(max(0.0, 1.0 - (u * u) / (w * w)));
+      f += (len + 0.006 * sin(uTime * 1.7 + id * 3.0)) * grow * tip;
+    }
+    return f;
+  }
   void main() {
     vec2 uv = vUv;
+    // px inside the paint (positive) or ahead of it (negative)
+    float md = -1e4;
+    if (uMelt > 0.001) {
+      md = (meltFront(vUv.x) - (1.0 - vUv.y)) * uRes.y;
+      // liquid lens: the world just under the lip is dragged down toward it
+      float lens = smoothstep(-70.0, 0.0, md) * (1.0 - step(0.0, md));
+      uv.y += lens * lens * 0.03;
+    }
     // shockwave: a refracting ring racing out from the break
     if (uShock.w > 0.001) {
       vec2 d = uv - uShock.xy;
@@ -119,6 +174,19 @@ const POST_FS = /* glsl */ `
     #include <colorspace_fragment>
     gl_FragColor.rgb += (hash(vUv * uRes + fract(uTime) * 91.7) - 0.5) * 0.03;
     gl_FragColor.rgb = mix(gl_FragColor.rgb, uFadeColor, uFade);
+    if (uMelt > 0.001) {
+      float inside = smoothstep(-1.2, 1.2, md);
+      // paint body: the page's own white, with a little volume near the lip
+      vec3 paint = uPage * (0.955 + 0.045 * smoothstep(0.0, 52.0, md));
+      // chrome rim with a specular line, and a thin bead of the sport's colour right at the edge
+      float rim = smoothstep(-1.0, 2.0, md) * (1.0 - smoothstep(5.0, 13.0, md));
+      vec3 steel = mix(vec3(0.55, 0.6, 0.67), vec3(0.88, 0.9, 0.94), 0.5 + 0.5 * sin(vUv.x * 37.0 + md * 0.35));
+      paint = mix(paint, mix(steel, uTint, exp(-pow((md - 1.8) / 1.3, 2.0)) * 0.95), rim);
+      paint += exp(-pow((md - 7.0) / 1.6, 2.0)) * 0.3;
+      // the world darkens slightly in the shadow of the coming paint
+      gl_FragColor.rgb *= 1.0 - smoothstep(-30.0, 0.0, md) * (1.0 - inside) * 0.25;
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, paint, inside);
+    }
   }
 `;
 
@@ -185,6 +253,10 @@ export class CrystalEngine {
   private dist = 7;
   private mobile = false;
   private visible = true;
+  /** how much of the stage is on screen; below half it renders every other frame (it's on its way out) */
+  private ratio = 1;
+  private skip = false;
+  private carry = 0;
   private scroll = 0;
   private pointer = new THREE.Vector2();
   private pointerT = new THREE.Vector2();
@@ -239,6 +311,10 @@ export class CrystalEngine {
           uFadeColor: { value: new THREE.Color('#F3F4F6') },
           uShock: { value: new THREE.Vector4(0.5, 0.5, 0, 0) },
           uSharp: { value: 0.32 },
+          uMelt: { value: 0 },
+          // raw sRGB (the melt is mixed after the colour-space conversion): exactly the page's frost
+          uPage: { value: new THREE.Vector3(243 / 255, 244 / 255, 246 / 255) },
+          uTint: { value: new THREE.Vector3(0.17, 0.35, 1) },
         },
         depthTest: false,
         depthWrite: false,
@@ -251,7 +327,13 @@ export class CrystalEngine {
     this.resize();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(o.canvas);
-    this.io = new IntersectionObserver(([e]) => (this.visible = !!e?.isIntersecting));
+    this.io = new IntersectionObserver(
+      ([e]) => {
+        this.visible = !!e?.isIntersecting;
+        this.ratio = e?.intersectionRatio ?? 0;
+      },
+      { threshold: [0, 0.5] },
+    );
     this.io.observe(o.canvas);
 
     if (process.env.NODE_ENV !== 'production') (window as Window & { __crystal?: unknown }).__crystal = this; // QA hook
@@ -259,6 +341,11 @@ export class CrystalEngine {
     window.addEventListener('pointermove', this.onMove, { passive: true });
     window.addEventListener('pointerup', this.onUp);
     window.addEventListener('pointercancel', this.onUp);
+  }
+
+  private showPieces(w: World, on: boolean) {
+    w.shards.visible = w.spray.visible = on;
+    w.debris.forEach((d) => (d.mesh.visible = on));
   }
 
   /** builds the first world, compiles shaders, then reports ready and pre-builds the rest */
@@ -269,13 +356,13 @@ export class CrystalEngine {
     if (this.disposed) return;
     this.activate(first);
     // shards are hidden until the break: show them for the compile so the break never stalls
-    first.shards.visible = first.spray.visible = true;
+    this.showPieces(first, true);
     try {
       await this.compileFor(this.scene);
     } catch {
       /* compile on first draw instead */
     }
-    first.shards.visible = first.spray.visible = false;
+    this.showPieces(first, false);
     performance.mark('crystal:compiled');
     this.renderFrame(0);
     this.o.onReady();
@@ -311,13 +398,13 @@ export class CrystalEngine {
       // compile off-stage: detached from the scene so it can never flash over the live world
       this.scene.remove(w.group);
       w.group.visible = true;
-      w.shards.visible = w.spray.visible = true;
+      this.showPieces(w, true);
       try {
         await this.compileFor(w.group, this.scene);
       } catch {
         /* ignore */
       }
-      w.shards.visible = w.spray.visible = false;
+      this.showPieces(w, false);
       w.group.visible = this.active === w;
       this.scene.add(w.group);
     }
@@ -345,6 +432,38 @@ export class CrystalEngine {
 
   setScroll(p: number) {
     this.scroll = p;
+  }
+
+  /** the page has taken the product over (it drops out of the stage as a real photo) */
+  private dropped = false;
+  setDrop(on: boolean) {
+    this.dropped = on;
+    if (this.active) this.active.product.visible = !on && this.active.product.visible;
+  }
+
+  /** where the product photo sits on the canvas right now (CSS px), for a seamless hand-off */
+  productRect() {
+    const w = this.active;
+    if (!w) return null;
+    const g = w.product.geometry.parameters;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    w.product.updateWorldMatrix(true, false);
+    for (const [sx, sy] of [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ] as const) {
+      const [x, y] = this.project((sx * g.width) / 2, (sy * g.height) / 2, 0, w.product);
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, rot: w.product.rotation.z };
   }
 
   dispose() {
@@ -399,7 +518,7 @@ export class CrystalEngine {
       const crystal = new THREE.Mesh(geo, mat);
       pivot.add(crystal);
       const wire = new THREE.LineSegments(
-        new THREE.EdgesGeometry(spec.crystal === 'orb' ? new THREE.IcosahedronGeometry(1.2, 2) : geo, spec.crystal === 'orb' ? 1 : 12),
+        new THREE.EdgesGeometry(spec.crystal === 'orb' || spec.crystal === 'hoop' ? new THREE.IcosahedronGeometry(1.2, 2) : geo, spec.crystal === 'orb' || spec.crystal === 'hoop' ? 1 : 12),
         new THREE.LineBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0, depthWrite: false, fog: false }),
       );
       pivot.add(wire);
@@ -424,7 +543,14 @@ export class CrystalEngine {
       group.add(parts);
 
       // the break: pre-fractured glass (droplets for water), one mesh, flown in the shader
-      const pieces = spec.crystal === 'orb' ? droplets(1.18, spec.burst, 11) : fracture(geo, spec.burst, spec.id.length * 31 + 5);
+      const pieces =
+        spec.crystal === 'orb'
+          ? droplets(1.18, spec.burst, 11)
+          : spec.crystal === 'ball'
+            ? panelShards(geo.userData.panels as Panel[], spec.id.length * 31 + 5)
+            : spec.crystal === 'hoop'
+              ? seamed(fracture(new THREE.IcosahedronGeometry(1.2, 2), spec.burst, spec.id.length * 31 + 5))
+              : fracture(geo, spec.burst, spec.id.length * 31 + 5);
       const sm = shardMaterial(mat, spec.burst, spec.crystal !== 'orb');
       const shards = new THREE.Mesh(pieces, sm.material);
       shards.visible = false;
@@ -433,6 +559,8 @@ export class CrystalEngine {
       const sp = spray(spec.burst, spec.id.length * 7 + 3);
       sp.points.visible = false;
       group.add(sp.points);
+      const deb = debris(spec.debris, spec.burst, this.env, spec.id.length * 53 + 9);
+      deb.forEach((d) => group.add(d.mesh));
 
       const world: World = {
         spec,
@@ -451,6 +579,7 @@ export class CrystalEngine {
         shardU: sm.uniforms,
         spray: sp.points,
         sprayU: sp.uniforms,
+        debris: deb,
         beams: envr.beams,
         broke: false,
       };
@@ -473,6 +602,9 @@ export class CrystalEngine {
     const s = w.spec;
     this.scene.fog = new THREE.Fog(s.fog, 6, 24);
     this.scene.background = new THREE.Color(s.fog);
+    const hex = heroSlides.find((h) => h.id === s.id)?.accent ?? '#2B59FF';
+    const n = parseInt(hex.slice(1), 16);
+    this.post.material.uniforms.uTint!.value.set(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
     this.hemi.color.set(s.light);
     this.sun.color.set(s.light);
     this.o.labels.spec.querySelector('[data-code]')!.textContent = `SPECIMEN_0${this.o.ids.indexOf(s.id) + 1} // ${s.code}`;
@@ -572,8 +704,17 @@ export class CrystalEngine {
     const raw = this.clock.getDelta();
     const dt = Math.min(0.05, raw);
     if (!this.visible || document.hidden) return;
-    this.t += dt;
-    this.renderFrame(dt);
+    if (this.ratio < 0.5) {
+      this.skip = !this.skip;
+      if (this.skip) {
+        this.carry += dt;
+        return;
+      }
+    }
+    const step = Math.min(0.05, dt + this.carry);
+    this.carry = 0;
+    this.t += step;
+    this.renderFrame(step);
     // adaptive sharpness: if frames run long, step the pixel ratio down (never below 1)
     this.frameAvg += (raw - this.frameAvg) * 0.05;
     this.frameCheck += raw;
@@ -618,7 +759,9 @@ export class CrystalEngine {
           this.swapped = true;
           this.cutAt = t;
           this.spin += this.cutDir * 3.2;
-          this.introAt = t - 0.8; // replay the tail of the opening: form + break
+          // replay the tail of the opening (form + break) — unless the product is out on the page,
+          // then the new world simply appears (no crystal forming around nothing)
+          this.introAt = this.dropped ? t - 99 : t - 0.8;
         }
       } else {
         warp = 1 - outExpo(seg(k, 0, 0.6));
@@ -638,7 +781,7 @@ export class CrystalEngine {
     const hit = age >= 0 && !reduced ? Math.exp(-age * 7) : 0;
     const flash = Math.max(flashForm, (age >= 0 && !reduced ? Math.exp(-age * 14) : 0) * 0.6);
     w.crystal.visible = intact;
-    w.product.visible = formed;
+    w.product.visible = formed && !this.dropped;
     w.wire.visible = !formed || intact;
     const live = !reduced && age >= 0 && age < B.life + 0.3;
     if (age < 0) w.broke = false;
@@ -652,9 +795,20 @@ export class CrystalEngine {
       w.shardU.uBias.value.set(...B.bias).applyQuaternion(inv);
       w.shardU.uGrav.value.set(0, -B.gravity, 0).applyQuaternion(inv);
       w.spray.position.copy(w.pivot.position);
+      for (const d of w.debris) {
+        d.mesh.position.copy(w.pivot.position);
+        d.mesh.quaternion.copy(w.pivot.quaternion);
+        d.mesh.scale.copy(w.pivot.scale);
+        d.uniforms.uBias.value.set(...B.bias).applyQuaternion(inv);
+        d.uniforms.uGrav.value.set(0, -B.gravity, 0).applyQuaternion(inv);
+      }
     }
     w.shards.visible = live;
     w.spray.visible = live;
+    for (const d of w.debris) {
+      d.mesh.visible = live;
+      d.uniforms.uAge.value = age;
+    }
     w.shardU.uAge.value = age;
     w.sprayU.uAge.value = age;
     w.sprayU.uPixel.value = this.h * this.dpr * 0.5;
@@ -665,7 +819,8 @@ export class CrystalEngine {
     w.wire.geometry.setDrawRange(0, Math.floor(wirePos.count * (ti < FORM ? draw : 1)));
     w.net.lines.geometry.setDrawRange(0, Math.floor(w.net.segments * 2 * draw));
     w.net.lines.material.opacity = 0.6 - 0.3 * mat;
-    u.uFade!.value = reduced ? 0 : Math.max(1 - seg(ti, 0, 0.6), this.scroll > 0.7 ? seg(this.scroll, 0.7, 1) : 0);
+    // the world stays sharp and present while you scroll on: the product leaves, the stage doesn't fade out
+    u.uFade!.value = reduced ? 0 : 1 - seg(ti, 0, 0.6);
     if (ti < 0) u.uFade!.value = 1;
 
     // ---- idle life
@@ -737,7 +892,10 @@ export class CrystalEngine {
 
     // ---- render
     u.uTime!.value = t;
-    u.uWarp!.value = warp + sc * 0.18;
+    u.uWarp!.value = warp;
+    // scrolling on pours the white page down over the world (scrubbed, reversible)
+    const mk = reduced ? 0 : seg(sc, 0.36, 1);
+    u.uMelt!.value = mk * mk * (3 - 2 * mk);
     u.uFlash!.value = flash;
     this.renderer.setRenderTarget(this.rt);
     this.renderer.render(this.scene, this.camera);
@@ -771,7 +929,7 @@ export class CrystalEngine {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     // callouts need room: hidden on short (landscape phone) screens
-    const show = (ti >= BREAK + 0.45 || this.o.reduced) && this.h >= 560 ? 1 : 0;
+    const show = (ti >= BREAK + 0.45 || this.o.reduced) && this.h >= 560 && !this.dropped ? 1 : 0;
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.lineWidth = 1;

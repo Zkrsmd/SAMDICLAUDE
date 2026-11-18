@@ -26,9 +26,9 @@ export function Icons({ items }: { items: CardData[] }) {
               <Link href={`/product/${p.slug}`} className="block" aria-label={`${p.brandName} ${p.name}`}>
                 <div className="arena tilt relative aspect-[4/5]" data-reveal="" data-tilt="" style={{ ['--d' as string]: `${i * 120}ms` }}>
                   <div aria-hidden className="absolute inset-0 -z-[2]" style={{ background: `radial-gradient(60% 48% at 50% 55%, ${GLOW[i % 3]!.replace(/[\d.]+\)$/, '0.3)')}, transparent 72%), linear-gradient(180deg, #F7F8FA, #E9ECF0)` }} />
-                  <span aria-hidden className="display pointer-events-none absolute -bottom-[0.12em] left-3 text-[38cqw] leading-none text-ink/[0.05] [container-type:inline-size]">0{i + 1}</span>
-                  <span className="mono absolute left-4 top-4 rounded-full border border-ink/10 bg-white/80 px-3 py-1 text-[11px] text-ink backdrop-blur">0{i + 1}</span>
-                  <div className="absolute inset-[10%] transition-transform duration-[1000ms] ease-[var(--ease-expo)] [transform:translateZ(40px)] group-hover:-translate-y-3 group-hover:scale-[1.07] group-hover:-rotate-[5deg]">
+                  <span aria-hidden className="icon-number display pointer-events-none absolute -bottom-[0.12em] left-3 text-[38cqw] leading-none text-ink/[0.05] [container-type:inline-size]">0{i + 1}</span>
+                  <span className="mono absolute left-4 top-4 rounded-full border border-ink/10 bg-white/90 px-3 py-1 text-[11px] text-ink">0{i + 1}</span>
+                  <div className="icon-product absolute inset-[10%] transition-transform duration-[1000ms] ease-[var(--ease-expo)] [transform:translateZ(40px)] group-hover:[transform:translateZ(40px)_translateY(-12px)] group-hover:scale-[1.07] group-hover:-rotate-[5deg]">
                     <div className="float-wrap absolute inset-0">
                       <ProductImage slug={p.slug} colorId={p.colors[0]!.id} alt="" sizes="(max-width:768px) 82vw, 34vw" className="float-product" />
                     </div>

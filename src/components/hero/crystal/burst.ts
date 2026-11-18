@@ -24,7 +24,7 @@ export interface BurstSpec {
 
 type Face = THREE.Vector3[];
 
-function rnd(seed: number) {
+export function rnd(seed: number) {
   let a = seed;
   return () => ((a = (a * 16807) % 2147483647) / 2147483647);
 }
@@ -82,15 +82,29 @@ function boxFaces(min: THREE.Vector3, max: THREE.Vector3): Face[] {
   ];
 }
 
-interface Out {
+export interface Out {
   pos: number[];
   nrm: number[];
   uv: number[];
   center: number[];
   spin: number[];
+  col: number[];
 }
 
-function pushTri(o: Out, a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, n: THREE.Vector3[] | THREE.Vector3, center: THREE.Vector3, spin: number[]) {
+export const out = (): Out => ({ pos: [], nrm: [], uv: [], center: [], spin: [], col: [] });
+
+const WHITE = [1, 1, 1] as const;
+
+export function pushTri(
+  o: Out,
+  a: THREE.Vector3,
+  b: THREE.Vector3,
+  c: THREE.Vector3,
+  n: THREE.Vector3[] | THREE.Vector3,
+  center: THREE.Vector3,
+  spin: number[],
+  col: readonly number[] = WHITE,
+) {
   const pts = [a, b, c];
   for (let k = 0; k < 3; k++) {
     const p = pts[k]!;
@@ -100,17 +114,19 @@ function pushTri(o: Out, a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, n
     o.uv.push(p.x * 0.5 + 0.5 + p.z * 0.3, p.y * 0.5 + 0.5);
     o.center.push(center.x, center.y, center.z);
     o.spin.push(spin[0]!, spin[1]!, spin[2]!, spin[3]!);
+    o.col.push(col[0]!, col[1]!, col[2]!);
   }
 }
 
-function axis(r: () => number) {
+export function axis(r: () => number) {
   const v = new THREE.Vector3(r() - 0.5, r() - 0.5, r() - 0.5);
   if (v.lengthSq() < 1e-4) v.set(0, 1, 0);
   return v.normalize();
 }
 
-function toGeometry(o: Out) {
+export function toGeometry(o: Out) {
   const g = new THREE.BufferGeometry();
+  g.setAttribute('color', new THREE.Float32BufferAttribute(o.col, 3));
   g.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(o.nrm, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(o.uv, 2));
@@ -146,7 +162,7 @@ export function fracture(source: THREE.BufferGeometry, spec: BurstSpec, seed: nu
     if (inside(q) && seeds.every((s) => s.distanceTo(q) > minD)) seeds.push(q);
   }
 
-  const o: Out = { pos: [], nrm: [], uv: [], center: [], spin: [] };
+  const o = out();
   const n = new THREE.Vector3();
   const e1 = new THREE.Vector3();
   const e2 = new THREE.Vector3();
@@ -184,7 +200,7 @@ export function droplets(radius: number, spec: BurstSpec, seed: number) {
   const r = rnd(seed);
   const ico = new THREE.IcosahedronGeometry(1, 1).toNonIndexed();
   const ip = ico.attributes.position!;
-  const o: Out = { pos: [], nrm: [], uv: [], center: [], spin: [] };
+  const o = out();
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();
@@ -249,20 +265,11 @@ const BEGIN = /* glsl */ `
   vec3 transformed = aCenter + bVel * bK + 0.5 * uGrav * bAge * bAge + bLocal * bScale;
 `;
 
-/** the crystal's own glass, taught to fly apart */
-export function shardMaterial(base: THREE.MeshPhysicalMaterial, spec: BurstSpec, flat: boolean) {
-  const m = base.clone();
-  m.flatShading = flat;
-  // thin, bright, wet-looking glass: more of the studio in every facet
-  m.thickness = Math.min(m.thickness, 0.16);
-  m.roughness = 0;
-  m.envMapIntensity = 2.1;
-  m.clearcoat = 1;
-  m.clearcoatRoughness = 0.02;
-  if (m.normalMap) m.normalScale.multiplyScalar(0.6);
+/** teach any lit material to fly apart along the burst (one age uniform drives every piece) */
+export function flying<M extends THREE.Material>(m: M, spec: BurstSpec, key: string, power = 1) {
   const uniforms = {
     uAge: { value: -1 },
-    uPower: { value: spec.power },
+    uPower: { value: spec.power * power },
     uDrag: { value: spec.drag },
     uGrav: { value: new THREE.Vector3(0, -spec.gravity, 0) },
     uSpinAmt: { value: spec.spin },
@@ -277,7 +284,58 @@ export function shardMaterial(base: THREE.MeshPhysicalMaterial, spec: BurstSpec,
       .replace('#include <beginnormal_vertex>', NORMAL)
       .replace('#include <begin_vertex>', BEGIN);
   };
-  m.customProgramCacheKey = () => 'smadi-shards';
+  m.customProgramCacheKey = () => key;
+  return uniforms;
+}
+
+/**
+ * The football's ice shell pops along its own panels: each pentagon / hexagon becomes a thick tile
+ * (outer face, inner face, rim) carrying its panel colour, so the ball's pattern flies apart intact.
+ */
+export function panelShards(panels: { pts: THREE.Vector3[]; col: readonly number[] }[], seed: number, depth = 0.8) {
+  const r = rnd(seed);
+  const o = out();
+  const n = new THREE.Vector3();
+  const e1 = new THREE.Vector3();
+  const e2 = new THREE.Vector3();
+  const tri = (a: THREE.Vector3, b: THREE.Vector3, d: THREE.Vector3, c: THREE.Vector3, spin: number[], col: readonly number[]) => {
+    n.crossVectors(e1.subVectors(b, a), e2.subVectors(d, a));
+    if (n.lengthSq() < 1e-14) return;
+    const fc = a.clone().add(b).add(d).multiplyScalar(1 / 3);
+    if (n.dot(fc.sub(c)) < 0) [b, d] = [d, b];
+    n.crossVectors(e1.subVectors(b, a), e2.subVectors(d, a)).normalize();
+    pushTri(o, a, b, d, n.clone(), c, spin, col);
+  };
+  for (const { pts, col } of panels) {
+    const outer = pts.map((v) => v.clone().multiplyScalar(0.985));
+    const inner = pts.map((v) => v.clone().multiplyScalar(depth));
+    const c = [...outer, ...inner].reduce((s, v) => s.add(v), new THREE.Vector3()).multiplyScalar(1 / (outer.length * 2));
+    const spin = [...axis(r).toArray(), r()];
+    for (let k = 1; k < outer.length - 1; k++) {
+      tri(outer[0]!, outer[k]!, outer[k + 1]!, c, spin, col);
+      tri(inner[0]!, inner[k + 1]!, inner[k]!, c, spin, col);
+    }
+    for (let k = 0; k < outer.length; k++) {
+      const k2 = (k + 1) % outer.length;
+      tri(outer[k]!, outer[k2]!, inner[k2]!, c, spin, col);
+      tri(outer[k]!, inner[k2]!, inner[k]!, c, spin, col);
+    }
+  }
+  return toGeometry(o);
+}
+
+/** the crystal's own glass, taught to fly apart */
+export function shardMaterial(base: THREE.MeshPhysicalMaterial, spec: BurstSpec, flat: boolean) {
+  const m = base.clone();
+  m.flatShading = flat;
+  // thin, bright, wet-looking glass: more of the studio in every facet
+  m.thickness = Math.min(m.thickness, 0.16);
+  m.roughness = 0;
+  m.envMapIntensity = 2.1;
+  m.clearcoat = 1;
+  m.clearcoatRoughness = 0.02;
+  if (m.normalMap) m.normalScale.multiplyScalar(0.6);
+  const uniforms = flying(m, spec, 'smadi-shards');
   return { material: m, uniforms };
 }
 

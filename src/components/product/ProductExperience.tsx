@@ -44,7 +44,6 @@ export function ProductExperience({
   const [inspect, setInspect] = useState(false);
   const [chapter, setChapter] = useState(0);
   const [barOn, setBarOn] = useState(false);
-  const [landed, setLanded] = useState(false);
   const add = useCart((s) => s.add);
   const pushRecent = useRecent((s) => s.push);
   const wished = useWishlist((s) => s.slugs.includes(product.slug));
@@ -56,6 +55,9 @@ export function ProductExperience({
   const exhibit = useRef<HTMLDivElement>(null);
   const purchase = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const shown = useRef<HTMLButtonElement>(null);
+  const flyer = useRef<HTMLDivElement>(null);
+  const slotImg = useRef<HTMLDivElement>(null);
   const tilt = useRef<HTMLDivElement>(null);
   const imgSlot = useRef<HTMLDivElement>(null);
   const inspectRef = useRef<HTMLDivElement>(null);
@@ -77,25 +79,71 @@ export function ProductExperience({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.slug]);
 
-  // scroll choreography: chapters re-pose the product; the end of the exhibit drops it into the tray
+  // scroll choreography: chapters re-pose the product; on phones the end of the exhibit drops the
+  // product out of the viewer and into the purchase tray — one continuous fall, scrubbed by scroll
+  // (the photo never fades out: the same picture travels from the stage to the tray and back)
   useEffect(() => {
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    const fall = (q: number) => (q < 0.8 ? (q / 0.8) ** 2 : 1 - 0.06 * Math.sin((Math.PI * (q - 0.8)) / 0.2));
     const onScroll = () => {
       const el = exhibit.current;
       if (!el) return;
+      const vh = window.innerHeight;
       const r = el.getBoundingClientRect();
-      const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - window.innerHeight)));
+      const span = Math.max(1, r.height - vh);
+      const p = clamp(-r.top / span);
       setChapter(Math.min(chapters.length - 1, Math.floor(p * chapters.length * 1.05)));
-      stage.current?.style.setProperty('--drop', String(window.innerWidth < 1024 ? Math.min(1, Math.max(0, (p - 0.84) / 0.16)) : 0));
       const pr = purchase.current?.getBoundingClientRect();
-      if (pr) {
-        setBarOn(pr.bottom < 0);
-        if (pr.top < window.innerHeight * 0.8) setLanded(true);
+      if (pr) setBarOn(pr.bottom < 0);
+
+      const src = shown.current;
+      const dst = imgSlot.current;
+      const f = flyer.current;
+      const si = slotImg.current;
+      if (!src || !dst || !f || !si) return;
+      const mobile = window.innerWidth < 1024 && !reduced;
+      if (!mobile) {
+        f.style.visibility = 'hidden';
+        src.style.opacity = '';
+        si.style.opacity = '1';
+        return;
       }
+      const d = dst.getBoundingClientRect();
+      // from 80% through the exhibit until the tray sits a little above the middle of the screen
+      const y = window.scrollY;
+      const start = r.top + y + span * 0.8;
+      const end = d.top + y + d.height / 2 - vh * 0.58;
+      const q = clamp((y - start) / Math.max(1, end - start));
+      if (q <= 0 || q >= 1) {
+        f.style.visibility = 'hidden';
+        src.style.opacity = q >= 1 ? '0' : '';
+        si.style.opacity = q >= 1 ? '1' : '0';
+        si.classList.toggle('is-landed', q >= 1);
+        return;
+      }
+      const s = src.getBoundingClientRect();
+      const e = q * q * (3 - 2 * q);
+      const k = fall(q);
+      const w = s.width + (d.width - s.width) * e;
+      const h = s.height + (d.height - s.height) * e;
+      const cx = s.left + s.width / 2 + (d.left + d.width / 2 - (s.left + s.width / 2)) * e;
+      const cy = s.top + s.height / 2 + (d.top + d.height / 2 - (s.top + s.height / 2)) * k;
+      src.style.opacity = '0';
+      si.style.opacity = '0';
+      si.classList.remove('is-landed');
+      f.style.visibility = 'visible';
+      f.style.width = `${w.toFixed(1)}px`;
+      f.style.height = `${h.toFixed(1)}px`;
+      f.style.transform = `translate3d(${(cx - w / 2).toFixed(1)}px, ${(cy - h / 2).toFixed(1)}px, 0) rotate(${(Math.sin(q * Math.PI) * -14).toFixed(2)}deg)`;
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [chapters.length]);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [chapters.length, reduced]);
 
   // mouse tilt (desktop) and horizontal swipe between photos (touch); vertical scroll stays native
   useEffect(() => {
@@ -182,11 +230,11 @@ export function ProductExperience({
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-[48%] h-[46vmin] w-[46vmin] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl" style={{ background: 'var(--holo-conic)', animation: reduced ? undefined : 'spin-a 9s linear infinite' }} />
 
           <button
+            ref={shown}
             type="button"
             onClick={() => setInspect(true)}
             aria-label="Zoom into the product photo"
             className="absolute inset-x-[6%] top-[13%] bottom-[24svh] cursor-zoom-in lg:inset-x-[8%] lg:bottom-[12%] lg:top-[14%]"
-            style={{ transform: 'translate3d(0, calc(var(--drop, 0) * 40svh), 0) scale(calc(1 - var(--drop, 0) * 0.45))', opacity: 'calc(1 - var(--drop, 0) * 0.9)' }}
           >
             <div ref={tilt} className="h-full w-full transition-transform duration-300 ease-out [transform-style:preserve-3d]">
               <div
@@ -200,7 +248,7 @@ export function ProductExperience({
                     src={src}
                     alt={i === view ? `${brandName} ${product.name}${i ? ` — view ${i + 1}` : ''}` : ''}
                     draggable={false}
-                    className={`absolute inset-0 h-full w-full object-contain transition-[opacity,transform,filter] duration-700 ease-[var(--ease-expo)] ${i === view ? 'float-product opacity-100' : 'scale-90 opacity-0 blur-md'}`}
+                    className={`absolute inset-0 h-full w-full object-contain transition-[opacity,transform,filter] duration-700 ease-[var(--ease-expo)] ${i === view ? 'float-product opacity-100' : 'scale-90 opacity-0'}`}
                   />
                 ))}
               </div>
@@ -242,6 +290,12 @@ export function ProductExperience({
         </div>
       </div>
 
+      {/* the product in flight between the viewer and the tray (phones) */}
+      <div ref={flyer} aria-hidden className="pdp-flyer" style={{ visibility: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={images[view] ?? images[0]} alt="" draggable={false} />
+      </div>
+
       {/* ------------------------------ info + purchase ------------------------------ */}
       <div className="relative z-10 bg-bg lg:order-2">
         <div className="container-x lg:px-10 lg:pb-16 lg:pt-24">
@@ -269,7 +323,7 @@ export function ProductExperience({
           {/* the product drops into this tray as you scroll */}
           <div ref={purchase} className="mt-8 rounded-[2px] border border-line bg-white p-4">
             <div ref={imgSlot} className="relative mx-auto -mt-2 mb-2 h-40 w-full overflow-visible lg:hidden" aria-hidden>
-              <div className="absolute inset-0" style={{ animation: landed ? 'drop-in .9s cubic-bezier(.3,1.4,.5,1) both' : 'none', opacity: landed ? undefined : 0 }}>
+              <div ref={slotImg} className="pdp-slot absolute inset-0" style={{ opacity: 0 }}>
                 <ProductImage slug={product.slug} colorId={colorId} alt="" sizes="60vw" />
               </div>
               <span className="absolute inset-x-[25%] bottom-1 h-3 rounded-[50%] bg-ink/10 blur-md" />

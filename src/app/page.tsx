@@ -9,6 +9,7 @@ import { brands } from '@/data/brands';
 import { arenaPicks } from '@/config/hero';
 import { bestSellers, countFor, featuredProducts, getAllProducts, getSports, productsFor, toCard } from '@/lib/catalog';
 import { SplitWords } from '@/components/ui/SplitWords';
+import { LiquidSeam } from '@/components/home/LiquidSeam';
 
 
 export default function Home() {
@@ -36,8 +37,11 @@ export default function Home() {
     <>
       <HomeHero />
       <Brands brands={brands} />
+      <LiquidSeam seed={1} />
       <CategoryShowcase sports={sports} />
+      <LiquidSeam seed={2} flip />
       <Icons items={icons} />
+      <LiquidSeam seed={3} />
       <section aria-labelledby="best-title" className="container-x py-16">
         <div className="flex items-end justify-between gap-4">
           <div>

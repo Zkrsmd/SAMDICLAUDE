@@ -91,6 +91,54 @@ export function Effects() {
     };
   }, []);
 
+  // adaptive quality: watch real frame times while the visitor scrolls; if this device can't hold
+  // ~36 fps, switch to `fx-lite` (solid glass instead of live backdrop blur, still grain, no spotlight).
+  // Strong devices never change; the look stays the same, only the most expensive GPU passes drop.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (root.classList.contains('fx-lite')) return;
+    let raf = 0;
+    let last = 0;
+    let frames = 0;
+    let total = 0;
+    let idle = 0;
+    const tick = (now: number) => {
+      if (last) {
+        const dt = now - last;
+        if (dt < 250) {
+          frames++;
+          total += dt;
+        }
+      }
+      last = now;
+      if (frames >= 120) {
+        if (total / frames > 28) root.classList.add('fx-lite');
+        stop();
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    const onScroll = () => {
+      window.clearTimeout(idle);
+      if (!raf) {
+        last = 0;
+        raf = requestAnimationFrame(tick);
+      }
+      // only frames during scrolling count
+      idle = window.setTimeout(() => {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }, 200);
+    };
+    function stop() {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(idle);
+      window.removeEventListener('scroll', onScroll);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return stop;
+  }, []);
+
   // magnetic controls lean a few pixels toward the cursor (CSS `translate`, so hover transforms still apply)
   useEffect(() => {
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;

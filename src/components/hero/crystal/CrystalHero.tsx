@@ -7,6 +7,10 @@ export interface CrystalApi {
   go: (index: number, dir: 1 | -1) => void;
   setScroll: (p: number) => void;
   start: () => void;
+  /** hide the 3D product while the page carries it (the scroll drop) */
+  setDrop: (on: boolean) => void;
+  /** the product photo's box on the stage canvas, in CSS px */
+  productRect: () => { x: number; y: number; w: number; h: number; rot: number } | null;
 }
 
 // start fetching the 3D code as soon as this island loads, not after hydration settles
@@ -76,7 +80,13 @@ export function CrystalHero({
           onExplore: () => cb.current.onExplore(),
           onReady: () => cb.current.onReady(),
         });
-        cb.current.onApi({ go: (i, d) => engine?.go(i, d), setScroll: (p) => engine?.setScroll(p), start: () => engine?.start() });
+        cb.current.onApi({
+          go: (i, d) => engine?.go(i, d),
+          setScroll: (p) => engine?.setScroll(p),
+          start: () => engine?.start(),
+          setDrop: (on) => engine?.setDrop(on),
+          productRect: () => engine?.productRect() ?? null,
+        });
         await engine.init(first.current);
       } catch {
         if (disposed) return;
@@ -94,12 +104,14 @@ export function CrystalHero({
   const slide = heroSlides[index]!;
   if (fallback)
     return (
-      <div className="absolute inset-0 grid place-items-center" style={{ background: 'radial-gradient(80% 60% at 50% 45%, #E3E7EC, #B4BCC6)' }}>
-        <div className="glass relative grid aspect-[4/5] w-[min(70vw,380px)] place-items-center rounded-[28px]">
-          <div className="float-wrap grid w-[80%] place-items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={renderUrl(slide.product.slug)} alt="" className="float-product w-full object-contain" />
-          </div>
+      // full-bleed still (no WebGL 2): the sport's word as architecture, the product floating in front
+      <div className="absolute inset-0 overflow-hidden" style={{ background: 'radial-gradient(90% 70% at 50% 42%, #DDE2E8, #A3ACB8 70%, #8E99A8)' }}>
+        <p aria-hidden className="display absolute inset-x-0 top-[24%] select-none text-center text-[22vw] leading-none text-white/35">
+          {slide.word}
+        </p>
+        <div className="float-wrap absolute inset-x-[8%] top-[22%] bottom-[34%] grid place-items-center md:inset-x-[22%]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={renderUrl(slide.product.slug)} alt="" className="float-product h-full w-full object-contain" />
         </div>
       </div>
     );
@@ -107,7 +119,7 @@ export function CrystalHero({
   return (
     <>
       <canvas ref={canvas} aria-hidden className="absolute inset-0 h-full w-full" />
-      <canvas ref={hud} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />
+      <canvas ref={hud} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" style={{ opacity: 'calc(1 - var(--melt, 0) * 2)' }} />
       <div className="pointer-events-none absolute left-0 top-0 z-[2] text-white [text-shadow:0_1px_8px_rgba(20,26,34,0.35)]">
         <div ref={spec} className="absolute left-0 top-0 whitespace-nowrap opacity-0 transition-opacity duration-500" style={{ willChange: 'transform' }}>
           <p data-code className="mono text-[10.5px] uppercase tracking-[0.16em]" />

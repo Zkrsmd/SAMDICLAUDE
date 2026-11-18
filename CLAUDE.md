@@ -21,9 +21,17 @@ campaign and a real store at once. Real product photos (background removed) and 
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
 - Hero = three.js "crystal" stage (`src/components/hero/crystal/*`): each sport's real product photo forms inside its own
-  crystal (ice shard / glass slab / water orb / cut gem), then the crystal BREAKS — pre-fractured Voronoi shards (droplets
-  for water) flown in the vertex shader (`burst.ts`, one draw call) with a shockwave + camera hit — and the product floats
-  free. Backdrops are coded sets painted in `textures.ts` (floodlit bowl, ring, pool wall, gym) plus additive light shafts.
+  crystal, then it BREAKS with sport matter (owner-requested): football = frozen football popping along its 32 panels with
+  grass + turf; boxing = glass slab with sweat, a few blood drops and hand-wrap ribbons; swimming = water orb into
+  droplets; basketball = seamed amber glass ball with hardwood splinters + leather chips. Shards/droplets are flown in the
+  vertex shader (`burst.ts`); sport debris is modelled in `debris.ts` and flown by the same shader (`flying()`).
+  The stage is full screen (`100lvh`, type kept inside `100svh`). Scrolling never blurs the stage: from 36% of the hero's
+  scroll the page's white POURS down over the world (the melt, in the post shader: drips, chrome lip, a bead of the
+  sport's accent) and stops two-thirds down, so the world's floor leaves as a band between white and chrome drips.
+  `LiquidSeam.tsx` repeats the chrome as pouring seams between homepage sections (CSS scroll timeline, no JS).
+  At 32% of the hero's scroll the product is handed to the page
+  (`HomeHero.tsx`, `setDrop`/`productRect`) and falls, as its real photo, onto the white page above the brands. The
+  product page does the same on phones (viewer → purchase tray). Backdrops are coded sets painted in `textures.ts` (floodlit bowl, ring, pool wall, gym) plus additive light shafts.
   Survey network, HUD callouts and one post pass (zoom blur, shockwave, light sharpen, grain).
   The only 3D is glass + environment — products stay real photos. three is code-split (client only) with a still fallback
   without WebGL 2. `window.__crystalT` freezes the opening in dev; `scripts/hero-frames.mjs` renders frames.

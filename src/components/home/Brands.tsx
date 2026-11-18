@@ -59,7 +59,7 @@ export function Brands({ brands }: { brands: B[] }) {
 
   const mark = (b: B, k: string) => (
     <li key={k} className="group relative flex h-24 shrink-0 items-center px-8 md:h-32 md:px-14">
-      <span aria-hidden className="absolute inset-4 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-50" style={{ background: 'radial-gradient(closest-side, rgba(43,89,255,.35), rgba(160,172,188,.2), transparent)' }} />
+      <span aria-hidden className="absolute -inset-2 rounded-full opacity-0 transition-opacity duration-500 group-hover:opacity-50" style={{ background: 'radial-gradient(closest-side, rgba(43,89,255,.35), rgba(160,172,188,.2), transparent)' }} />
       {b.logo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -82,7 +82,7 @@ export function Brands({ brands }: { brands: B[] }) {
   const sets = [brands.slice(0, half), brands.slice(half)];
 
   return (
-    <section aria-labelledby="brands-title" className="relative overflow-hidden bg-bg pb-16 pt-[26vh] md:pt-[30vh]">
+    <section aria-labelledby="brands-title" className="relative overflow-hidden bg-bg pb-16 pt-[28vh] md:pt-[34vh]">
       <div className="container-x" data-reveal>
         <p className="eyebrow text-muted">Brands we carry</p>
         <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(36px,9.4vw,128px)]" data-reveal="words">
@@ -90,7 +90,10 @@ export function Brands({ brands }: { brands: B[] }) {
         </h2>
         <p className="mt-4 max-w-md text-[15px] text-muted">Official products from the manufacturers we stock. Logos are trademarks of their owners; no partnership is implied.</p>
       </div>
-      <div className="relative mt-12 space-y-2 border-y border-line py-4 md:mt-16 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+      <div className="relative mt-12 space-y-2 border-y border-line py-4 md:mt-16">
+        {/* edge fades are two still overlays: a mask over the moving rows was re-applied on every frame */}
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[8%] bg-gradient-to-r from-bg to-transparent" />
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-[8%] bg-gradient-to-l from-bg to-transparent" />
         {sets.map((set, i) => (
           <div key={i} className="overflow-hidden" aria-hidden>
             <ul ref={i === 0 ? r0 : r1} className="flex w-max will-change-transform">

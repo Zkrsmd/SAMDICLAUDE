@@ -26,13 +26,22 @@ function deferred() {
  * water orb, cut gem) in a coded, atmospheric set, read by a HUD — survey network, specimen
  * callouts, live readouts. Mono corner type, an index to jump between sports, a single CTA.
  */
-export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, index: number) => void }) {
+export function Hero({
+  onScrollProgress,
+  onApi,
+}: {
+  onScrollProgress?: (p: number, index: number) => void;
+  /** the stage's API, for the page-level product drop */
+  onApi?: (api: CrystalApi | null) => void;
+}) {
   const router = useRouter();
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [ready, setReady] = useState(false);
   const [hover, setHover] = useState(false);
   const [offscreen, setOffscreen] = useState(false);
+  // once you scroll on, the product drops out of the stage: the sport must not change under it
+  const [away, setAway] = useState(false);
   const [tick, setTick] = useState(0);
   const [gate] = useState(deferred);
   const api = useRef<CrystalApi | null>(null);
@@ -40,7 +49,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
   const stage = useRef<HTMLDivElement>(null);
   const indexRef = useRef(0);
   indexRef.current = index;
-  const paused = hover || offscreen || reduced;
+  const paused = hover || offscreen || reduced || away;
 
   const go = useCallback((to: number, d?: 1 | -1) => {
     const n = (to + heroSlides.length) % heroSlides.length;
@@ -80,7 +89,10 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
       raf = requestAnimationFrame(() => {
         const p = Math.min(1, Math.max(0, (window.scrollY - top) / span));
         api.current?.setScroll(p);
-        stage.current?.style.setProperty('--sp', p.toFixed(4));
+        setAway(p > 0.2);
+        // the white pour (drawn by the stage) hides the type with it
+        const m = Math.min(1, Math.max(0, (p - 0.36) / 0.64));
+        stage.current?.style.setProperty('--melt', (m * m * (3 - 2 * m)).toFixed(4));
         onScrollProgress?.(p, indexRef.current);
       });
     };
@@ -145,7 +157,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
       ref={section}
       aria-roledescription="carousel"
       aria-label="Featured sports"
-      className="relative h-[170svh] bg-bg"
+      className="relative h-[calc(100lvh+70svh)] bg-bg"
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight') {
           e.preventDefault();
@@ -160,7 +172,7 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
       <div
         ref={stage}
         data-testid="hero-stage"
-        className="sticky top-0 h-[100svh] w-full select-none overflow-hidden bg-[#A3ACB8] text-white"
+        className="sticky top-0 h-[100lvh] w-full select-none overflow-hidden bg-[#A3ACB8] text-white"
         style={{ touchAction: 'pan-y' }}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
@@ -170,14 +182,17 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
           reduced={reduced}
           onReady={gate.resolve}
           onExplore={() => router.push(slide.href)}
-          onApi={(a) => (api.current = a)}
+          onApi={(a) => {
+            api.current = a;
+            onApi?.(a);
+          }}
         />
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(180deg,transparent,rgba(16,22,30,0.38))]" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(180deg,transparent,rgba(16,22,30,0.38))]" style={{ opacity: 'calc(1 - var(--melt, 0) * 1.6)' }} />
 
         {/* corner type */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 z-[3] [text-shadow:0_1px_10px_rgba(16,22,30,0.35)]"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 92px)', opacity: show, transition: 'opacity .8s .3s' }}
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 92px)', opacity: show ? 'calc(1 - var(--melt, 0) * 2.2)' : 0, transition: 'opacity .8s .3s' }}
         >
           <div className="container-x flex items-start justify-between gap-6">
             <div className="mono text-[10.5px] uppercase leading-[1.55] tracking-[0.14em] [@media(max-height:560px)]:hidden">
@@ -219,8 +234,9 @@ export function Hero({ onScrollProgress }: { onScrollProgress?: (p: number, inde
         </div>
 
         {/* bottom: statement + actions */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] [&_a]:pointer-events-auto [&_button]:pointer-events-auto" style={{ opacity: show, transition: 'opacity .8s .5s' }}>
-          <div className="container-x pb-[max(22px,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] [&_a]:pointer-events-auto [&_button]:pointer-events-auto" style={{ opacity: show ? 'calc(1 - var(--melt, 0) * 1.5)' : 0, transition: 'opacity .8s .5s' }}>
+          {/* the stage is the LARGE viewport (full bleed when the browser bar hides); keep the type inside the small one */}
+          <div className="container-x pb-[calc(100lvh-100svh+max(22px,env(safe-area-inset-bottom)))]">
             <div aria-live="polite" aria-atomic="true" className="[text-shadow:0_2px_24px_rgba(16,22,30,0.35)]">
               <h2 className="sr-only">{slide.word}</h2>
               <p key={`w-${tick}`} className="mono text-[10.5px] uppercase tracking-[0.18em] text-white/85" style={{ animation: ready ? 'rise-in .7s .15s var(--ease-expo) both' : undefined }}>

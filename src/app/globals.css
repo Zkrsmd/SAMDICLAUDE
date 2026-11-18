@@ -501,6 +501,9 @@
   animation: glow-soft 3.2s ease-in-out infinite;
   z-index: -1;
 }
+.holo-halo > span {
+  animation: none !important;
+}
 .holo-ring > span,
 .holo-halo > span {
   position: absolute;
@@ -570,16 +573,16 @@
 /* frosted glass */
 .glass {
   background: rgb(255 255 255 / 0.62);
-  backdrop-filter: blur(22px) saturate(1.6);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.7) inset,
     0 18px 50px -20px rgb(15 20 30 / 0.35);
 }
 .glass-dark {
   background: rgb(12 14 18 / 0.55);
-  backdrop-filter: blur(22px) saturate(1.5);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
   color: #fff;
 }
 
@@ -666,8 +669,8 @@
 }
 .glass-strong {
   background: rgb(255 255 255 / 0.82);
-  backdrop-filter: blur(22px) saturate(1.6);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.9) inset,
     0 18px 50px -24px rgb(15 20 30 / 0.3);
@@ -749,18 +752,15 @@
 /* scroll reveal */
 [data-reveal] {
   opacity: 0;
-  transform: translate3d(0, 40px, 0);
-  filter: blur(8px);
+  transform: translate3d(0, 40px, 0) scale(0.985);
   transition:
     opacity 1s var(--ease-expo),
-    transform 1.1s var(--ease-expo),
-    filter 1s var(--ease-expo);
+    transform 1.1s var(--ease-expo);
   transition-delay: var(--d, 0ms);
 }
 [data-reveal].in {
   opacity: 1;
   transform: none;
-  filter: none;
 }
 /* no hover churn mid-scroll (see Effects) */
 .is-scrolling .arena,
@@ -821,7 +821,7 @@
 
 /* the reveal runs on the compositor (no repaint of blurred content per frame); released once settled */
 [data-reveal]:not([data-settled]) {
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
 }
 
 /* word-by-word mask reveal */
@@ -1090,10 +1090,8 @@
   filter: drop-shadow(0 14px 16px rgb(15 18 22 / 0.16)) drop-shadow(0 1px 1px rgb(15 18 22 / 0.12));
 }
 .arena-chip {
-  background: rgb(255 255 255 / 0.8);
+  background: rgb(255 255 255 / 0.9);
   border: 1px solid rgb(15 18 22 / 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition:
     background 0.5s var(--ease-expo),
     color 0.5s var(--ease-expo);
@@ -1178,8 +1176,8 @@
   background: rgb(255 255 255 / 0.82);
   border: 1px solid rgb(15 18 22 / 0.08);
   box-shadow: 0 30px 60px -28px rgb(15 18 22 / 0.45);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   transform-origin: 100% 100%;
   animation: sheet-in 0.45s var(--ease-expo) both;
 }
@@ -1224,5 +1222,211 @@
   .arena-draw {
     stroke-dashoffset: 0;
     transition: none;
+  }
+}
+
+/* ── adaptive quality (Effects adds .fx-lite when scrolling can't hold ~36 fps) ──
+   Live backdrop blur is recomputed for every frame that content moves beneath it; on weak GPUs the
+   glass becomes a near-opaque frost instead. Grain stops shuffling and the cursor glow is dropped. */
+.fx-lite :is(.glass, .glass-strong, .size-sheet, .placard, .btn-glass-light) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.fx-lite .glass {
+  background: rgb(250 251 252 / 0.9);
+}
+.fx-lite :is(.glass-strong, .size-sheet) {
+  background: rgb(250 251 252 / 0.96);
+}
+.fx-lite .btn-glass-light {
+  background: rgb(255 255 255 / 0.9);
+}
+.fx-lite.grain::after,
+.fx-lite .grain::after {
+  animation: none;
+}
+.fx-lite .spotlight {
+  display: none;
+}
+/* while the page scrolls, idle loops hold still: the eye is on the moving page, and every paused
+   loop is one less layer re-composited per frame (the chrome edge spins a large masked gradient) */
+.is-scrolling :is(.float-wrap, .arena-float, .holo-ring > span, .holo-halo, .holo-text),
+.is-scrolling.grain::after {
+  animation-play-state: paused;
+}
+
+/* ── depth on scroll: products drift a little faster than their cards and the giant numbers a little
+   slower, driven by the scroll position itself (CSS scroll timeline, runs on the compositor — no JS).
+   Uses the `translate` property so hover transforms on the same elements still compose. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .arena-product,
+    .icon-product {
+      animation: drift-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+    .icon-number {
+      animation: drift-down linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+}
+@keyframes drift-up {
+  from {
+    translate: 0 9%;
+  }
+  to {
+    translate: 0 -9%;
+  }
+}
+@keyframes drift-down {
+  from {
+    translate: 0 -14%;
+  }
+  to {
+    translate: 0 10%;
+  }
+}
+
+/* arena field markings: on fx-lite devices they fade in as one layer instead of tracing each path
+   (the tracing repaints six card-sized vector layers per frame while the visitor scrolls past) */
+.fx-lite .arena-draw {
+  transition: none;
+  stroke-dashoffset: 0;
+}
+.fx-lite .arena:not(.in) .arena-lines {
+  opacity: 0;
+}
+
+/* ── the home product drop (HomeHero): the hero product falls out of the stage onto the page ── */
+.hero-drop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 20;
+  display: block;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.hero-drop-float {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hero-drop img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 26px 24px rgb(15 18 22 / 0.22));
+  transition: transform 0.6s var(--ease-expo);
+}
+.hero-drop.is-landed .hero-drop-float {
+  animation: float-y 6s ease-in-out infinite;
+}
+.hero-drop.is-landed:hover img {
+  transform: scale(1.05) rotate(-2deg);
+}
+.hero-drop-shadow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 19;
+  height: 18px;
+  border-radius: 50%;
+  background: rgb(15 18 22 / 0.2);
+  filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+
+/* ── product page: the product in flight from the viewer to the purchase tray (phones) ── */
+.pdp-flyer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  pointer-events: none;
+  will-change: transform;
+}
+.pdp-flyer img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 24px 22px rgb(15 18 22 / 0.24));
+}
+.pdp-slot.is-landed {
+  animation: slot-settle 0.5s var(--ease-expo) both;
+}
+@keyframes slot-settle {
+  from {
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+/* ── liquid chrome seams between sections (<LiquidSeam/>): the hero's matter carried down the page ── */
+.liquid-seam {
+  position: relative;
+  height: clamp(64px, 10.4vw, 150px);
+  pointer-events: none;
+  margin-block: -6px;
+}
+.liquid-seam > svg,
+.liquid-seam > div,
+.liquid-seam > div > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.liquid-seam.is-flip {
+  transform: scaleX(-1);
+}
+.seam-pour {
+  transform-origin: 50% 0;
+}
+.seam-drop {
+  opacity: 0;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .seam-pour {
+      animation: seam-pour linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 55%;
+    }
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .seam-drop {
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+    animation: seam-fall 3.6s cubic-bezier(0.55, 0, 0.9, 0.6) infinite;
+  }
+}
+@keyframes seam-pour {
+  from {
+    transform: scaleY(0.08);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes seam-fall {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.6);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(0) scale(1, 1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(140px) scale(0.8, 1.3);
   }
 }

@@ -99,11 +99,25 @@ export function HeroDrip({ sport }: { sport: React.RefObject<string> }) {
     io.observe(el);
     let raf = 0;
     let last = 0;
+    let lastY = -1;
+    let movedAt = 0;
+    const root = document.documentElement;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!visible || now - last < 30) return;
+      if (!visible) return;
+      // every update re-runs the liquid filter (two blurs + a lighting pass over the whole band).
+      // On devices that switched to fx-lite it refreshes at ~16 fps, and rests once the page and
+      // its droplets are still; elsewhere it keeps ~33 fps and its idle wobble.
+      const lite = root.classList.contains('fx-lite');
+      if (now - last < (lite ? 60 : 30)) return;
+      const y = window.scrollY;
+      if (y !== lastY) {
+        lastY = y;
+        movedAt = now;
+      }
+      if (lite && now - movedAt > 1200 && !drops.some((o) => o.d >= 0)) return;
       last = now;
-      const top = docTop - window.scrollY;
+      const top = docTop - y;
       const p = Math.min(1, Math.max(0, (window.innerHeight - top) / (window.innerHeight * 0.8)));
       const grow = reduced ? (p > 0.15 ? 1 : 0) : p * p * (3 - 2 * p);
       const t = now / 1000;
