@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { heroSlides } from '@/config/hero';
 import { Icon } from '@/components/ui/Icon';
-import { HoloEdge } from '@/components/ui/HoloEdge';
 import { Loader } from './Loader';
 import { CrystalHero, type CrystalApi } from './crystal/CrystalHero';
 import { WORLDS } from './crystal/worlds';
@@ -242,21 +241,31 @@ export function Hero({
               <p key={`w-${tick}`} className="mono text-[10.5px] uppercase tracking-[0.18em] text-white/85" style={{ animation: ready ? 'rise-in .7s .15s var(--ease-expo) both' : undefined }}>
                 {String(index + 1).padStart(2, '0')} — {slide.word} / {world.code}
               </p>
-              <p key={`t-${tick}`} className="display mt-3 max-w-[14ch] text-[clamp(24px,min(7.4vw,7.2svh),64px)] leading-[0.95]">
+              <p key={`t-${tick}`} className="display mt-3 max-w-[14ch] text-[clamp(24px,min(6.4vw,6.2svh),56px)] leading-[0.95]">
                 {ready ? <SplitWords text={slide.tagline} play /> : slide.tagline}
               </p>
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-2.5 [@media(max-height:560px)]:mt-3">
-              <Link href={slide.href} className="btn-holo h-14 flex-1 sm:flex-none sm:px-9" data-edge="" data-magnetic="">
-                <HoloEdge halo={false} variant="btn" />
-                {slide.cta} <Icon name="arrow-right" size={18} />
+            <div className="mt-5 flex items-center gap-2.5 [@media(max-height:560px)]:mt-3">
+              {/* a slim glass pill with the arrow in a white dot — not a slab of white across the phone */}
+              <Link href={slide.href} className="hero-cta" data-magnetic="">
+                <span className="hero-cta-label">{slide.cta}</span>
+                <span className="hero-cta-dot" aria-hidden>
+                  <Icon name="arrow-right" size={16} />
+                </span>
               </Link>
-              <button type="button" onClick={back} aria-label="Previous sport" className="btn-glassy h-14 w-14 shrink-0 !px-0" data-magnetic="">
-                <Icon name="arrow-left" size={18} />
-              </button>
-              <button type="button" onClick={next} aria-label="Next sport" className="btn-glassy h-14 w-14 shrink-0 !px-0" data-magnetic="">
-                <Icon name="arrow-right" size={18} />
-              </button>
+              {/* one compact pager: ‹ 01 / 04 › */}
+              <div className="hero-pager" role="group" aria-label="Change sport">
+                <button type="button" onClick={back} aria-label="Previous sport">
+                  <Icon name="arrow-left" size={16} />
+                </button>
+                <span aria-hidden className="mono text-[11px] tracking-[0.12em]">
+                  {String(index + 1).padStart(2, '0')}
+                  <span className="text-white/55"> / {String(heroSlides.length).padStart(2, '0')}</span>
+                </span>
+                <button type="button" onClick={next} aria-label="Next sport">
+                  <Icon name="arrow-right" size={16} />
+                </button>
+              </div>
               <p className="mono ml-auto hidden text-right text-[10.5px] uppercase leading-[1.6] tracking-[0.14em] text-white/80 md:block">
                 Scroll down to discover.
                 <br />

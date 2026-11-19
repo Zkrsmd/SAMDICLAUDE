@@ -1,14 +1,19 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRef } from 'react';
 import { ProductImage } from './ProductImage';
+import { QuickAdd } from './QuickAdd';
 import { Icon } from '@/components/ui/Icon';
 import { useWishlist } from '@/stores/lists';
 import { useHydrated } from '@/hooks/useHydrated';
 import { formatPrice } from '@/lib/format';
 import type { CardData } from '@/lib/catalog';
 
-/** Museum-placard product card: render on stone, mono price, colour swatches, wishlist. */
+/**
+ * Product card: the cut-out floats on a soft studio ground, and everything you need sits inside the
+ * card on a frosted strip — brand, name, price and the + that puts it straight in the bag.
+ */
 export function ProductCard({
   p,
   size = 'md',
@@ -22,79 +27,90 @@ export function ProductCard({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const [color, setColor] = useState(p.colors[0]!.id);
   const hydrated = useHydrated();
   const wished = useWishlist((s) => s.slugs.includes(p.slug));
   const toggle = useWishlist((s) => s.toggle);
-  const colorName = p.colors.find((c) => c.id === color)?.name;
+  const colorId = p.colors[0]!.id;
+  const href = `/product/${p.slug}`;
+  const router = useRouter();
+  const img = useRef<HTMLSpanElement>(null);
+
+  // open the product as one continuous shot: this exact photo morphs into the product page's photo
+  // (View Transitions API) while the page builds around it. Plain navigation without support,
+  // with reduced motion, or for new-tab / modified clicks.
+  const open = (e: React.MouseEvent) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => Promise<void>) => { finished: Promise<void>; ready: Promise<void>; updateCallbackDone: Promise<void> };
+    };
+    if (!doc.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    e.preventDefault();
+    const el = img.current;
+    // only one element may carry the name: on a product page, its own photo steps aside
+    document.querySelectorAll<HTMLElement>('[data-pdp-hero]').forEach((n) => (n.style.viewTransitionName = 'none'));
+    if (el) el.style.viewTransitionName = 'pdp-hero';
+    document.documentElement.classList.add('vt-product');
+    const t = doc.startViewTransition(
+      () =>
+        new Promise<void>((resolve) => {
+          router.push(href);
+          const t0 = performance.now();
+          // the new page is ready when its photo is in the document
+          const ready = () => {
+            const next = document.querySelector<HTMLElement>(`[data-pdp-hero="${p.slug}"]`);
+            if (next) {
+              if (el) el.style.viewTransitionName = '';
+              next.style.viewTransitionName = 'pdp-hero';
+              resolve();
+            } else if (performance.now() - t0 > 2500) resolve(); // never hold the page (browsers abort at 4 s)
+            // (a timer, not requestAnimationFrame: rendering is paused while a transition waits)
+            else window.setTimeout(ready, 16);
+          };
+          ready();
+        }),
+    );
+    // a skipped/aborted transition is not an error: the navigation itself always happens
+    t.ready.catch(() => {});
+    t.updateCallbackDone.catch(() => {});
+    t.finished.catch(() => {}).finally(() => {
+      if (el) el.style.viewTransitionName = '';
+      document.documentElement.classList.remove('vt-product');
+    });
+  };
   return (
-    <article className={`group relative flex flex-col ${className}`} style={style}>
-      <Link
-        href={`/product/${p.slug}${color !== p.colors[0]!.id ? `?color=${color}` : ''}`}
-        className="relative block overflow-hidden rounded-[2px] bg-stone"
-        aria-label={`${p.brandName} ${p.name}${colorName ? `, ${colorName}` : ''}`}
-      >
-        <div className={`relative w-full ${size === 'lg' ? 'aspect-[4/5]' : size === 'sm' ? 'aspect-square' : 'aspect-[5/6]'}`}>
-          <div className="absolute inset-[8%] transition-transform duration-700 ease-[var(--ease-expo)] group-hover:-translate-y-2 group-hover:scale-[1.04]">
-            <ProductImage
-              slug={p.slug}
-              colorId={color}
-              alt=""
-              priority={priority}
-              sizes={size === 'lg' ? '(max-width: 768px) 90vw, 40vw' : '(max-width: 768px) 50vw, 22vw'}
-            />
-          </div>
-          <span aria-hidden className="absolute inset-x-[18%] bottom-[7%] h-3 rounded-[50%] bg-ink/10 blur-md transition-all duration-700 group-hover:inset-x-[24%] group-hover:opacity-60" />
-        </div>
-        <div className="absolute left-2.5 top-2.5 flex gap-1.5">
-          {p.bestSeller && <span className="eyebrow rounded-[2px] bg-white px-1.5 py-1 text-[9.5px]">Best seller</span>}
-          {p.verified && <span className="eyebrow rounded-[2px] bg-ink px-1.5 py-1 text-[9.5px] text-white">Verified</span>}
-        </div>
+    <article className={`pcard group ${className}`} style={style}>
+      <Link href={href} className="pcard-media" aria-label={`${p.brandName} ${p.name}`} onClick={open}>
+        <span className="pcard-stage">
+          <span className="pcard-shadow" aria-hidden />
+          <span ref={img} className="pcard-img">
+            <ProductImage slug={p.slug} colorId={colorId} alt="" priority={priority} sizes={size === 'lg' ? '(max-width: 768px) 90vw, 40vw' : '(max-width: 768px) 50vw, 24vw'} />
+          </span>
+        </span>
       </Link>
+      <div className="pointer-events-none absolute left-2.5 top-2.5 flex gap-1.5">
+        {p.isNew && <span className="pcard-badge pcard-badge-new">New</span>}
+        {p.bestSeller && <span className="pcard-badge">Best seller</span>}
+      </div>
       <button
         type="button"
         onClick={() => toggle(p.slug)}
         aria-pressed={hydrated ? wished : false}
         aria-label={`Save ${p.name} to wishlist`}
-        className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-full text-ink/70 transition-colors hover:text-cobalt"
+        className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-full text-ink/60 transition-colors hover:text-cobalt"
       >
-        <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
+        <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={19} className={hydrated && wished ? 'text-cobalt' : ''} />
       </button>
-      <div className="flex flex-1 flex-col pt-3">
-        <span className="eyebrow text-muted">{p.brandName}</span>
-        <h3 className={`mt-1 font-medium leading-snug ${size === 'lg' ? 'text-[18px]' : 'text-[15px]'}`}>
-          <Link href={`/product/${p.slug}`} className="hover:text-cobalt">
-            {p.name}
-          </Link>
-        </h3>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <span className="mono text-[14px] font-semibold">{formatPrice(p.price)}</span>
-          {p.colors.length > 1 && (
-            <fieldset className="flex gap-1">
-              <legend className="sr-only">Colour for {p.name}</legend>
-              {p.colors.map((c) => (
-                <label key={c.id} className="relative cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`color-${p.slug}`}
-                    value={c.id}
-                    checked={c.id === color}
-                    onChange={() => setColor(c.id)}
-                    className="peer sr-only"
-                  />
-                  <span className="sr-only">{c.name}</span>
-                  <span
-                    aria-hidden
-                    className={`block h-5 w-5 rounded-full border transition-transform peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${
-                      c.id === color ? 'scale-110 border-ink' : 'border-line'
-                    }`}
-                    style={{ background: `linear-gradient(135deg, ${c.swatch[0]} 50%, ${c.swatch[1] ?? c.swatch[0]} 50%)` }}
-                  />
-                </label>
-              ))}
-            </fieldset>
-          )}
+      <div className="pcard-info">
+        <div className="min-w-0 flex-1">
+          <span className="eyebrow block truncate text-[9.5px] text-muted">{p.brandName}</span>
+          <h3 className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-tight tracking-[-0.01em] md:line-clamp-1 md:text-[14.5px]">
+            <Link href={href} tabIndex={-1} className="hover:text-cobalt">
+              {p.name}
+            </Link>
+          </h3>
+          <span className="mono mt-0.5 block text-[12.5px] font-semibold">{formatPrice(p.price)}</span>
         </div>
+        <QuickAdd slug={p.slug} name={p.name} colorId={colorId} sizes={p.sizes} />
       </div>
     </article>
   );

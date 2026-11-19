@@ -23,7 +23,7 @@ export function DemoCheckout() {
           fulfilment system are integrated.
         </p>
       </div>
-      <h1 className="display mt-10 text-[clamp(52px,15vw,150px)]">Checkout</h1>
+      <h1 className="display mt-10 text-[clamp(40px,9vw,96px)]">Checkout</h1>
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
         <ol className="space-y-4">
           {['Contact', 'Delivery', 'Payment'].map((step, i) => (

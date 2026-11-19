@@ -3,7 +3,7 @@ import { crystalGeometry, crystalMaterial, environment, network, particles, WORL
 import { backdropTex, glowTex } from './textures';
 import { droplets, fracture, panelShards, shardMaterial, spray } from './burst';
 import { debris, type DebrisMesh } from './debris';
-import { heroSlides } from '@/config/hero';
+import { heroMedia, heroSlides } from '@/config/hero';
 
 /** wrap a sphere's equirect texture (the basketball's seams) around fractured pieces */
 function seamed(g: THREE.BufferGeometry) {
@@ -53,6 +53,8 @@ interface World {
   caustics: THREE.Mesh[];
   back: THREE.Mesh;
   backAspect?: number;
+  /** the sport's film on the back wall (poster first, then the playing video) */
+  film?: { plane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; src: string; el: HTMLVideoElement | null; tex: THREE.VideoTexture | null; aspect: number };
   base: { roughness: number; normal: number; dispersion: number };
   orb?: { pos: Float32Array; nrm: Float32Array };
   shards: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
@@ -64,6 +66,10 @@ interface World {
   beams: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[];
   broke: boolean;
 }
+
+/** placeholder map so a film plane compiles once with a texture slot (no recompile when the poster lands) */
+const BLANK = new THREE.DataTexture(new Uint8Array([167, 178, 192, 255]), 1, 1);
+BLANK.needsUpdate = true;
 
 /** opening beats (seconds): the crystal forms, then breaks */
 const FORM = 0.9;
@@ -331,6 +337,11 @@ export class CrystalEngine {
       ([e]) => {
         this.visible = !!e?.isIntersecting;
         this.ratio = e?.intersectionRatio ?? 0;
+        const el = this.active?.film?.el;
+        if (el) {
+          if (this.visible) void el.play().catch(() => {});
+          else el.pause();
+        }
       },
       { threshold: [0, 0.5] },
     );
@@ -430,6 +441,7 @@ export class CrystalEngine {
     void this.build(id);
   }
 
+  private scrollS = 0;
   setScroll(p: number) {
     this.scroll = p;
   }
@@ -468,6 +480,13 @@ export class CrystalEngine {
 
   dispose() {
     this.disposed = true;
+    for (const w of this.worlds.values()) {
+      if (w.film?.el) {
+        w.film.el.pause();
+        w.film.el.removeAttribute('src');
+        w.film.el.load();
+      }
+    }
     cancelAnimationFrame(this.raf);
     this.ro.disconnect();
     this.io.disconnect();
@@ -505,9 +524,34 @@ export class CrystalEngine {
       tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
       const group = new THREE.Group();
       group.visible = false;
-      const envr = environment(spec, this.o.fontFamily);
+      const media = heroMedia[id];
+      const envr = environment(spec, this.o.fontFamily, !!media);
       performance.mark(`crystal:env:${id}`);
       group.add(envr.group);
+      let film: World['film'];
+      if (media) {
+        // the wall behind the set: a cool-graded film under the bare (word-only) backdrop
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(64, 32),
+          new THREE.MeshBasicMaterial({ map: BLANK, color: '#A7B2C0', fog: false, toneMapped: false }),
+        );
+        plane.position.copy(envr.back.position);
+        plane.position.z -= 0.05;
+        envr.group.add(plane);
+        film = { plane, src: media.video, el: null, tex: null, aspect: 16 / 9 };
+        const f = film;
+        this.loader
+          .loadAsync(media.poster)
+          .then((t) => {
+            t.colorSpace = THREE.SRGBColorSpace;
+            if (f.plane.material.map === BLANK) {
+              f.aspect = t.image.width / t.image.height;
+              f.plane.material.map = t;
+              this.fitFilm(world);
+            }
+          })
+          .catch(() => {});
+      }
 
       const pivot = new THREE.Group();
       pivot.position.y = 0.15;
@@ -582,6 +626,7 @@ export class CrystalEngine {
         debris: deb,
         beams: envr.beams,
         broke: false,
+        film,
       };
       if (spec.crystal === 'orb') {
         const pos = geo.attributes.position!;
@@ -597,6 +642,8 @@ export class CrystalEngine {
 
   private activate(w: World) {
     if (this.active) this.active.group.visible = false;
+    if (this.active && this.active !== w) this.active.film?.el?.pause();
+    this.playFilm(w);
     this.active = w;
     w.group.visible = true;
     const s = w.spec;
@@ -613,6 +660,54 @@ export class CrystalEngine {
     this.fitBackdrop();
   }
 
+  /** start (or resume) the world's film; with reduced motion the poster stays */
+  private playFilm(w: World) {
+    const f = w.film;
+    if (!f || this.o.reduced) return;
+    if (!f.el) {
+      const el = document.createElement('video');
+      el.muted = true;
+      el.loop = true;
+      el.playsInline = true;
+      el.setAttribute('playsinline', '');
+      el.preload = 'auto';
+      el.src = f.src;
+      el.addEventListener('loadedmetadata', () => {
+        if (el.videoWidth) f.aspect = el.videoWidth / el.videoHeight;
+        this.fitFilm(w);
+      });
+      el.addEventListener(
+        'playing',
+        () => {
+          f.tex ??= new THREE.VideoTexture(el);
+          f.tex.colorSpace = THREE.SRGBColorSpace;
+          f.plane.material.map = f.tex;
+          this.fitFilm(w);
+        },
+        { once: true },
+      );
+      f.el = el;
+    }
+    if (this.visible && !document.hidden) void f.el.play().catch(() => {});
+  }
+
+  /** object-fit: cover for the film on the wall */
+  private fitFilm(w: World) {
+    const f = w.film;
+    const map = f?.plane.material.map;
+    if (!f || !map || map === BLANK) return;
+    const plane = (64 * f.plane.scale.x) / (32 * f.plane.scale.y);
+    map.repeat.set(1, 1);
+    map.offset.set(0, 0);
+    if (plane > f.aspect) {
+      map.repeat.y = f.aspect / plane;
+      map.offset.y = (1 - map.repeat.y) / 2;
+    } else {
+      map.repeat.x = plane / f.aspect;
+      map.offset.x = (1 - map.repeat.x) / 2;
+    }
+  }
+
   /** size the sky plane to the view and redraw it for this screen shape, so the word always reads */
   private fitBackdrop() {
     const w = this.active;
@@ -625,6 +720,11 @@ export class CrystalEngine {
     const visW = visH * this.camera.aspect;
     w.back.scale.set(visW / 64, visH / 32, 1);
     w.back.position.y = camY + (lookY - camY) * (d / camZ);
+    if (w.film) {
+      w.film.plane.scale.copy(w.back.scale);
+      w.film.plane.position.y = w.back.position.y;
+      this.fitFilm(w);
+    }
     const aspect = Math.round(this.camera.aspect * 10) / 10;
     if (w.backAspect !== aspect) {
       w.backAspect = aspect;
@@ -632,7 +732,7 @@ export class CrystalEngine {
       const horizon = (w.back.position.y + visH / 2 + 1.75) / visH;
       const mat = w.back.material as THREE.MeshBasicMaterial;
       mat.map?.dispose();
-      mat.map = backdropTex(w.spec.word, [w.spec.sky[0], w.spec.fog], this.o.fontFamily, w.spec.id.length * 17, aspect, w.spec.id, horizon);
+      mat.map = backdropTex(w.spec.word, [w.spec.sky[0], w.spec.fog], this.o.fontFamily, w.spec.id.length * 17, aspect, w.spec.id, horizon, !!w.film);
       mat.needsUpdate = true;
     }
   }
@@ -871,7 +971,10 @@ export class CrystalEngine {
     });
 
     // ---- camera: slow orbit, pointer parallax, scroll dolly, and it takes the hit
-    const sc = this.scroll;
+    // wheels scroll in steps: the scrubbed camera and melt ease toward the scroll instead of jumping
+    this.scrollS += (this.scroll - this.scrollS) * (1 - Math.exp(-dt * 12));
+    if (Math.abs(this.scroll - this.scrollS) < 1e-4) this.scrollS = this.scroll;
+    const sc = this.scrollS;
     const orbit = Math.sin(t * 0.12) * 0.25 * idle;
     const intro = ti >= 0 && ti < 2.4 ? THREE.MathUtils.lerp(1.12, 1, outExpo(seg(ti, 0.2, 2.4))) : 1;
     const dist = this.dist * (1 - sc * 0.32) * intro * (1 - charge * 0.035 + hit * 0.05);

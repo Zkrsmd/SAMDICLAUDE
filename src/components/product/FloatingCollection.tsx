@@ -34,7 +34,7 @@ export function FloatingCollection({ items, title }: { items: CardData[]; title:
     <section aria-labelledby="coll-title" className="relative overflow-hidden py-16" style={{ background: 'radial-gradient(70% 90% at 50% 40%, #FFFFFF, #EFEEE8)' }}>
       <div className="container-x">
         <p className="eyebrow text-muted">More from this collection</p>
-        <h2 id="coll-title" className="display mt-3 text-[clamp(40px,10vw,96px)]">
+        <h2 id="coll-title" className="display mt-3 text-[clamp(30px,6.2vw,72px)]">
           {title}
         </h2>
       </div>

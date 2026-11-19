@@ -15,7 +15,7 @@ export default async function SearchPage({ searchParams }: Props) {
     <>
       <header className="container-x" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 88px)' }}>
         <p className="eyebrow text-muted">Search</p>
-        <h1 className="display mt-3 text-[clamp(52px,15vw,150px)]">{q ? `“${q}”` : 'All products'}</h1>
+        <h1 className="display mt-3 text-[clamp(40px,9vw,96px)]">{q ? `“${q}”` : 'All products'}</h1>
         <div className="mt-6 max-w-xl">
           <SearchBox initial={q} />
         </div>

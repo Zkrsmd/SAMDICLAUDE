@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useCart } from '@/stores/cart';
 import { useUi } from '@/stores/ui';
@@ -17,6 +17,7 @@ export function QuickAdd({ slug, name, colorId, sizes }: { slug: string; name: s
   const [done, setDone] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const sheetEl = useRef<HTMLDivElement>(null);
   const sheet = useId();
   const many = sizes.length > 1;
 
@@ -38,6 +39,17 @@ export function QuickAdd({ slug, name, colorId, sizes }: { slug: string; name: s
       document.removeEventListener('pointerdown', onDoc);
       document.removeEventListener('keydown', onKey);
     };
+  }, [open]);
+
+  // the sheet opens above the +; on a narrow screen it must never run off either edge
+  // (`translate`, so the sheet's own entrance transform still plays)
+  useLayoutEffect(() => {
+    const el = sheetEl.current;
+    if (!open || !el) return;
+    el.style.translate = '';
+    const r = el.getBoundingClientRect();
+    const dx = Math.max(0, 8 - r.left) - Math.max(0, r.right - (window.innerWidth - 8));
+    if (dx) el.style.translate = `${dx.toFixed(0)}px 0`;
   }, [open]);
 
   useEffect(() => {
@@ -69,7 +81,7 @@ export function QuickAdd({ slug, name, colorId, sizes }: { slug: string; name: s
         <Icon name={done ? 'check' : 'plus'} size={18} className={`transition-transform duration-500 ease-[var(--ease-expo)] ${open ? 'rotate-45' : ''}`} />
       </button>
       {many && open && (
-        <div id={sheet} role="group" aria-label={`Choose a size for ${name}`} className="size-sheet absolute bottom-[calc(100%+10px)] right-0 z-20 w-[min(76vw,264px)] p-3">
+        <div ref={sheetEl} id={sheet} role="group" aria-label={`Choose a size for ${name}`} className="size-sheet absolute bottom-[calc(100%+10px)] right-0 z-20 w-[min(76vw,264px)] p-3">
           <p className="mono px-1 text-[10px] uppercase tracking-[0.16em] text-muted">Select size</p>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {sizes.map((sz) => (

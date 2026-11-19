@@ -58,7 +58,7 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
               <div className="flex items-center">
                 <Link
                   href={`/${s.slug}`}
-                  className="display flex flex-1 items-center gap-3 py-3 text-[clamp(44px,13vw,64px)]"
+                  className="display flex flex-1 items-center gap-3 py-3 text-[clamp(34px,9.5vw,50px)]"
                   style={{ transitionDelay: menuOpen ? `${80 + i * 40}ms` : '0ms' }}
                 >
                   <span className="h-3 w-3 rounded-full" style={{ background: ACCENT[s.slug] }} aria-hidden />

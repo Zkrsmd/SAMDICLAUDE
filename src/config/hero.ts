@@ -46,6 +46,18 @@ export const heroSlides = [
 ] as const;
 
 export type HeroSlide = (typeof heroSlides)[number];
+
+/**
+ * Background film per sport, played on the back wall of its 3D world (cool-graded, under the sport
+ * word). Files live in /public/video and must be licensed for commercial use; the poster is a still
+ * of the clip, shown until the video plays (and instead of it with reduced motion).
+ */
+export const heroMedia: Partial<Record<string, { video: string; poster: string; credit: string }>> = {
+  football: { video: '/video/football.mp4', poster: '/video/football.webp', credit: 'Pexels video 30147551 (Pexels License)' },
+  boxing: { video: '/video/boxing.mp4', poster: '/video/boxing.webp', credit: 'Pexels video 4761738 (Pexels License)' },
+  swimming: { video: '/video/swimming.mp4', poster: '/video/swimming.webp', credit: 'Pexels video 6539698 (Pexels License)' },
+  basketball: { video: '/video/basketball.mp4', poster: '/video/basketball.webp', credit: 'Pexels video 12787247 (Pexels License)' },
+};
 export const heroIds: string[] = heroSlides.map((s) => s.id);
 
 /** The product that stands on each sport's arena card on the homepage. */

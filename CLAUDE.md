@@ -12,8 +12,8 @@ campaign and a real store at once. Real product photos (background removed) and 
 - Effects language (class names kept from the old holo era, now chrome): `.holo-border`/`.holo-ring` = travelling
   chrome edge with a cobalt glint, `.btn-holo` white pill, `.holo-text` dark steel text with a cobalt glint, `.glass`,
   film grain, `[data-reveal]`. Liquid elements are chrome (mercury). Use these, don't invent new gradients.
-- Type: Unbounded (display, uppercase, heavy), Sora (body), Geist Mono (labels). No Inter/Arial.
-  Unbounded is very wide — size giant words with container units (`cqw`) and check at 375px.
+- Type: Archivo 900 condensed italic (display — the owner's "action font", `.display`), Sora (body), Geist Mono
+  (labels). No Inter/Arial. Keep headings modest (sections ≈ `clamp(30px,6.2vw,78px)`), the owner finds big type too loud.
 - The sport word is composition (behind objects, on walls, on pool floors), not a caption.
 
 ## Architecture
@@ -36,8 +36,11 @@ campaign and a real store at once. Real product photos (background removed) and 
   The only 3D is glass + environment — products stay real photos. three is code-split (client only) with a still fallback
   without WebGL 2. `window.__crystalT` freezes the opening in dev; `scripts/hero-frames.mjs` renders frames.
   Slides, arena-card product picks (`arenaPicks`) and category photos: `src/config/hero.ts`.
-- Homepage arena cards draw coded SVG field-of-play art (`src/components/home/ArenaArt.tsx`), no photos. Object cards
-  show name + price + a quick-add `+` (`QuickAdd.tsx`: one size adds at once, otherwise a size sheet).
+- Homepage order: hero (frosted sport bubbles) → brands → category bubbles (`CategoryBubbles.tsx`, every subcategory) →
+  best sellers (2 rows) → new in (3 rows, newest per sport) → everything else (`ProductStream`, 20 at a time + Show more).
+  Product cards keep brand, name, price and the quick-add `+` INSIDE the card (`ProductCard.tsx`, `QuickAdd.tsx`).
+- Product page: pinned viewer (desktop) / scroll drop into the buy box (phones) → "Complete the look" (3) → more from
+  the same category. Hero films: `public/video` (Pexels License, cut by `scripts/edit-films.mjs`, credits beside them).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 

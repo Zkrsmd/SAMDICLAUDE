@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist_Mono, Sora, Unbounded } from 'next/font/google';
+import { Archivo, Geist_Mono, Sora } from 'next/font/google';
 import { brand } from '@/config/brand';
 import { getSports, searchIndex } from '@/lib/catalog';
 import { Header } from '@/components/header/Header';
@@ -11,7 +11,8 @@ import { RouteCurtain } from '@/components/layout/RouteCurtain';
 import { Effects } from '@/components/layout/Effects';
 import './globals.css';
 
-const display = Unbounded({ subsets: ['latin'], variable: '--font-display-face', display: 'swap' });
+// action display: Archivo, heavy, condensed (wdth axis) and slanted — the language of sports ads
+const display = Archivo({ subsets: ['latin'], axes: ['wdth'], style: ['italic'], variable: '--font-display-face', display: 'swap' });
 const sans = Sora({ subsets: ['latin'], variable: '--font-sans-face', display: 'swap' });
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono-face', display: 'swap' });
 

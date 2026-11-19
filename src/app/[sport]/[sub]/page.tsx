@@ -51,7 +51,7 @@ export default async function SubPage({ params, searchParams }: Props) {
       <header className="container-x pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 84px)' }}>
         <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: s.name, href: `/${s.slug}` }, { label: x.name }]} />
         <div className="mt-5 flex items-end justify-between gap-6">
-          <h1 className="display text-[clamp(52px,15vw,150px)]" style={{ animation: 'rise-in .8s var(--ease-expo) both' }}>
+          <h1 className="display text-[clamp(40px,9vw,96px)]" style={{ animation: 'rise-in .8s var(--ease-expo) both' }}>
             {x.name}
           </h1>
           <span className="mono mb-3 hidden shrink-0 text-[12px] uppercase tracking-[0.14em] text-muted md:block">{list.length} products</span>

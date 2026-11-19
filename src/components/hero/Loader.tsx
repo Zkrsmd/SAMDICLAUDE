@@ -177,7 +177,7 @@ export function Loader({ assets, gate, onDone }: { assets: string[]; gate?: Prom
                 <div aria-hidden className="absolute inset-[-40%] rounded-full opacity-60 blur-3xl transition-opacity duration-500" style={{ background: 'var(--holo-conic)', animation: 'spin-a 6s linear infinite', opacity: exiting ? 0 : undefined }} />
                 <HandMark className="relative h-24 w-24 md:h-32 md:w-32" />
               </div>
-              <h2 className="display mt-6 flex text-[clamp(64px,19vw,200px)] leading-[0.85]" aria-label={brand.name} style={{ opacity: exiting ? 0 : 1, filter: exiting ? 'blur(8px)' : 'none', transition: 'opacity .45s, filter .45s' }}>
+              <h2 className="display mt-6 flex text-[clamp(56px,15vw,168px)] leading-[0.85]" aria-label={brand.name} style={{ opacity: exiting ? 0 : 1, filter: exiting ? 'blur(8px)' : 'none', transition: 'opacity .45s, filter .45s' }}>
                 {brand.name.split('').map((ch, i) => (
                   <span key={i} className="mask-line">
                     <span style={{ ['--d' as string]: `${350 + i * 80}ms` }}>{ch}</span>

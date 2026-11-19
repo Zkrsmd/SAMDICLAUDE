@@ -5,6 +5,7 @@ import type { CrystalApi } from '@/components/hero/crystal/CrystalHero';
 import { HeroDrip } from './HeroDrip';
 import { heroSlides } from '@/config/hero';
 import { renderUrl } from '@/lib/format';
+import { useScrollAssist } from '@/hooks/useScrollAssist';
 
 /** where in the hero's scroll the page takes the product over */
 const HANDOFF = 0.32;
@@ -33,6 +34,8 @@ export function HomeHero() {
     wrapDocTop: 0,
     stageH: 0,
     handoffScroll: 0,
+    /** scroll position at which the product has landed (the assist's resting point) */
+    landScroll: 0,
     p: 0,
     enabled: true,
   });
@@ -47,6 +50,12 @@ export function HomeHero() {
     const top = hero.getBoundingClientRect().top + window.scrollY;
     s.stageH = (hero.querySelector('[data-testid="hero-stage"]') as HTMLElement | null)?.offsetHeight ?? window.innerHeight;
     s.handoffScroll = top + HANDOFF * Math.max(1, hero.offsetHeight - s.stageH);
+    // until a drop has been measured, assume the tallest landing box
+    if (!s.landScroll) {
+      const vh = window.innerHeight;
+      const lh = Math.min(vh * (window.innerWidth < 768 ? 0.17 : 0.24), 260);
+      s.landScroll = s.wrapDocTop - (vh * 0.52 - (vh * 0.05 + lh / 2));
+    }
   }, []);
 
   const frame = useCallback(() => {
@@ -95,6 +104,7 @@ export function HomeHero() {
     // progress: from the hand-off until the landing spot reaches the middle of the screen
     const startTop = s.wrapDocTop - s.handoffScroll;
     const endTop = vh * 0.52 - ly;
+    s.landScroll = s.wrapDocTop - endTop;
     const q = clamp((startTop - wrapTopV) / Math.max(1, startTop - endTop));
     const k = fall(q);
     const e = smooth(q);
@@ -123,6 +133,9 @@ export function HomeHero() {
     },
     [frame],
   );
+
+  // one small scroll glides through the melt and the drop to the landing (and back up to the top)
+  useScrollAssist(() => (st.current.landScroll > 0 ? [0, st.current.landScroll] : null));
 
   useEffect(() => {
     st.current.enabled = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;

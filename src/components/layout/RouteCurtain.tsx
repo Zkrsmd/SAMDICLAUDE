@@ -49,7 +49,7 @@ export function RouteCurtain() {
           if (el && phase === 'in') requestAnimationFrame(() => requestAnimationFrame(() => set({ phase: 'hold' })));
         }}
       >
-        <span className="display text-[clamp(72px,24vw,320px)]" style={{ color: ink, animation: 'rise-in .7s var(--ease-expo) both' }}>
+        <span className="display text-[clamp(60px,17vw,230px)]" style={{ color: ink, animation: 'rise-in .7s var(--ease-expo) both' }}>
           {word}
         </span>
       </div>

@@ -24,7 +24,7 @@ test.describe('core shopping journeys', () => {
   test('quick add: the + on a homepage object puts it in the bag (size sheet when needed)', async ({ page }) => {
     await openHome(page);
     const before = await cartCount(page);
-    const icons = page.locator('section[aria-labelledby="icons-title"]');
+    const icons = page.locator('section[aria-labelledby="best-title"]');
     await icons.scrollIntoViewIfNeeded();
     // goggles come in one size: the + adds straight away
     await icons.getByRole('button', { name: /^Add Fastskin Speed Socket.* to bag$/ }).click();

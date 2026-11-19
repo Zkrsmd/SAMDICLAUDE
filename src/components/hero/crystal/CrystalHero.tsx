@@ -66,7 +66,7 @@ export function CrystalHero({
     const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-display-face').trim() || 'sans-serif';
     (async () => {
       try {
-        const [{ CrystalEngine }] = await Promise.all([enginePromise ?? import('./engine'), document.fonts?.load(`900 100px ${fontFamily}`).catch(() => null)]);
+        const [{ CrystalEngine }] = await Promise.all([enginePromise ?? import('./engine'), document.fonts?.load(`italic 900 condensed 100px ${fontFamily}`).catch(() => null)]);
         if (disposed) return;
         performance.mark('crystal:imported');
         engine = new CrystalEngine({

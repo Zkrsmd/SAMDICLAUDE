@@ -711,16 +711,19 @@ function grain(ctx: Ctx, w: number, h: number, seed: number) {
  * bowl, ring, pool wall, gym), the giant sport word, light through haze, survey marks.
  * `horizon` is where the floor meets this backdrop (0 top … 1 bottom), so the set sits on it.
  */
-export function backdropTex(word: string, sky: [string, string], fontFamily: string, seed: number, aspect = 2, id = '', horizon = 0.78) {
+export function backdropTex(word: string, sky: [string, string], fontFamily: string, seed: number, aspect = 2, id = '', horizon = 0.78, bare = false) {
   const w = 2048;
   const h = Math.round(Math.min(4096, Math.max(512, w / aspect)));
   const c = canvas(w, h);
   const ctx = c.getContext('2d')!;
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, sky[0]);
-  g.addColorStop(1, sky[1]);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
+  // bare: transparent, laid over a film playing on the wall behind (no painted set, no grain)
+  if (!bare) {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, sky[0]);
+    g.addColorStop(1, sky[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
   // depth: the sky darkens toward the top like a lit set, not a flat card
   const top = ctx.createLinearGradient(0, 0, 0, h * 0.55);
   top.addColorStop(0, 'rgba(16,22,30,0.34)');
@@ -729,7 +732,7 @@ export function backdropTex(word: string, sky: [string, string], fontFamily: str
   ctx.fillRect(0, 0, w, h * 0.55);
   const hz = Math.min(h * 0.97, Math.max(h * 0.45, h * horizon));
   const r = rng(seed);
-  const art = PAINTERS[id];
+  const art = bare ? undefined : PAINTERS[id];
   art?.back(ctx, w, h, hz, r);
 
   // the word, set like architecture: across landscape screens, standing up on portrait ones
@@ -738,9 +741,10 @@ export function backdropTex(word: string, sky: [string, string], fontFamily: str
   const span = vertical ? h * 0.86 : w * 0.84;
   const cap = vertical ? w * 0.62 : h * 0.42;
   let fs = 400;
-  ctx.font = `900 ${fs}px ${fontFamily}`;
+  // the site's action face: heavy, condensed, slanted
+  ctx.font = `italic 900 condensed ${fs}px ${fontFamily}`;
   fs = Math.min(cap, (fs * span) / ctx.measureText(text).width);
-  ctx.font = `900 ${fs}px ${fontFamily}`;
+  ctx.font = `italic 900 condensed ${fs}px ${fontFamily}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.save();
@@ -781,7 +785,7 @@ export function backdropTex(word: string, sky: [string, string], fontFamily: str
     ctx.stroke();
     ctx.fillText(String(10 + Math.floor(r() * 89)), x2 + 14, y2 - 10);
   }
-  grain(ctx, w, h, seed + 7);
+  if (!bare) grain(ctx, w, h, seed + 7);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;

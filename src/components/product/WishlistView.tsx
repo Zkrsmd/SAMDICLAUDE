@@ -12,7 +12,7 @@ export function WishlistView({ cards }: { cards: CardData[] }) {
   return (
     <>
       <div className="container-x pb-10" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 88px)' }}>
-        <h1 className="display text-[clamp(52px,15vw,150px)]">Wishlist</h1>
+        <h1 className="display text-[clamp(40px,9vw,96px)]">Wishlist</h1>
         <p className="mt-2 text-muted">Saved on this device.</p>
         <div className="mt-8">
           {!hydrated ? (

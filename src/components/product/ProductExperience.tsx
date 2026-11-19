@@ -11,6 +11,7 @@ import { useTransitionStore, useUi } from '@/stores/ui';
 import { useHydrated, useReducedMotion } from '@/hooks/useHydrated';
 import { useDialog } from '@/hooks/useDialog';
 import { formatPrice, renderUrl } from '@/lib/format';
+import { useScrollAssist } from '@/hooks/useScrollAssist';
 import type { Product } from '@/types/catalog';
 
 /** Per-chapter pose of the floating cut-out (rotation in deg, scale). */
@@ -58,6 +59,8 @@ export function ProductExperience({
   const shown = useRef<HTMLButtonElement>(null);
   const flyer = useRef<HTMLDivElement>(null);
   const slotImg = useRef<HTMLDivElement>(null);
+  /** resting points for the scroll assist: each chapter, then the product landed in the tray */
+  const rest = useRef<number[] | null>(null);
   const tilt = useRef<HTMLDivElement>(null);
   const imgSlot = useRef<HTMLDivElement>(null);
   const inspectRef = useRef<HTMLDivElement>(null);
@@ -92,6 +95,15 @@ export function ProductExperience({
       const r = el.getBoundingClientRect();
       const span = Math.max(1, r.height - vh);
       const p = clamp(-r.top / span);
+      {
+        const top = r.top + window.scrollY;
+        const n = chapters.length;
+        const pts = Array.from({ length: n }, (_, i) => top + (span * i) / (n * 1.05));
+        const slot = imgSlot.current?.getBoundingClientRect();
+        const mobileDrop = window.innerWidth < 1024 && slot && slot.height > 0;
+        pts.push(mobileDrop ? slot.top + window.scrollY + slot.height / 2 - vh * 0.58 : top + span);
+        rest.current = pts;
+      }
       setChapter(Math.min(chapters.length - 1, Math.floor(p * chapters.length * 1.05)));
       const pr = purchase.current?.getBoundingClientRect();
       if (pr) setBarOn(pr.bottom < 0);
@@ -119,22 +131,36 @@ export function ProductExperience({
         src.style.opacity = q >= 1 ? '0' : '';
         si.style.opacity = q >= 1 ? '1' : '0';
         si.classList.toggle('is-landed', q >= 1);
+        dst.style.setProperty('--near', q >= 1 ? '1' : '0');
         return;
       }
       const s = src.getBoundingClientRect();
-      const e = q * q * (3 - 2 * q);
+      const sm = (a: number, b: number, t: number) => {
+        const x = clamp((t - a) / (b - a));
+        return x * x * (3 - 2 * x);
+      };
+      const e = sm(0, 1, q);
       const k = fall(q);
       const w = s.width + (d.width - s.width) * e;
       const h = s.height + (d.height - s.height) * e;
       const cx = s.left + s.width / 2 + (d.left + d.width / 2 - (s.left + s.width / 2)) * e;
-      const cy = s.top + s.height / 2 + (d.top + d.height / 2 - (s.top + s.height / 2)) * k;
+      // anticipation: it lifts a touch before it lets go
+      const lift = sm(0, 0.14, q) * (1 - sm(0.14, 0.34, q));
+      const cy = s.top + s.height / 2 + (d.top + d.height / 2 - (s.top + s.height / 2)) * k - lift * 28;
+      // stretch with speed on the way down, squash on impact, settle
+      const stretch = 0.07 * sm(0.3, 0.62, q) * (1 - sm(0.7, 0.8, q));
+      const squash = q > 0.8 ? 0.1 * Math.sin(clamp((q - 0.8) / 0.14) * Math.PI) : 0;
+      const sx = (1 + lift * 0.04) * (1 - stretch * 0.6 + squash);
+      const sy = (1 + lift * 0.04) * (1 + stretch - squash);
+      const rot = -18 * Math.sin(clamp(q / 0.82) * Math.PI) + lift * 4;
       src.style.opacity = '0';
       si.style.opacity = '0';
       si.classList.remove('is-landed');
+      dst.style.setProperty('--near', sm(0.45, 0.95, q).toFixed(3));
       f.style.visibility = 'visible';
       f.style.width = `${w.toFixed(1)}px`;
       f.style.height = `${h.toFixed(1)}px`;
-      f.style.transform = `translate3d(${(cx - w / 2).toFixed(1)}px, ${(cy - h / 2).toFixed(1)}px, 0) rotate(${(Math.sin(q * Math.PI) * -14).toFixed(2)}deg)`;
+      f.style.transform = `translate3d(${(cx - w / 2).toFixed(1)}px, ${(cy - h / 2).toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -195,6 +221,9 @@ export function ProductExperience({
     };
   }, [images.length, reduced]);
 
+  // a small scroll moves to the next chapter / finishes the drop instead of stopping half-way
+  useScrollAssist(() => rest.current);
+
   const addToCart = (buyNow = false) => {
     if (!size) {
       setError('Please choose a size.');
@@ -213,7 +242,7 @@ export function ProductExperience({
   return (
     <div className="lg:grid lg:grid-cols-[1.15fr_1fr]">
       {/* ------------------------------ exhibit ------------------------------ */}
-      <div ref={exhibit} className="relative lg:order-1" style={{ height: `calc(100svh + ${chapters.length * 55}svh)` }}>
+      <div ref={exhibit} className="pdp-exhibit relative lg:order-1" style={{ ['--exh' as string]: `calc(100svh + ${chapters.length * 55}svh)` }}>
         <div
           ref={stage}
           className="sticky top-0 h-[100svh] overflow-hidden"
@@ -224,13 +253,15 @@ export function ProductExperience({
           }}
         >
           {/* brand word as architecture behind the product */}
-          <div aria-hidden className="display pointer-events-none absolute inset-x-0 top-[22%] select-none text-center text-[30vw] leading-none text-ink/[0.05] lg:text-[17vw]">
+          <div aria-hidden className="pdp-word display pointer-events-none absolute inset-x-0 top-[22%] select-none text-center text-[30vw] leading-none text-ink/[0.05] lg:text-[17vw]">
             {brandName}
           </div>
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-[48%] h-[46vmin] w-[46vmin] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl" style={{ background: 'var(--holo-conic)', animation: reduced ? undefined : 'spin-a 9s linear infinite' }} />
 
           <button
             ref={shown}
+            data-pdp-hero={product.slug}
+            style={{ viewTransitionName: 'pdp-hero' }}
             type="button"
             onClick={() => setInspect(true)}
             aria-label="Zoom into the product photo"
@@ -298,7 +329,7 @@ export function ProductExperience({
 
       {/* ------------------------------ info + purchase ------------------------------ */}
       <div className="relative z-10 bg-bg lg:order-2">
-        <div className="container-x lg:px-10 lg:pb-16 lg:pt-24">
+        <div className="pdp-build container-x lg:px-10 lg:pb-16 lg:pt-24">
           <div className="pt-8 lg:pt-0">
             <Breadcrumbs
               items={[
@@ -308,7 +339,7 @@ export function ProductExperience({
               ]}
             />
             <p className="eyebrow mt-6 text-muted">{brandName}</p>
-            <h1 className="display mt-2 text-[clamp(40px,10vw,76px)] leading-[0.86]">{product.name}</h1>
+            <h1 className="display mt-2 text-[clamp(30px,6.2vw,56px)] leading-[0.86]">{product.name}</h1>
             <div className="mt-4 flex items-center gap-3">
               <span className="mono text-[20px] font-semibold">{formatPrice(product.price)}</span>
               {product.verified ? (
@@ -321,12 +352,13 @@ export function ProductExperience({
           </div>
 
           {/* the product drops into this tray as you scroll */}
-          <div ref={purchase} className="mt-8 rounded-[2px] border border-line bg-white p-4">
-            <div ref={imgSlot} className="relative mx-auto -mt-2 mb-2 h-40 w-full overflow-visible lg:hidden" aria-hidden>
+          <div ref={purchase} className="pdp-buy mt-7">
+            <div ref={imgSlot} className="pdp-tray relative mx-auto -mt-1 mb-3 h-44 w-full overflow-visible lg:hidden" aria-hidden>
+              <span className="pdp-tray-floor" />
+              <span className="pdp-tray-shadow" />
               <div ref={slotImg} className="pdp-slot absolute inset-0" style={{ opacity: 0 }}>
                 <ProductImage slug={product.slug} colorId={colorId} alt="" sizes="60vw" />
               </div>
-              <span className="absolute inset-x-[25%] bottom-1 h-3 rounded-[50%] bg-ink/10 blur-md" />
             </div>
 
             <fieldset>
@@ -371,7 +403,7 @@ export function ProductExperience({
             </fieldset>
 
             <div className="mt-6 flex items-center gap-3">
-              <div className="flex items-center border border-line" role="group" aria-label="Quantity">
+              <div className="flex items-center rounded-full border border-line bg-white" role="group" aria-label="Quantity">
                 <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label="Decrease quantity" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
                   <Icon name="minus" size={16} />
                 </button>
@@ -388,7 +420,7 @@ export function ProductExperience({
               </button>
               <button
                 type="button"
-                className="grid h-12 w-12 place-items-center border border-line"
+                className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white"
                 aria-pressed={hydrated ? wished : false}
                 aria-label="Save to wishlist"
                 onClick={() => toggleWish(product.slug)}
@@ -396,7 +428,7 @@ export function ProductExperience({
                 <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
               </button>
             </div>
-            <button type="button" className="btn btn-line mt-3 h-12 w-full" onClick={() => addToCart(true)}>
+            <button type="button" className="btn btn-line mt-3 h-12 w-full rounded-full" onClick={() => addToCart(true)}>
               Buy now
             </button>
             {added && (

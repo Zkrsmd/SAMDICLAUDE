@@ -85,7 +85,7 @@ export function Brands({ brands }: { brands: B[] }) {
     <section aria-labelledby="brands-title" className="relative overflow-hidden bg-bg pb-16 pt-[28vh] md:pt-[34vh]">
       <div className="container-x" data-reveal>
         <p className="eyebrow text-muted">Brands we carry</p>
-        <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(36px,9.4vw,128px)]" data-reveal="words">
+        <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(30px,6.2vw,78px)]" data-reveal="words">
           <SplitWords text="The brands behind the" /> <SplitWords text="performance" className="holo-text" from={4} />
         </h2>
         <p className="mt-4 max-w-md text-[15px] text-muted">Official products from the manufacturers we stock. Logos are trademarks of their owners; no partnership is implied.</p>

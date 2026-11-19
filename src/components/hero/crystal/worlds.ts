@@ -446,11 +446,11 @@ export function network(seed: number) {
 
 /* ---------------------------------------------------------------- environment */
 
-export function environment(spec: WorldSpec, fontFamily: string) {
+export function environment(spec: WorldSpec, fontFamily: string, film = false) {
   const group = new THREE.Group();
   const back = new THREE.Mesh(
     new THREE.PlaneGeometry(64, 32),
-    new THREE.MeshBasicMaterial({ map: backdropTex(spec.word, [spec.sky[0], spec.fog], fontFamily, spec.id.length * 17, 2, spec.id), fog: false, toneMapped: false }),
+    new THREE.MeshBasicMaterial({ map: backdropTex(spec.word, [spec.sky[0], spec.fog], fontFamily, spec.id.length * 17, 2, spec.id, 0.78, film), fog: false, toneMapped: false, transparent: film }),
   );
   back.position.set(0, 1.6, -12);
   group.add(back);

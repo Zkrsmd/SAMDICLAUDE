@@ -85,7 +85,7 @@ export function Showroom({ items, mount, sport }: { items: ShowItem[]; mount: Mo
           <div className="flex items-end justify-between">
             <div>
               <p className="eyebrow text-muted">Showroom</p>
-              <h2 className="display mt-2 text-[clamp(36px,8vw,76px)]">{TITLE[mount]}</h2>
+              <h2 className="display mt-2 text-[clamp(30px,6vw,58px)]">{TITLE[mount]}</h2>
             </div>
             <p className="mono hidden text-[11px] uppercase tracking-[0.16em] text-muted md:block">Hover to light · click to step closer</p>
           </div>

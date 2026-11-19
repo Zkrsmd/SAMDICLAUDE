@@ -12,7 +12,7 @@ export function CartView() {
   const { data, error, loading } = useQuote(lines, hydrated);
   return (
     <div className="container-x pb-10" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 88px)' }}>
-      <h1 className="display text-[clamp(52px,15vw,150px)]">Your bag</h1>
+      <h1 className="display text-[clamp(40px,9vw,96px)]">Your bag</h1>
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_380px]">
         <div aria-live="polite" aria-busy={loading}>
           {hydrated ? <CartLines quote={data} failed={!!error} /> : <p className="py-10 text-muted">Loading your bag…</p>}
