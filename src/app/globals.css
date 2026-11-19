@@ -372,16 +372,6 @@
     animation: none !important;
   }
 }
-@keyframes hero-drop {
-  from {
-    opacity: 0;
-    transform: translate3d(0, -40px, 0) scale(0.86) rotate(-8deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 @keyframes tile-in {
   from {
     opacity: 0;
@@ -1302,48 +1292,6 @@
   opacity: 0;
 }
 
-/* ── the home product drop (HomeHero): the hero product falls out of the stage onto the page ── */
-.hero-drop {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 20;
-  display: block;
-  transform-origin: 50% 50%;
-  will-change: transform;
-}
-.hero-drop-float {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.hero-drop img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 26px 24px rgb(15 18 22 / 0.22));
-  transition: transform 0.6s var(--ease-expo);
-}
-.hero-drop.is-landed .hero-drop-float {
-  animation: float-y 6s ease-in-out infinite;
-}
-.hero-drop.is-landed:hover img {
-  transform: scale(1.05) rotate(-2deg);
-}
-.hero-drop-shadow {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 19;
-  height: 18px;
-  border-radius: 50%;
-  background: rgb(15 18 22 / 0.2);
-  filter: blur(10px);
-  opacity: 0;
-  pointer-events: none;
-  transform-origin: 50% 50%;
-}
-
 /* ── product page: the product in flight from the viewer to the purchase tray (phones) ── */
 .pdp-flyer {
   position: fixed;
@@ -1638,8 +1586,7 @@
   translate: 0 -50%;
   color: #fff;
   filter: drop-shadow(0 2px 10px rgb(16 22 30 / 0.5));
-  opacity: calc(1 - var(--melt, 0) * 2.2);
-  transition: opacity 0.8s 0.5s;
+  opacity: calc(1 - var(--p, 0) * 2.2);
 }
 .hero-arrow-prev {
   left: max(2px, env(safe-area-inset-left));
@@ -1705,15 +1652,282 @@
     height: 48px;
   }
 }
-.hero-line {
-  transition: opacity 0.4s;
-}
-.hero-line:hover {
-  opacity: 0.85;
-}
 @media (prefers-reduced-motion: reduce) {
   .hero-arrow svg {
     animation: none;
+  }
+}
+
+/* ── hero: a full-screen film per sport, its name across it in see-through white ──
+   The section is sticky: the page after it (.home-sheet) slides up over it, while --p (0→1, set
+   from the scroll) pushes the films in, darkens them and lifts the word away. A new sport wipes in
+   from the side it came from (--d = 1 next / -1 previous) while the old film slides off under it. */
+.hero-stage {
+  --hero-t: 1.15s;
+  --hero-ease: cubic-bezier(0.76, 0, 0.18, 1);
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: 100lvh;
+  overflow: hidden;
+  background: #0b0e12;
+  color: #fff;
+  touch-action: pan-y;
+  user-select: none;
+}
+.hero-slides {
+  position: absolute;
+  inset: 0;
+  transform: scale(calc(1 + var(--p, 0) * 0.07));
+  will-change: transform;
+}
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+.hero-slide[data-pos='current'],
+.hero-slide[data-pos='leaving'] {
+  visibility: visible;
+}
+.hero-slide[data-pos='current'] {
+  z-index: 2;
+}
+.hero-slide[data-pos='leaving'] {
+  z-index: 1;
+}
+/* the dark that falls over a leaving film */
+.hero-slide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #0b0e12;
+  opacity: 0;
+  pointer-events: none;
+}
+.hero-film {
+  position: absolute;
+  inset: 0;
+}
+.hero-film img,
+.hero-film video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero-film video {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.hero-film video[data-live] {
+  opacity: 1;
+}
+/* first visit: the first film breathes in */
+.hero-stage:not([data-moved]) .hero-slide[data-pos='current'] .hero-film {
+  animation: hero-film-intro 2.2s var(--ease-expo) both;
+}
+.hero-stage[data-moved] .hero-slide[data-pos='current'] {
+  animation: hero-wipe-in var(--hero-t) var(--hero-ease) both;
+}
+.hero-stage[data-moved] .hero-slide[data-pos='current'] .hero-film {
+  animation: hero-film-in var(--hero-t) var(--hero-ease) both;
+}
+.hero-stage[data-moved] .hero-slide[data-pos='leaving'] .hero-film {
+  animation: hero-film-out var(--hero-t) var(--hero-ease) both;
+}
+.hero-stage[data-moved] .hero-slide[data-pos='leaving']::after {
+  animation: hero-dim var(--hero-t) var(--hero-ease) both;
+}
+@keyframes hero-film-intro {
+  from {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hero-wipe-in {
+  from {
+    clip-path: inset(0 calc(50% - 50% * var(--d)) 0 calc(50% + 50% * var(--d)));
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes hero-film-in {
+  from {
+    transform: translate3d(calc(var(--d) * 26%), 0, 0) scale(1.16);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes hero-film-out {
+  to {
+    transform: translate3d(calc(var(--d) * -18%), 0, 0) scale(1.04);
+  }
+}
+@keyframes hero-dim {
+  to {
+    opacity: 0.6;
+  }
+}
+/* legibility: soft at the top (index), a little under the word, more at the bottom; deeper as the page covers it */
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 45% at 50% 52%, rgb(8 11 15 / 0.22), transparent 70%),
+    linear-gradient(180deg, rgb(8 11 15 / 0.42) 0%, transparent 26%, transparent 64%, rgb(8 11 15 / 0.5) 100%);
+}
+.hero-scrim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #0b0e12;
+  opacity: calc(var(--p, 0) * 0.7);
+}
+.hero-ui {
+  opacity: calc(1 - var(--p, 0) * 2.4);
+  text-shadow: 0 1px 10px rgb(8 11 15 / 0.35);
+}
+/* the word: as wide as the screen allows (by its letter count), see-through white */
+.hero-words {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform: translate3d(0, calc(var(--p, 0) * -14vh), 0);
+  opacity: calc(1 - var(--p, 0) * 1.5);
+}
+.hero-word {
+  grid-area: 1 / 1;
+  display: block;
+  padding: 0 0.06em;
+  /* phones keep it clear of the edge arrows */
+  font-size: min(calc(78vw / (var(--n) * 0.53)), 34svh);
+  line-height: 0.8;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: rgb(255 255 255 / 0.72);
+  text-shadow: 0 0 60px rgb(8 11 15 / 0.18);
+  pointer-events: auto;
+  transition: color 0.5s ease;
+}
+@media (min-width: 768px) {
+  .hero-word {
+    font-size: min(calc(88vw / (var(--n) * 0.53)), 34svh);
+  }
+}
+a.hero-word:hover {
+  color: rgb(255 255 255 / 0.9);
+}
+.hero-word[data-pos='leaving'] {
+  pointer-events: none;
+}
+.hero-ch {
+  display: inline-block;
+  animation: hero-ch-in 1.15s var(--ease-expo) both;
+  animation-delay: calc(0.18s + var(--i) * 0.045s);
+}
+.hero-word[data-pos='leaving'] .hero-ch {
+  animation: hero-ch-out 0.6s cubic-bezier(0.55, 0, 0.75, 0.3) both;
+  animation-delay: calc(var(--i) * 0.025s);
+}
+@keyframes hero-ch-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.45em, 0) skewX(-6deg);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes hero-ch-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -0.3em, 0);
+    filter: blur(8px);
+  }
+}
+/* scroll cue: a line that drips down */
+.hero-scroll {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.hero-scroll::after {
+  content: '';
+  width: 1px;
+  height: 34px;
+  background: linear-gradient(180deg, #fff, transparent);
+  transform-origin: top;
+  animation: hero-scroll-line 2.4s var(--ease-expo) infinite;
+}
+@keyframes hero-scroll-line {
+  0% {
+    transform: scaleY(0);
+    opacity: 1;
+  }
+  60% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+/* pause / play glyph */
+.hero-pp {
+  position: relative;
+  width: 9px;
+  height: 10px;
+  border-inline: 2px solid currentColor;
+  border-block: 0;
+}
+.hero-pp[data-paused] {
+  width: 0;
+  height: 0;
+  border-block: 5px solid transparent;
+  border-inline: 0;
+  border-inline-start: 9px solid currentColor;
+}
+/* the store slides up over the films as one sheet */
+.home-sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: -1px;
+  background: var(--color-bg);
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -30px 60px rgb(8 11 15 / 0.22);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-stage .hero-slide[data-pos] .hero-film,
+  .hero-stage .hero-slide[data-pos],
+  .hero-stage .hero-slide::after,
+  .hero-ch,
+  .hero-scroll::after {
+    animation: none !important;
+  }
+  .hero-slide[data-pos='leaving'] {
+    visibility: hidden;
+  }
+  .hero-slides,
+  .hero-words {
+    transform: none;
   }
 }
 

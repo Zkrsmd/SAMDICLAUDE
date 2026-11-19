@@ -28,6 +28,8 @@ npm-debug.log*
 # local tooling
 .venv-tools/
 /media-src/
+# owner-supplied raw clips for the hero films (only the cut films in public/video ship)
+/tiktok/
 
 # artifact preview snapshot
 /.snapshot/

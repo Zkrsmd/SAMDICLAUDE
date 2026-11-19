@@ -17,7 +17,7 @@ test.describe('core shopping journeys', () => {
       await expect(page.getByRole('link', { name: new RegExp(`Explore ${want}`, 'i') })).toBeVisible();
     }
     // native vertical scroll must pass straight through the hero (no scroll trap)
-    await page.evaluate(() => window.scrollBy(0, window.innerHeight * 1.95));
+    await page.evaluate(() => window.scrollBy(0, window.innerHeight * 1.1));
     await expect(page.getByRole('heading', { name: /brands behind the performance/i })).toBeInViewport({ timeout: 15_000 });
   });
 

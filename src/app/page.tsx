@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { HomeHero } from '@/components/home/HomeHero';
+import { Hero } from '@/components/hero/Hero';
 import { Brands } from '@/components/home/Brands';
 import { CategoryBubbles, type Bubble } from '@/components/home/CategoryBubbles';
 import { ProductGrid, ProductStream, RecentlyViewed } from '@/components/product/ProductRail';
@@ -68,7 +68,9 @@ export default function Home() {
 
   return (
     <>
-      <HomeHero />
+      <Hero />
+      {/* the store slides up over the films as one sheet */}
+      <div className="home-sheet">
       <Brands brands={brands} />
 
       <section aria-labelledby="cats-title" className="container-x pt-14 md:pt-20">
@@ -110,6 +112,7 @@ export default function Home() {
       </section>
 
       <RecentlyViewed cards={cards} />
+      </div>
     </>
   );
 }

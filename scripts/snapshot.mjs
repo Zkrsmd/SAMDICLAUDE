@@ -18,6 +18,8 @@ const rel = (s) =>
     .replaceAll('"/products/', '"products/')
     .replaceAll('\\"/products/', '\\"products/')
     .replaceAll('`/products/', '`products/')
+    .replaceAll('"/video/', '"video/')
+    .replaceAll('\\"/video/', '\\"video/')
     .replaceAll('"/brands/', '"brands/')
     .replaceAll('\\"/brands/', '\\"brands/')
     .replaceAll('"/icon.svg', '"icon.svg')
@@ -26,11 +28,9 @@ const rel = (s) =>
 
 // the page itself: tell Turbopack to load chunks relative to this document
 let html = await fs.readFile(path.join(root, '.next/server/app/index.html'), 'utf8');
-const used = new Set([...html.matchAll(/\/(products|brands)\/([\w.\-]+\.(?:webp|svg|png|jpg))/g)].map((m) => `${m[1]}/${m[2]}`));
+const used = new Set([...html.matchAll(/\/(products|brands|video)\/([\w.\-]+\.(?:webp|svg|png|jpg|mp4))/g)].map((m) => `${m[1]}/${m[2]}`));
 const cfg = await fs.readFile(path.join(root, 'src/config/hero.ts'), 'utf8');
 for (const m of cfg.matchAll(/'([a-z0-9][a-z0-9-]{8,})'/g)) used.add(`products/${m[1]}-1.webp`);
-const worlds = await fs.readFile(path.join(root, 'src/components/hero/crystal/worlds.ts'), 'utf8');
-for (const m of worlds.matchAll(/product: '([a-z0-9-]+)'/g)) used.add(`products/${m[1]}-1.webp`);
 html = rel(html).replace('<head>', '<head><script>var TURBOPACK_CHUNK_BASE_PATH="next/";</script>');
 await fs.writeFile(path.join(out, 'home.html'), html);
 

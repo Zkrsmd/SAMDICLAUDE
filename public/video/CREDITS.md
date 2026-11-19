@@ -1,14 +1,14 @@
 # Hero films
 
-Edited (speed ramps into slow motion, push-in zoom, a punch on every cut, motion trails, a cool grade)
-by `scripts/edit-films.mjs` from these clips, all under the [Pexels License](https://www.pexels.com/license/)
-(free for commercial use, no attribution required):
+Short edits (speed ramps into slow motion, push-in zoom, a punch on every cut, motion trails, a light grade),
+cut by `scripts/edit-films.mjs` in two shapes per sport: `<sport>.mp4` (landscape, desktop) and
+`<sport>-p.mp4` (portrait, phones), each with a `.webp` poster still.
 
-| Sport      | Source clips |
-| ---------- | ------------ |
-| Football   | https://www.pexels.com/video/close-up-of-soccer-player-kicking-ball-30147551/ |
-| Boxing     | https://www.pexels.com/video/a-boxer-speed-in-throwing-punches-4761714/ · https://www.pexels.com/video/a-man-hitting-a-punching-bag-with-force-4806570/ |
-| Swimming   | https://www.pexels.com/video/a-man-doing-the-butterfly-stroke-8686044/ · https://www.pexels.com/video/a-footage-of-an-athlete-doing-butterfly-stroke-8686118/ · https://www.pexels.com/video/a-male-swimmer-swimming-underwater-8686048/ |
-| Basketball | https://www.pexels.com/video/bosnian-boy-dunk-windmill-18812173/ · https://www.pexels.com/video/dynamic-basketball-dunking-on-outdoor-court-32067896/ |
+| Sport      | Source clips | Rights |
+| ---------- | ------------ | ------ |
+| Football   | `tiktok/football.mp4` — owner-supplied clip (a brand campaign film) | Supplied by the site owner; commercial use must be cleared with the rights holder |
+| Boxing     | `tiktok/BOXING.mp4` — owner-supplied clip (professional fight footage) | Supplied by the site owner; commercial use must be cleared with the rights holder |
+| Swimming   | `tiktok/swiming1.mp4` · `tiktok/Swiming2.mp4` (after its on-screen caption) — owner-supplied clips | Supplied by the site owner; commercial use must be cleared with the creators |
+| Basketball | https://www.pexels.com/video/bosnian-boy-dunk-windmill-18812173/ · https://www.pexels.com/video/dynamic-basketball-dunking-on-outdoor-court-32067896/ | [Pexels License](https://www.pexels.com/license/) (free for commercial use) |
 
-The raw downloads live in `media-src/video-raw/` (multi-clip sources in `media-src/video-raw/b/`), not committed.
+The raw clips live in `tiktok/` and `media-src/video-raw/` and are not committed — only the cut films ship.

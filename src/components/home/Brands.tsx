@@ -82,7 +82,7 @@ export function Brands({ brands }: { brands: B[] }) {
   const sets = [brands.slice(0, half), brands.slice(half)];
 
   return (
-    <section aria-labelledby="brands-title" className="relative overflow-hidden bg-bg pb-16 pt-[28vh] md:pt-[34vh]">
+    <section aria-labelledby="brands-title" className="relative overflow-hidden pb-16 pt-16 md:pt-24">
       <div className="container-x" data-reveal>
         <p className="eyebrow text-muted">Brands we carry</p>
         <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(30px,6.2vw,78px)]" data-reveal="words">

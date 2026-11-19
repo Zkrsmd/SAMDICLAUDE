@@ -20,31 +20,21 @@ campaign and a real store at once. Real product photos (background removed) and 
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
-- Hero = three.js "crystal" stage (`src/components/hero/crystal/*`): each sport's real product photo forms inside its own
-  crystal, then it BREAKS with sport matter (owner-requested): football = frozen football popping along its 32 panels with
-  grass + turf; boxing = glass slab with sweat, a few blood drops and hand-wrap ribbons; swimming = water orb into
-  droplets; basketball = seamed amber glass ball with hardwood splinters + leather chips. Shards/droplets are flown in the
-  vertex shader (`burst.ts`); sport debris is modelled in `debris.ts` and flown by the same shader (`flying()`).
-  The stage is full screen (`100lvh`, type kept inside `100svh`). Scrolling never blurs the stage: from 36% of the hero's
-  scroll the page's white POURS down over the world (the melt, in the post shader: drips, chrome lip, a bead of the
-  sport's accent) and stops two-thirds down, so the world's floor leaves as a band between white and chrome drips.
-  `LiquidSeam.tsx` repeats the chrome as pouring seams between homepage sections (CSS scroll timeline, no JS).
-  At 32% of the hero's scroll the product is handed to the page
-  (`HomeHero.tsx`, `setDrop`/`productRect`) and falls, as its real photo, onto the white page above the brands. The
-  product page does the same on phones (viewer → purchase tray). The backdrop is the sport's film, full screen behind
-  the crystal (graded cool in `FILM_FS`, push-in punched by the break; the painted sets in `textures.ts` remain only as the
-  fallback without a film). The break throws out a crew of three more real products per sport (`heroCrew`), placed by
-  visible width; swimming's products float on a 3D ocean (`ocean.ts`, the same swell on CPU and GPU) that ripples
-  when the orb bursts. Controls on the stage: thin arrows on the screen edges and the statement itself as the link — no button.
-  Survey network, HUD callouts and one post pass (zoom blur, shockwave, light sharpen, grain).
-  The only 3D is glass + environment — products stay real photos. three is code-split (client only) with a still fallback
-  without WebGL 2. `window.__crystalT` freezes the opening in dev; `scripts/hero-frames.mjs` renders frames.
+- Hero = full-screen sport FILMS (owner-requested; no 3D, no explosion, no product): `src/components/hero/Hero.tsx`.
+  One short, hard-cut film per sport (speed ramps, push-in, a punch on each cut) made by `scripts/edit-films.mjs` from the
+  owner's clips in `tiktok/` (gitignored) and Pexels dunks, in two shapes: `public/video/<sport>.mp4` (landscape) and
+  `<sport>-p.mp4` (portrait, picked by `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Over the film, the
+  sport's name in big see-through white (`.hero-word`, letters rise in), which is the link to the sport — no button.
+  Films change when they end (held on hover / off screen / the Pause control / reduced motion), or by the edge arrows,
+  the index, a swipe or the arrow keys: the new film wipes in from its side (`hero-wipe-in`, `--d`). The hero is sticky;
+  the store after it is one `.home-sheet` that slides up over it while `--p` pushes the film in and darkens it.
+  Smooth wheel scrolling site-wide is Lenis (`SmoothScroll.tsx`, `src/lib/smooth-scroll.ts`; dialogs hold it via `useDialog`).
   Slides, arena-card product picks (`arenaPicks`) and category photos: `src/config/hero.ts`.
-- Homepage order: hero (frosted sport bubbles) → brands → category bubbles (`CategoryBubbles.tsx`, every subcategory) →
+- Homepage order: hero (sport films) → brands → category bubbles (`CategoryBubbles.tsx`, every subcategory) →
   best sellers (2 rows) → new in (3 rows, newest per sport) → everything else (`ProductStream`, 20 at a time + Show more).
   Product cards keep brand, name, price and the quick-add `+` INSIDE the card (`ProductCard.tsx`, `QuickAdd.tsx`).
 - Product page: pinned viewer (desktop) / scroll drop into the buy box (phones) → "Complete the look" (3) → more from
-  the same category. Hero films: `public/video` (Pexels License, cut by `scripts/edit-films.mjs`, credits beside them).
+  the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 

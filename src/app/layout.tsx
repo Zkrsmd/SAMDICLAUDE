@@ -9,6 +9,8 @@ import { SearchOverlay } from '@/components/search/SearchOverlay';
 import { FlyToCart } from '@/components/cart/FlyToCart';
 import { RouteCurtain } from '@/components/layout/RouteCurtain';
 import { Effects } from '@/components/layout/Effects';
+import { SmoothScroll } from '@/components/layout/SmoothScroll';
+import 'lenis/dist/lenis.css';
 import './globals.css';
 
 // action display: Archivo, heavy, condensed (wdth axis) and slanted — the language of sports ads
@@ -49,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <FlyToCart />
         <RouteCurtain />
         <Effects />
+        <SmoothScroll />
       </body>
     </html>
   );
