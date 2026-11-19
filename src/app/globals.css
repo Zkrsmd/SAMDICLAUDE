@@ -1443,8 +1443,14 @@
 }
 .pcard-img {
   position: absolute;
-  inset: 8% 9% 30%;
+  /* phones: room under the product for a two-line name */
+  inset: 7% 11% 37%;
   transition: transform 0.7s var(--ease-expo);
+}
+@media (min-width: 768px) {
+  .pcard-img {
+    inset: 8% 9% 30%;
+  }
 }
 .pcard:hover .pcard-img {
   transform: translate3d(0, -4px, 0) scale(1.05) rotate(-2deg);
@@ -1453,26 +1459,64 @@
   position: absolute;
   left: 24%;
   right: 24%;
-  bottom: 27%;
+  bottom: 34%;
   height: 10px;
   border-radius: 50%;
   background: rgb(15 18 22 / 0.13);
   filter: blur(8px);
 }
+@media (min-width: 768px) {
+  .pcard-shadow {
+    bottom: 27%;
+  }
+}
+/* name, price and + sit straight on the card's own ground — no box inside the box */
 .pcard-info {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
-  padding: 9px 8px 9px 12px;
-  border-radius: 14px;
-  background: rgb(255 255 255 / 0.93);
-  box-shadow:
-    inset 0 0 0 1px rgb(15 18 22 / 0.06),
-    0 8px 20px -14px rgb(15 18 22 / 0.35);
+  padding: 0 10px 12px 14px;
+}
+
+/* cards rising in: the card lifts out of the page, then the product drops onto its ground with a
+   small bounce and its shadow spreads under it (staggered by --i across the row) */
+[data-reveal='card'] {
+  transform: translate3d(0, 64px, 0) scale(0.92);
+  transition:
+    opacity 0.9s var(--ease-expo),
+    transform 1.2s var(--ease-expo);
+  transition-delay: calc(var(--i, 0) * 85ms);
+}
+[data-reveal='card']:not([data-settled]) .pcard-img {
+  opacity: 0;
+  transform: translate3d(0, -22%, 0) scale(0.84) rotate(-7deg);
+  transition:
+    opacity 0.5s ease calc(var(--i, 0) * 85ms + 220ms),
+    transform 1.05s cubic-bezier(0.34, 1.5, 0.64, 1) calc(var(--i, 0) * 85ms + 220ms);
+}
+[data-reveal='card']:not([data-settled]) .pcard-shadow {
+  opacity: 0;
+  transform: scaleX(0.3);
+  transition:
+    opacity 0.6s ease calc(var(--i, 0) * 85ms + 420ms),
+    transform 0.9s var(--ease-expo) calc(var(--i, 0) * 85ms + 420ms);
+}
+[data-reveal='card'].in:not([data-settled]) .pcard-img,
+[data-reveal='card'].in:not([data-settled]) .pcard-shadow {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal='card'] .pcard-img,
+  [data-reveal='card'] .pcard-shadow {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 .pcard-badge {
   border-radius: 999px;

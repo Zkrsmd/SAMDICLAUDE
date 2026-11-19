@@ -7,7 +7,7 @@ import { QuickAdd } from './QuickAdd';
 import { Icon } from '@/components/ui/Icon';
 import { useWishlist } from '@/stores/lists';
 import { useHydrated } from '@/hooks/useHydrated';
-import { formatPrice } from '@/lib/format';
+import { formatPrice, shortName } from '@/lib/format';
 import type { CardData } from '@/lib/catalog';
 
 /**
@@ -100,15 +100,15 @@ export function ProductCard({
       >
         <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={19} className={hydrated && wished ? 'text-cobalt' : ''} />
       </button>
+      {/* on the card itself, not in a box: a short name, the price and the + */}
       <div className="pcard-info">
         <div className="min-w-0 flex-1">
-          <span className="eyebrow block truncate text-[9.5px] text-muted">{p.brandName}</span>
-          <h3 className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-tight tracking-[-0.01em] md:line-clamp-1 md:text-[14.5px]">
+          <h3 className="line-clamp-2 text-[13px] font-semibold leading-tight tracking-[-0.01em] md:line-clamp-1 md:text-[14px]" title={p.name}>
             <Link href={href} tabIndex={-1} className="hover:text-cobalt">
-              {p.name}
+              {shortName(p.name)}
             </Link>
           </h3>
-          <span className="mono mt-0.5 block text-[12.5px] font-semibold">{formatPrice(p.price)}</span>
+          <span className="mono mt-1 block text-[12px] font-semibold text-ink/65">{formatPrice(p.price)}</span>
         </div>
         <QuickAdd slug={p.slug} name={p.name} colorId={colorId} sizes={p.sizes} />
       </div>

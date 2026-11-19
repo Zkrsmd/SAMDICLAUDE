@@ -9,7 +9,8 @@ export function ProductGrid({ items, cols = 4, priorityFirst }: { items: CardDat
   return (
     <ul className={`grid grid-cols-2 gap-2.5 md:gap-3 ${cols === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
       {items.map((p, i) => (
-        <li key={p.slug}>
+        // each card rises in as it scrolls into view, staggered across its row
+        <li key={p.slug} data-reveal="card" style={{ '--i': i % 4 } as React.CSSProperties}>
           <ProductCard p={p} priority={priorityFirst && i < 2} />
         </li>
       ))}
