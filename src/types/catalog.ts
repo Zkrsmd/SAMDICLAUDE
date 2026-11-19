@@ -72,6 +72,10 @@ export interface Product {
   sub: string;
   /** Price in minor units (cents). Demo values unless `verified` says otherwise. */
   price: number;
+  /** Was-price shown struck through (set in the admin). */
+  compareAt?: number;
+  /** Units per size, when the admin tracks stock (a size at 0 is sold out). */
+  stock?: Record<string, number>;
   short: string;
   description: string;
   features: string[];

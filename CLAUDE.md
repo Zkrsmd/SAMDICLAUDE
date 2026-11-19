@@ -18,6 +18,8 @@ campaign and a real store at once. Real product photos (background removed) and 
 
 ## Architecture
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
+  Storefront pages live in the `(store)` route group (its layout = `StoreChrome`: header, footer, bag, search, effects);
+  the admin lives in `src/app/admin` with its own frame. The root layout is only the document shell.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
 - Hero = full-screen sport FILMS (owner-requested; no 3D, no explosion, no product): `src/components/hero/Hero.tsx`.
@@ -30,12 +32,23 @@ campaign and a real store at once. Real product photos (background removed) and 
   the store after it is one `.home-sheet` that slides up over it while `--p` pushes the film in and darkens it.
   Smooth wheel scrolling site-wide is Lenis (`SmoothScroll.tsx`, `src/lib/smooth-scroll.ts`; dialogs hold it via `useDialog`).
   Slides, arena-card product picks (`arenaPicks`) and category photos: `src/config/hero.ts`.
-- Homepage order: hero (sport films) → brands → category bubbles (`CategoryBubbles.tsx`, every subcategory) →
+- Homepage order: hero (sport films) → brands → shop by sport (`SportShop.tsx`: a photo tile per sport that opens that
+  sport IN PLACE — its best sellers, new releases, all its products with category chips and "See all"; `?sport=` keeps it) →
   best sellers (2 rows) → new in (3 rows, newest per sport) → everything else (`ProductStream`, 20 at a time + Show more).
-  Product cards keep brand, name, price and the quick-add `+` INSIDE the card (`ProductCard.tsx`, `QuickAdd.tsx`).
+  Product cards keep a short name, the price (was-price when on sale) and the quick-add `+` INSIDE the card, no brand
+  (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked).
 - Product page: pinned viewer (desktop) / scroll drop into the buy box (phones) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
+- Admin (`/admin`, Shopify-style): home dashboard, orders, products (index + editor), collections, inventory, customers,
+  analytics, settings. Sign-in: `ADMIN_PASSWORD` in `.env.local` (`src/lib/admin/auth.ts`, signed http-only cookie;
+  every page and action calls the guard itself). Writes go through server actions (`src/app/admin/actions.ts`, Zod
+  schemas in `src/lib/validation/admin.ts`) into ONE store file, `src/data/store/overrides.json` (edits, added/deleted
+  products, stock, order status), which `src/lib/catalog.ts` merges over the catalogue on every render — so the store
+  shows admin changes at once; commit the file to publish them. Photo uploads: `/api/admin/media` (sharp → webp in
+  `public/products`). Hosted (Vercel) the file system is read-only, so the admin is view-only there.
+  Orders/customers/sales are SAMPLE data (`src/lib/admin/orders.ts`, seeded per day, labelled in the UI) until the
+  checkout takes real orders.
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 
 ## Commands

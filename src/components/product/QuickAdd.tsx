@@ -10,7 +10,21 @@ import { renderUrl } from '@/lib/format';
  * Several: a compact size sheet opens above it. The product flies to the bag, the + turns
  * into a tick. Prices are never set here — the bag is quoted by the server.
  */
-export function QuickAdd({ slug, name, colorId, sizes }: { slug: string; name: string; colorId: string; sizes: string[] }) {
+export function QuickAdd({
+  slug,
+  name,
+  colorId,
+  sizes,
+  soldOut = [],
+}: {
+  slug: string;
+  name: string;
+  colorId: string;
+  sizes: string[];
+  /** sizes that are out of stock: shown, but can't be picked */
+  soldOut?: string[];
+}) {
+  const none = sizes.every((s) => soldOut.includes(s));
   const add = useCart((s) => s.add);
   const set = useUi((s) => s.set);
   const [open, setOpen] = useState(false);
@@ -73,10 +87,11 @@ export function QuickAdd({ slug, name, colorId, sizes }: { slug: string; name: s
         ref={btn}
         type="button"
         onClick={() => (many ? setOpen((o) => !o) : commit(sizes[0] ?? 'One size'))}
-        aria-label={`Add ${name} to bag`}
+        disabled={none}
+        aria-label={none ? `${name} is sold out` : `Add ${name} to bag`}
         aria-expanded={many ? open : undefined}
         aria-controls={many ? sheet : undefined}
-        className={`quick-add grid h-11 w-11 place-items-center rounded-full ${done ? 'is-done' : ''}`}
+        className={`quick-add grid h-11 w-11 place-items-center rounded-full disabled:opacity-35 ${done ? 'is-done' : ''}`}
       >
         <Icon name={done ? 'check' : 'plus'} size={18} className={`transition-transform duration-500 ease-[var(--ease-expo)] ${open ? 'rotate-45' : ''}`} />
       </button>
@@ -90,7 +105,9 @@ export function QuickAdd({ slug, name, colorId, sizes }: { slug: string; name: s
                 type="button"
                 data-size=""
                 onClick={() => commit(sz)}
-                className="h-10 rounded-full border border-ink/10 bg-white text-[13px] font-medium transition-colors duration-300 hover:border-ink hover:bg-ink hover:text-white focus-visible:border-ink"
+                disabled={soldOut.includes(sz)}
+                aria-label={soldOut.includes(sz) ? `${sz}, sold out` : undefined}
+                className="h-10 rounded-full border border-ink/10 bg-white text-[13px] font-medium transition-colors duration-300 hover:border-ink hover:bg-ink hover:text-white focus-visible:border-ink disabled:pointer-events-none disabled:text-ink/30 disabled:line-through"
               >
                 {sz}
               </button>

@@ -5,7 +5,8 @@ import { SubNav } from '@/components/category/SubNav';
 import { Listing } from '@/components/category/Listing';
 import { getSport, getSports, productsFor } from '@/lib/catalog';
 
-export const dynamicParams = false;
+// pages for products/sports added in the admin render on first visit (unknown ones still 404)
+export const dynamicParams = true;
 export function generateStaticParams() {
   return getSports().map((s) => ({ sport: s.slug }));
 }

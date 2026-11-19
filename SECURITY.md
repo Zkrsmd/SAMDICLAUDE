@@ -11,6 +11,13 @@
   built from user input.
 - **Errors.** `app/error.tsx` never renders error messages or stacks; the API returns generic messages.
 - **Demo checkout.** No payment form, no card data, no order creation, no fake confirmation.
+- **Admin.** `/admin` is locked by `ADMIN_PASSWORD` (env only, 8+ characters; unset = locked). Sign-in is rate limited
+  (8 tries / 10 min per address) and compared in constant time; the session is an HMAC-signed, http-only,
+  `SameSite=Strict`, `Secure` (production) cookie that lasts 12 hours, keyed from the password (or
+  `ADMIN_SESSION_SECRET`), so changing the password signs everyone out. Every admin page, server action and admin API
+  checks the session itself (not only a layout). All writes are validated with Zod and written atomically to
+  `src/data/store/overrides.json`; uploads must be same-origin, ≤ 8 MB, an image type, and are re-encoded by sharp.
+  Admin pages are `noindex`. Orders shown in the admin are sample data (no customer data is stored).
 
 ## HTTP headers (`next.config.ts`)
 `Content-Security-Policy` (default-src 'self'; frame-ancestors 'none'; object-src 'none'; worker-src 'self' blob:),
@@ -30,7 +37,10 @@ inline bootstrap scripts). Upgrade path: nonce-based CSP via `proxy.ts` (Next 16
 ## Known limitations (prototype)
 - Rate limiting is in-memory per instance (not shared across servers).
 - Cart, wishlist and recently-viewed data live in `localStorage` on the device.
-- No authentication, accounts, CSRF tokens or order storage exist yet (no state-changing endpoints beyond the read-only quote).
+- No customer accounts or order storage exist yet. The only state-changing endpoints are the admin's (session-checked
+  server actions — Next.js checks their Origin — and the same-origin, session-checked upload route).
+- The admin has one shared password, no per-user accounts or audit log; a real deployment should add proper auth
+  (an identity provider) and a database instead of the store file.
 - No remote images or video: product photos, brand logos and campaign media are downloaded once at build time into `public/` and served from `'self'` (CSP `img-src`/`media-src`). The download helpers (`scripts/build-catalog.mjs`, `scripts/cutout-rembg.py`) are local tools, never run in the app.
 
 ## Before production

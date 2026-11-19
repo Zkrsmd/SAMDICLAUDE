@@ -342,6 +342,11 @@ export function ProductExperience({
             <h1 className="display mt-2 text-[clamp(30px,6.2vw,56px)] leading-[0.86]">{product.name}</h1>
             <div className="mt-4 flex items-center gap-3">
               <span className="mono text-[20px] font-semibold">{formatPrice(product.price)}</span>
+              {product.compareAt ? (
+                <s className="mono text-[15px] text-muted" aria-label={`Was ${formatPrice(product.compareAt)}`}>
+                  {formatPrice(product.compareAt)}
+                </s>
+              ) : null}
               {product.verified ? (
                 <span className="eyebrow rounded-[2px] bg-ink px-2 py-1 text-[10px] text-white">Model verified</span>
               ) : (
@@ -387,10 +392,22 @@ export function ProductExperience({
               <legend className="eyebrow text-muted">Size {size ? <span className="text-ink">— {size}</span> : null}</legend>
               <div id="size-group" tabIndex={-1} className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6" aria-invalid={!!error} aria-describedby={error ? 'size-error' : undefined}>
                 {product.sizes.map((s) => (
-                  <label key={s} className="cursor-pointer">
-                    <input type="radio" name="pdp-size" value={s} checked={size === s} onChange={() => setSize(s)} className="peer sr-only" />
-                    <span className="chip h-11 w-full justify-center px-1 text-[13px] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink" data-active={size === s}>
+                  <label key={s} className={product.stock && (product.stock[s] ?? 0) <= 0 ? 'cursor-not-allowed' : 'cursor-pointer'}>
+                    <input
+                      type="radio"
+                      name="pdp-size"
+                      value={s}
+                      checked={size === s}
+                      onChange={() => setSize(s)}
+                      disabled={!!product.stock && (product.stock[s] ?? 0) <= 0}
+                      className="peer sr-only"
+                    />
+                    <span
+                      className="chip h-11 w-full justify-center px-1 text-[13px] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:text-ink/30 peer-disabled:line-through"
+                      data-active={size === s}
+                    >
                       {s}
+                      {product.stock && (product.stock[s] ?? 0) <= 0 ? <span className="sr-only"> (sold out)</span> : null}
                     </span>
                   </label>
                 ))}

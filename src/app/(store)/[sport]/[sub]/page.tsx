@@ -7,7 +7,8 @@ import { Showroom } from '@/components/showroom/Showroom';
 import { brandName } from '@/data/brands';
 import { getSport, getSports, getSub, productsFor } from '@/lib/catalog';
 
-export const dynamicParams = false;
+// pages for products/sports added in the admin render on first visit (unknown ones still 404)
+export const dynamicParams = true;
 export function generateStaticParams() {
   return getSports().flatMap((s) => s.subs.map((sub) => ({ sport: s.slug, sub: sub.slug })));
 }

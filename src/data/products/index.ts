@@ -19,13 +19,13 @@ interface Row {
   source: string;
 }
 
-const KIND: Record<string, ModelKind> = {
+export const KIND: Record<string, ModelKind> = {
   boots: 'boot', shoes: 'boot', balls: 'ball', gloves: 'glove', 'hand-wraps': 'handwrap', mouthguards: 'mouthguard',
   'head-protection': 'headgear', 'punching-bags': 'heavybag', goggles: 'goggles', caps: 'cap', swimsuits: 'swimsuit',
   'swim-shorts': 'shorts', fins: 'fins', kickboards: 'kickboard', apparel: 'shorts', weights: 'kettlebell',
 };
 
-const PAIRS: Record<string, string[]> = {
+export const PAIRS: Record<string, string[]> = {
   'football/boots': ['football/balls', 'football/shorts'],
   'football/balls': ['football/boots'],
   'boxing/gloves': ['boxing/hand-wraps', 'boxing/mouthguards', 'boxing/training'],

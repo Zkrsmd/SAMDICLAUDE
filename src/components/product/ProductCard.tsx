@@ -12,7 +12,7 @@ import type { CardData } from '@/lib/catalog';
 
 /**
  * Product card: the cut-out floats on a soft studio ground, and everything you need sits inside the
- * card on a frosted strip — brand, name, price and the + that puts it straight in the bag.
+ * card itself: a short name, the price (and the was-price on sale) and the + that puts it in the bag.
  */
 export function ProductCard({
   p,
@@ -89,7 +89,8 @@ export function ProductCard({
       </Link>
       <div className="pointer-events-none absolute left-2.5 top-2.5 flex gap-1.5">
         {p.isNew && <span className="pcard-badge pcard-badge-new">New</span>}
-        {p.bestSeller && <span className="pcard-badge">Best seller</span>}
+        {p.soldOut ? <span className="pcard-badge">Sold out</span> : p.compareAt ? <span className="pcard-badge pcard-badge-new">Sale</span> : null}
+        {p.bestSeller && !p.soldOut && <span className="pcard-badge">Best seller</span>}
       </div>
       <button
         type="button"
@@ -108,9 +109,16 @@ export function ProductCard({
               {shortName(p.name)}
             </Link>
           </h3>
-          <span className="mono mt-1 block text-[12px] font-semibold text-ink/65">{formatPrice(p.price)}</span>
+          <span className="mono mt-1 flex flex-wrap items-baseline gap-x-1.5 text-[12px] font-semibold text-ink/65">
+            {formatPrice(p.price)}
+            {p.compareAt ? (
+              <s className="text-[11px] font-normal text-ink/40" aria-label={`Was ${formatPrice(p.compareAt)}`}>
+                {formatPrice(p.compareAt)}
+              </s>
+            ) : null}
+          </span>
         </div>
-        <QuickAdd slug={p.slug} name={p.name} colorId={colorId} sizes={p.sizes} />
+        <QuickAdd slug={p.slug} name={p.name} colorId={colorId} sizes={p.sizes} soldOut={p.soldOutSizes} />
       </div>
     </article>
   );

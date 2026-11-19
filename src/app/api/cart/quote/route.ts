@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProduct } from '@/lib/catalog';
+import { getProduct, sizeAvailable } from '@/lib/catalog';
 import { brandName } from '@/data/brands';
 import { CartQuoteRequestSchema } from '@/lib/validation/catalog';
 import { clientKey, rateLimit } from '@/lib/security/rateLimit';
@@ -73,6 +73,10 @@ export async function POST(req: Request) {
     }
     if (!color || !p.sizes.includes(item.size)) {
       rejected.push({ key, reason: 'Variant no longer available' });
+      continue;
+    }
+    if (!sizeAvailable(p, item.size)) {
+      rejected.push({ key, reason: 'Sold out' });
       continue;
     }
     lines.push({

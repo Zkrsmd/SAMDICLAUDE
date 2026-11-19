@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { Hero } from '@/components/hero/Hero';
 import { Brands } from '@/components/home/Brands';
-import { CategoryBubbles, type Bubble } from '@/components/home/CategoryBubbles';
+import { SportShop, type SportShopItem } from '@/components/home/SportShop';
 import { ProductGrid, ProductStream, RecentlyViewed } from '@/components/product/ProductRail';
 import { Icon } from '@/components/ui/Icon';
 import { SplitWords } from '@/components/ui/SplitWords';
 import { brands } from '@/data/brands';
-import { bestSellers, getAllProducts, getSports, productsFor, toCard, type CardData } from '@/lib/catalog';
+import { categoryMedia } from '@/config/hero';
+import { applyListing, bestSellers, getAllProducts, getSports, productsFor, toCard, type CardData } from '@/lib/catalog';
 
 /** deterministic shuffle (the page is prerendered: same order on server and client) */
 function shuffle<T>(list: T[], seed: number) {
@@ -43,13 +44,28 @@ function Heading({ id, eyebrow, title, accent, action }: { id: string; eyebrow: 
 export default function Home() {
   const all = getAllProducts();
   const sports = getSports();
-  // every category inside every sport, as small bubbles
-  const categoryBubbles: Bubble[] = sports.flatMap((s) =>
-    s.subs.map((sub) => {
-      const list = productsFor(s.slug, sub.slug);
-      return { href: `/${s.slug}/${sub.slug}`, name: sub.name, count: list.length, thumb: (list.find((p) => p.bestSeller) ?? list[0]!).slug };
-    }),
-  );
+  // every sport as a big tile that opens in place: its best sellers, what's new, everything
+  const shop: SportShopItem[] = sports.map((s) => {
+    const list = applyListing(productsFor(s.slug), { q: '', brand: [], color: [], size: [], min: undefined, max: undefined, sort: 'featured' });
+    const best = bestSellers(s.slug, undefined, 4).map((p) => p.slug);
+    // fewer than four best sellers: top it up with the next best of the sport
+    for (const p of list) if (best.length < 4 && !best.includes(p.slug)) best.push(p.slug);
+    const fresh = [...productsFor(s.slug)]
+      .reverse()
+      .filter((p) => !best.includes(p.slug))
+      .slice(0, 4)
+      .map((p) => p.slug);
+    return {
+      slug: s.slug,
+      name: s.name,
+      tagline: s.tagline,
+      photo: categoryMedia[s.slug],
+      subs: s.subs.map((x) => ({ slug: x.slug, name: x.name, count: productsFor(s.slug, x.slug).length })),
+      cards: list.map((p) => (fresh.includes(p.slug) ? { ...toCard(p), isNew: true } : toCard(p))),
+      best,
+      fresh,
+    };
+  });
 
   const best = bestSellers(undefined, undefined, 8);
   const taken = new Set(best.map((p) => p.slug));
@@ -74,9 +90,9 @@ export default function Home() {
       <Brands brands={brands} />
 
       <section aria-labelledby="cats-title" className="container-x pt-14 md:pt-20">
-        <Heading id="cats-title" eyebrow="Shop by category" title="Find your" accent="game" />
+        <Heading id="cats-title" eyebrow="Shop by sport" title="Pick your" accent="sport" />
         <div className="mt-7">
-          <CategoryBubbles items={categoryBubbles} label="Categories" />
+          <SportShop items={shop} />
         </div>
       </section>
 

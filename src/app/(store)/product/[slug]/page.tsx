@@ -5,7 +5,8 @@ import { ProductGrid, RecentlyViewed } from '@/components/product/ProductRail';
 import { brandName } from '@/data/brands';
 import { completeKit, getAllProducts, getProduct, getSport, getSub, moreFromCollection, toCard } from '@/lib/catalog';
 
-export const dynamicParams = false;
+// pages for products/sports added in the admin render on first visit (unknown ones still 404)
+export const dynamicParams = true;
 export function generateStaticParams() {
   return getAllProducts().map((p) => ({ slug: p.slug }));
 }

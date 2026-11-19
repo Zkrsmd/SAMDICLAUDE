@@ -19,6 +19,8 @@ export const ProductSchema = z.object({
   sport: z.enum(SPORT_SLUGS),
   sub: slug,
   price: z.number().int().positive(),
+  compareAt: z.number().int().positive().optional(),
+  stock: z.record(z.string(), z.number().int().min(0)).optional(),
   short: z.string().min(4),
   description: z.string().min(4),
   features: z.array(z.string()),
