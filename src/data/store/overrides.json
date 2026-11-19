@@ -3,6 +3,18 @@
   "products": {},
   "created": [],
   "deleted": [],
-  "orders": {},
-  "updatedAt": null
+  "orders": {
+    "o1386": {
+      "fulfillment": "fulfilled"
+    },
+    "o1381": {
+      "notes": [
+        {
+          "at": "2026-11-19T20:12:38.744Z",
+          "text": "sent"
+        }
+      ]
+    }
+  },
+  "updatedAt": "2026-11-19T20:12:38.744Z"
 }
