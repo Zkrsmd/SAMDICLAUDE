@@ -58,6 +58,15 @@ export const heroMedia: Partial<Record<string, { video: string; poster: string; 
   swimming: { video: '/video/swimming.mp4', poster: '/video/swimming.webp', credit: 'Pexels video 6539698 (Pexels License)' },
   basketball: { video: '/video/basketball.mp4', poster: '/video/basketball.webp', credit: 'Pexels video 12787247 (Pexels License)' },
 };
+/**
+ * Film set B (several licensed clips per sport, cut by `scripts/edit-films.mjs --set b`), shown with
+ * ?films=b so the two cuts can be compared on the live site. Sports without a B cut keep set A.
+ */
+export const heroMediaB: Partial<Record<string, { video: string; poster: string; credit: string }>> = {
+  boxing: { video: '/video/b/boxing.mp4', poster: '/video/b/boxing.webp', credit: 'Pexels videos 4761714, 4806570 (Pexels License)' },
+  swimming: { video: '/video/b/swimming.mp4', poster: '/video/b/swimming.webp', credit: 'Pexels videos 8686044, 8686118, 8686048 (Pexels License)' },
+  basketball: { video: '/video/b/basketball.mp4', poster: '/video/b/basketball.webp', credit: 'Pexels videos 18812173, 32067896 (Pexels License)' },
+};
 export const heroIds: string[] = heroSlides.map((s) => s.id);
 
 /**
