@@ -2,9 +2,9 @@
 // speed ramps (full speed easing into slow motion), a push-in zoom, a punch on every cut (zoom kick,
 // shake, a white flash frame), motion trails in the slow parts, a cool high-contrast grade — rendered
 // in a real browser (canvas + MediaRecorder, no ffmpeg needed) and saved to public/video with a
-// poster still.   node scripts/edit-films.mjs [--set b] [sport ...]
-// Set "a" cuts one clip per sport into public/video; set "b" cuts several clips per sport (segments
-// name their own `src` under media-src/video-raw) into public/video/b — compare them with ?films=b.
+// poster still.   node scripts/edit-films.mjs [sport ...]
+// A segment's `src` names its clip under media-src/video-raw (default: <sport>.mp4), so one film can
+// cut between several clips. Vertical sources (the dunks) are cropped to a band around the focus.
 import { chromium } from '@playwright/test';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -12,9 +12,7 @@ import path from 'node:path';
 
 const RAW = path.resolve('media-src/video-raw');
 const args = process.argv.slice(2);
-const setAt = args.indexOf('--set');
-const SET = setAt >= 0 ? args.splice(setAt, 2)[1] : 'a';
-const OUT = path.resolve(SET === 'a' ? 'public/video' : `public/video/${SET}`);
+const OUT = path.resolve('public/video');
 fs.mkdirSync(OUT, { recursive: true });
 
 // segments: source in/out (s), playback rate (or [from, to]: a speed ramp across the first 45%),
@@ -27,43 +25,6 @@ const EDITS = {
       { a: 3.1, b: 5.8, rate: [0.4, 1], z: [1.22, 1.0], f: [0.5, 0.65], kick: 0.6 },
     ],
     poster: 2.3,
-  },
-  boxing: {
-    segs: [
-      { a: 6.5, b: 9.6, rate: [1, 0.4], z: [1.04, 1.2], f: [0.42, 0.42], trail: 0.35 },
-      { a: 16.6, b: 19.6, rate: [1, 0.35], z: [1.2, 1.04], f: [0.55, 0.4], kick: 1, trail: 0.4 },
-      { a: 24.0, b: 27.6, rate: [0.9, 0.3], z: [1.0, 1.18], f: [0.48, 0.45], kick: 1, trail: 0.4 },
-    ],
-    poster: 8.0,
-  },
-  swimming: {
-    segs: [
-      { a: 0.0, b: 6.0, rate: [1, 0.55], z: [1.0, 1.1], f: [0.5, 0.4], trail: 0.3 },
-      { a: 6.0, b: 13.1, rate: [0.55, 0.8], z: [1.16, 1.02], f: [0.5, 0.42], kick: 0.6, trail: 0.3 },
-    ],
-    poster: 6.0,
-  },
-  basketball: {
-    segs: [
-      { a: 3.6, b: 6.4, rate: 1, z: [1.0, 1.06], f: [0.5, 0.5] },
-      { a: 6.4, b: 8.7, rate: [1, 0.22], z: [1.08, 1.26], f: [0.5, 0.62], kick: 1, trail: 0.5 },
-      { a: 8.7, b: 10.9, rate: [0.35, 1], z: [1.22, 1.0], f: [0.5, 0.55], kick: 0.7 },
-    ],
-    poster: 7.2,
-  },
-};
-
-// set b: several licensed Pexels clips per sport (credits in public/video/CREDITS.md). Vertical
-// sources (the dunks) are cropped to a band around the focus point.
-const EDITS_B = {
-  basketball: {
-    segs: [
-      { src: 'b/dunk-windmill.mp4', a: 2.4, b: 5.8, rate: [1, 0.3], z: [1.0, 1.08], f: [0.45, 0.48], trail: 0.45 },
-      { src: 'b/dunk-outdoor.mp4', a: 0.7, b: 3.3, rate: [1, 0.3], z: [1.0, 1.1], f: [0.5, 0.4], kick: 1, trail: 0.4 },
-      { src: 'b/dunk-outdoor.mp4', a: 10.6, b: 13.4, rate: [0.5, 0.9], z: [1.06, 1.0], f: [0.5, 0.4], kick: 0.7 },
-    ],
-    poster: 1.8,
-    posterSrc: 'b/dunk-outdoor.mp4',
   },
   boxing: {
     segs: [
@@ -85,7 +46,19 @@ const EDITS_B = {
     poster: 4.8,
     posterSrc: 'b/butterfly-1.mp4',
   },
+  basketball: {
+    segs: [
+      { src: 'b/dunk-windmill.mp4', a: 2.4, b: 5.8, rate: [1, 0.3], z: [1.0, 1.08], f: [0.45, 0.48], trail: 0.45 },
+      { src: 'b/dunk-outdoor.mp4', a: 0.7, b: 3.3, rate: [1, 0.3], z: [1.0, 1.1], f: [0.5, 0.4], kick: 1, trail: 0.4 },
+      { src: 'b/dunk-outdoor.mp4', a: 10.6, b: 13.4, rate: [0.5, 0.9], z: [1.06, 1.0], f: [0.5, 0.4], kick: 0.7 },
+    ],
+    poster: 1.8,
+    posterSrc: 'b/dunk-outdoor.mp4',
+  },
 };
+
+
+
 
 // a tiny static server with Range support (video seeking needs it)
 const server = http.createServer((req, res) => {
@@ -112,7 +85,7 @@ const port = server.address().port;
 const only = args;
 const b = await chromium.launch({ channel: 'msedge', args: ['--autoplay-policy=no-user-gesture-required'] });
 const page = await b.newPage({ viewport: { width: 960, height: 540 } });
-for (const [name, base] of Object.entries(SET === 'a' ? EDITS : EDITS_B)) {
+for (const [name, base] of Object.entries(EDITS)) {
   if (only.length && !only.includes(name)) continue;
   const edit = { ...base, segs: base.segs.map((sg) => ({ src: `${name}.mp4`, ...sg })), posterSrc: base.posterSrc ?? `${name}.mp4` };
   await page.goto(`http://127.0.0.1:${port}/`);

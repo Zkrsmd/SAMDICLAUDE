@@ -3,7 +3,7 @@ import { crystalGeometry, crystalMaterial, environment, network, particles, WORL
 import { backdropTex, glowTex } from './textures';
 import { droplets, fracture, panelShards, shardMaterial, spray } from './burst';
 import { debris, type DebrisMesh } from './debris';
-import { heroCrew, heroMedia, heroMediaB, heroSlides } from '@/config/hero';
+import { heroCrew, heroMedia, heroSlides } from '@/config/hero';
 import { swell, type OceanMesh } from './ocean';
 
 /** wrap a sphere's equirect texture (the basketball's seams) around fractured pieces */
@@ -327,8 +327,6 @@ export class CrystalEngine {
   private ro: ResizeObserver;
   private disposed = false;
   private dprScale = 1;
-  /** which cut of the films to play: ?films=b picks set B (for comparing the two edits) */
-  private filmSet = new URLSearchParams(window.location.search).get('films') === 'b' ? 'b' : 'a';
 
   constructor(o: EngineOptions) {
     this.o = o;
@@ -581,7 +579,7 @@ export class CrystalEngine {
       tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
       const group = new THREE.Group();
       group.visible = false;
-      const media = (this.filmSet === 'b' ? heroMediaB[id] : undefined) ?? heroMedia[id];
+      const media = heroMedia[id];
       const envr = environment(spec, this.o.fontFamily, !!media);
       performance.mark(`crystal:env:${id}`);
       group.add(envr.group);
