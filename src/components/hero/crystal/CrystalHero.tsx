@@ -48,7 +48,6 @@ export function CrystalHero({
   const spec = useRef<HTMLDivElement>(null);
   const read = useRef<HTMLDivElement>(null);
   const readValue = useRef<HTMLSpanElement>(null);
-  const explore = useRef<HTMLDivElement>(null);
   const [fallback, setFallback] = useState(false);
   const cb = useRef({ onReady, onExplore, onApi });
   cb.current = { onReady, onExplore, onApi };
@@ -72,7 +71,7 @@ export function CrystalHero({
         engine = new CrystalEngine({
           canvas: canvas.current!,
           hud: hud.current!,
-          labels: { spec: spec.current!, read: read.current!, readValue: readValue.current!, explore: explore.current! },
+          labels: { spec: spec.current!, read: read.current!, readValue: readValue.current! },
           ids: heroIds,
           productUrl: (slug) => renderUrl(slug),
           fontFamily,
@@ -132,10 +131,6 @@ export function CrystalHero({
             <span data-label>TEMP</span>
           </p>
           <span ref={readValue} className="mono block text-[10.5px] tabular-nums tracking-[0.08em]" />
-        </div>
-        <div ref={explore} className="absolute left-0 top-0 whitespace-nowrap opacity-0 transition-opacity duration-500" style={{ willChange: 'transform' }}>
-          <p className="mono text-[10.5px] uppercase tracking-[0.16em]">◇ SS26 — {String(index + 1).padStart(2, '0')}/{String(heroSlides.length).padStart(2, '0')}</p>
-          <p className="mono text-[10.5px] font-bold uppercase tracking-[0.16em]">Click to explore</p>
         </div>
       </div>
     </>

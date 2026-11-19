@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { heroSlides } from '@/config/hero';
-import { Icon } from '@/components/ui/Icon';
 import { Loader } from './Loader';
 import { CrystalHero, type CrystalApi } from './crystal/CrystalHero';
 import { WORLDS } from './crystal/worlds';
@@ -23,7 +22,7 @@ function deferred() {
 /**
  * The opening: each sport's product breaks out of its own crystal (ice shard, glass slab,
  * water orb, cut gem) in a coded, atmospheric set, read by a HUD — survey network, specimen
- * callouts, live readouts. Mono corner type, an index to jump between sports, a single CTA.
+ * callouts, live readouts. Mono corner type, an index to jump between sports, arrows on the edges.
  */
 export function Hero({
   onScrollProgress,
@@ -235,45 +234,36 @@ export function Hero({
         {/* bottom: statement + actions */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] [&_a]:pointer-events-auto [&_button]:pointer-events-auto" style={{ opacity: show ? 'calc(1 - var(--melt, 0) * 1.5)' : 0, transition: 'opacity .8s .5s' }}>
           {/* the stage is the LARGE viewport (full bleed when the browser bar hides); keep the type inside the small one */}
-          <div className="container-x pb-[calc(100lvh-100svh+max(22px,env(safe-area-inset-bottom)))]">
+          <div className="container-x flex items-end justify-between gap-6 pb-[calc(100lvh-100svh+max(26px,env(safe-area-inset-bottom)))]">
             <div aria-live="polite" aria-atomic="true" className="[text-shadow:0_2px_24px_rgba(16,22,30,0.35)]">
               <h2 className="sr-only">{slide.word}</h2>
               <p key={`w-${tick}`} className="mono text-[10.5px] uppercase tracking-[0.18em] text-white/85" style={{ animation: ready ? 'rise-in .7s .15s var(--ease-expo) both' : undefined }}>
                 {String(index + 1).padStart(2, '0')} — {slide.word} / {world.code}
               </p>
-              <p key={`t-${tick}`} className="display mt-3 max-w-[14ch] text-[clamp(24px,min(6.4vw,6.2svh),56px)] leading-[0.95]">
+              {/* the statement itself opens the sport: no button on the film */}
+              <Link key={`t-${tick}`} href={slide.href} aria-label={slide.cta} className="hero-line display mt-3 block max-w-[14ch] text-[clamp(26px,min(6.6vw,6.4svh),58px)] leading-[0.95]">
                 {ready ? <SplitWords text={slide.tagline} play /> : slide.tagline}
-              </p>
-            </div>
-            <div className="mt-5 flex items-center gap-2.5 [@media(max-height:560px)]:mt-3">
-              {/* a slim glass pill with the arrow in a white dot — not a slab of white across the phone */}
-              <Link href={slide.href} className="hero-cta" data-magnetic="">
-                <span className="hero-cta-label">{slide.cta}</span>
-                <span className="hero-cta-dot" aria-hidden>
-                  <Icon name="arrow-right" size={16} />
-                </span>
               </Link>
-              {/* one compact pager: ‹ 01 / 04 › */}
-              <div className="hero-pager" role="group" aria-label="Change sport">
-                <button type="button" onClick={back} aria-label="Previous sport">
-                  <Icon name="arrow-left" size={16} />
-                </button>
-                <span aria-hidden className="mono text-[11px] tracking-[0.12em]">
-                  {String(index + 1).padStart(2, '0')}
-                  <span className="text-white/55"> / {String(heroSlides.length).padStart(2, '0')}</span>
-                </span>
-                <button type="button" onClick={next} aria-label="Next sport">
-                  <Icon name="arrow-right" size={16} />
-                </button>
-              </div>
-              <p className="mono ml-auto hidden text-right text-[10.5px] uppercase leading-[1.6] tracking-[0.14em] text-white/80 md:block">
-                Scroll down to discover.
-                <br />
-                Drag to turn it. Click to explore.
-              </p>
             </div>
+            <p className="mono hidden shrink-0 text-right text-[10.5px] uppercase leading-[1.6] tracking-[0.14em] text-white/80 md:block">
+              Scroll down to discover.
+              <br />
+              Drag to turn it. Click to explore.
+            </p>
           </div>
         </div>
+
+        {/* two arrows on the edges of the screen: they say "slide" without a word */}
+        <button type="button" onClick={back} aria-label="Previous sport" className="hero-arrow hero-arrow-prev" style={{ opacity: show ? undefined : 0 }}>
+          <svg viewBox="0 0 22 44" aria-hidden>
+            <path d="M17 3 5 22l12 19" />
+          </svg>
+        </button>
+        <button type="button" onClick={next} aria-label="Next sport" className="hero-arrow hero-arrow-next" style={{ opacity: show ? undefined : 0 }}>
+          <svg viewBox="0 0 22 44" aria-hidden>
+            <path d="M5 3l12 19L5 41" />
+          </svg>
+        </button>
       </div>
       <Loader
         assets={HERO_ASSETS}

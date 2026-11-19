@@ -48,8 +48,8 @@ export const heroSlides = [
 export type HeroSlide = (typeof heroSlides)[number];
 
 /**
- * Background film per sport, played on the back wall of its 3D world (cool-graded, under the sport
- * word). Files live in /public/video and must be licensed for commercial use; the poster is a still
+ * Background film per sport: the whole backdrop of its 3D world, full screen behind the crystal
+ * (cool-graded, under the sport word). Files live in /public/video and must be licensed for commercial use; the poster is a still
  * of the clip, shown until the video plays (and instead of it with reduced motion).
  */
 export const heroMedia: Partial<Record<string, { video: string; poster: string; credit: string }>> = {
@@ -59,6 +59,33 @@ export const heroMedia: Partial<Record<string, { video: string; poster: string; 
   basketball: { video: '/video/basketball.mp4', poster: '/video/basketball.webp', credit: 'Pexels video 12787247 (Pexels License)' },
 };
 export const heroIds: string[] = heroSlides.map((s) => s.id);
+
+/**
+ * The crew: more of the sport's real products that burst out of the crystal with the hero product
+ * and hang around it in depth (real cut-outs, like the hero product — never models).
+ */
+export const heroCrew: Record<string, { slug: string; w: number }[]> = {
+  football: [
+    { slug: 'adidas-predator-elite-fg-soccer-cleats-white', w: 1.15 },
+    { slug: 'puma-stellar-match-laliga-fifa-quality-soccer-ball', w: 0.72 },
+    { slug: 'adidas-f50-hyperfast-elite-fg-soccer-cleats', w: 1.1 },
+  ],
+  boxing: [
+    { slug: 'everlast-powerlock-og-pro-training-glove-lace-up', w: 0.85 },
+    { slug: 'everlast-elite-2-headgear', w: 0.8 },
+    { slug: 'everlast-elite-handwraps-white-180in', w: 0.78 },
+  ],
+  swimming: [
+    { slug: 'speedo-fastskin-cap-blackwhite', w: 0.75 },
+    { slug: 'arena-cobra-ultra-swipe-mirror-goggles', w: 0.95 },
+    { slug: 'speedo-dmc-super-fin-bluegrey', w: 0.9 },
+  ],
+  basketball: [
+    { slug: 'nike-lebron-xxiv-stars-basketball-shoes', w: 1.15 },
+    { slug: 'wilson-2026-evo-editions-hyper-pop-basketball', w: 0.72 },
+    { slug: 'nike-ja-4-code-red-basketball-shoes', w: 1.1 },
+  ],
+};
 
 /** The product that stands on each sport's arena card on the homepage. */
 export const arenaPicks: Record<string, string> = {

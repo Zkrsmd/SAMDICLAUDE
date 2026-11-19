@@ -31,7 +31,11 @@ campaign and a real store at once. Real product photos (background removed) and 
   `LiquidSeam.tsx` repeats the chrome as pouring seams between homepage sections (CSS scroll timeline, no JS).
   At 32% of the hero's scroll the product is handed to the page
   (`HomeHero.tsx`, `setDrop`/`productRect`) and falls, as its real photo, onto the white page above the brands. The
-  product page does the same on phones (viewer → purchase tray). Backdrops are coded sets painted in `textures.ts` (floodlit bowl, ring, pool wall, gym) plus additive light shafts.
+  product page does the same on phones (viewer → purchase tray). The backdrop is the sport's film, full screen behind
+  the crystal (graded cool in `FILM_FS`, push-in punched by the break; the painted sets in `textures.ts` remain only as the
+  fallback without a film). The break throws out a crew of three more real products per sport (`heroCrew`), placed by
+  visible width; swimming's products float on a 3D ocean (`ocean.ts`, the same swell on CPU and GPU) that ripples
+  when the orb bursts. Controls on the stage: thin arrows on the screen edges and the statement itself as the link — no button.
   Survey network, HUD callouts and one post pass (zoom blur, shockwave, light sharpen, grain).
   The only 3D is glass + environment — products stay real photos. three is code-split (client only) with a still fallback
   without WebGL 2. `window.__crystalT` freezes the opening in dev; `scripts/hero-frames.mjs` renders frames.

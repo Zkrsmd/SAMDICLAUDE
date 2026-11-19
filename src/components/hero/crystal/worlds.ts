@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ocean, type OceanMesh } from './ocean';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { backdropTex, beamTex, causticTex, concreteGround, crackNormal, frostGround, frostNormal, rippleNormal, shadowTex, tileGround, woodGround } from './textures';
@@ -457,7 +458,8 @@ export function environment(spec: WorldSpec, fontFamily: string, film = false) {
 
   // light through haze: additive shafts with real parallax against the set
   const bt = beamTex();
-  const beams = spec.beams.map(([x, y, z, tilt, w, len, a]) => {
+  // (a film is the whole backdrop: no painted set in front of it — no shafts, floor or court)
+  const beams = (film ? [] : spec.beams).map(([x, y, z, tilt, w, len, a]) => {
     const g = new THREE.PlaneGeometry(w, len);
     g.translate(0, -len / 2, 0);
     const m = new THREE.Mesh(
@@ -471,6 +473,16 @@ export function environment(spec: WorldSpec, fontFamily: string, film = false) {
     return m;
   });
 
+  let caustics: THREE.Mesh[] = [];
+  let sea: OceanMesh | undefined;
+  if (film) {
+    // swimming: a 3D ocean rolls in front of the film
+    if (spec.id === 'swimming') {
+      sea = ocean();
+      group.add(sea);
+    }
+    return { group, caustics, back, beams, sea };
+  }
   const groundTex = spec.ground();
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(60, 60),
@@ -488,7 +500,6 @@ export function environment(spec: WorldSpec, fontFamily: string, film = false) {
   shadow.position.y = -1.73;
   group.add(shadow);
 
-  let caustics: THREE.Mesh[] = [];
   if (spec.id === 'swimming') {
     const ct = causticTex();
     caustics = [0, 1].map((i) => {
@@ -525,5 +536,5 @@ export function environment(spec: WorldSpec, fontFamily: string, film = false) {
     ]);
     group.add(new THREE.Line(key, new THREE.LineBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.55 })));
   }
-  return { group, caustics, shadow, back, beams };
+  return { group, caustics, back, beams, sea };
 }

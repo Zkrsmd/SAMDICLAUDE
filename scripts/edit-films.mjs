@@ -1,5 +1,6 @@
 // Cuts the hero background films from the licensed raw clips in media-src/video-raw (Pexels License):
-// speed ramps into slow motion at the moment of impact, a push-in zoom, a little contrast — rendered
+// speed ramps (full speed easing into slow motion), a push-in zoom, a punch on every cut (zoom kick,
+// shake, a white flash frame), motion trails in the slow parts, a cool high-contrast grade — rendered
 // in a real browser (canvas + MediaRecorder, no ffmpeg needed) and saved to public/video with a
 // poster still.   node scripts/edit-films.mjs [sport ...]
 import { chromium } from '@playwright/test';
@@ -11,33 +12,37 @@ const RAW = path.resolve('media-src/video-raw');
 const OUT = path.resolve('public/video');
 fs.mkdirSync(OUT, { recursive: true });
 
-// segments: source in/out (s), playback rate, zoom from→to, zoom focus (0..1 of the frame), poster at
+// segments: source in/out (s), playback rate (or [from, to]: a speed ramp across the first 45%),
+// zoom from→to, zoom focus (0..1 of the frame), kick (punch on the cut), trail (0..1), poster at
 const EDITS = {
   football: {
     segs: [
-      { a: 0.0, b: 1.5, rate: 1, z: [1.0, 1.05], f: [0.5, 0.62] },
-      { a: 1.5, b: 3.1, rate: 0.3, z: [1.05, 1.2], f: [0.5, 0.7] },
-      { a: 3.1, b: 5.8, rate: 0.85, z: [1.2, 1.0], f: [0.5, 0.65] },
+      { a: 0.0, b: 1.5, rate: 1, z: [1.0, 1.06], f: [0.5, 0.62] },
+      { a: 1.5, b: 3.1, rate: [1, 0.25], z: [1.08, 1.24], f: [0.5, 0.7], kick: 1, trail: 0.45 },
+      { a: 3.1, b: 5.8, rate: [0.4, 1], z: [1.22, 1.0], f: [0.5, 0.65], kick: 0.6 },
     ],
     poster: 2.3,
   },
   boxing: {
     segs: [
-      { a: 6.5, b: 9.6, rate: 0.6, z: [1.04, 1.16], f: [0.42, 0.42] },
-      { a: 16.6, b: 19.6, rate: 0.6, z: [1.16, 1.04], f: [0.55, 0.4] },
-      { a: 24.0, b: 27.6, rate: 0.5, z: [1.0, 1.14], f: [0.48, 0.45] },
+      { a: 6.5, b: 9.6, rate: [1, 0.4], z: [1.04, 1.2], f: [0.42, 0.42], trail: 0.35 },
+      { a: 16.6, b: 19.6, rate: [1, 0.35], z: [1.2, 1.04], f: [0.55, 0.4], kick: 1, trail: 0.4 },
+      { a: 24.0, b: 27.6, rate: [0.9, 0.3], z: [1.0, 1.18], f: [0.48, 0.45], kick: 1, trail: 0.4 },
     ],
     poster: 8.0,
   },
   swimming: {
-    segs: [{ a: 0.0, b: 13.1, rate: 0.8, z: [1.0, 1.12], f: [0.5, 0.4] }],
+    segs: [
+      { a: 0.0, b: 6.0, rate: [1, 0.55], z: [1.0, 1.1], f: [0.5, 0.4], trail: 0.3 },
+      { a: 6.0, b: 13.1, rate: [0.55, 0.8], z: [1.16, 1.02], f: [0.5, 0.42], kick: 0.6, trail: 0.3 },
+    ],
     poster: 6.0,
   },
   basketball: {
     segs: [
-      { a: 3.6, b: 6.4, rate: 1, z: [1.0, 1.05], f: [0.5, 0.5] },
-      { a: 6.4, b: 8.7, rate: 0.35, z: [1.05, 1.2], f: [0.5, 0.62] },
-      { a: 8.7, b: 10.9, rate: 1, z: [1.2, 1.0], f: [0.5, 0.55] },
+      { a: 3.6, b: 6.4, rate: 1, z: [1.0, 1.06], f: [0.5, 0.5] },
+      { a: 6.4, b: 8.7, rate: [1, 0.22], z: [1.08, 1.26], f: [0.5, 0.62], kick: 1, trail: 0.5 },
+      { a: 8.7, b: 10.9, rate: [0.35, 1], z: [1.22, 1.0], f: [0.5, 0.55], kick: 0.7 },
     ],
     poster: 7.2,
   },
@@ -79,15 +84,23 @@ for (const [name, edit] of Object.entries(EDITS)) {
     c.width = W;
     c.height = H;
     const x = c.getContext('2d');
-    const draw = (zoom, f) => {
-      // object-fit: cover, then push in toward the focus point
+    const draw = (zoom, f, fx = {}) => {
+      // object-fit: cover, then push in toward the focus point (plus the cut's shake)
       const s = Math.max(W / v.videoWidth, H / v.videoHeight) * zoom;
       const dw = v.videoWidth * s;
       const dh = v.videoHeight * s;
-      const dx = Math.min(0, Math.max(W - dw, W / 2 - dw * f[0]));
-      const dy = Math.min(0, Math.max(H - dh, H / 2 - dh * f[1]));
-      x.filter = 'contrast(1.12) saturate(0.92) brightness(0.97)';
+      const dx = Math.min(0, Math.max(W - dw, W / 2 - dw * f[0] + (fx.sx ?? 0)));
+      const dy = Math.min(0, Math.max(H - dh, H / 2 - dh * f[1] + (fx.sy ?? 0)));
+      x.filter = 'contrast(1.18) saturate(0.86) brightness(0.98)';
+      // trail: the new frame laid over the last one, so fast motion smears in the slow parts
+      x.globalAlpha = 1 - (fx.trail ?? 0);
       x.drawImage(v, dx, dy, dw, dh);
+      x.globalAlpha = 1;
+      x.filter = 'none';
+      if (fx.flash > 0.01) {
+        x.fillStyle = `rgba(240,244,250,${fx.flash.toFixed(3)})`;
+        x.fillRect(0, 0, W, H);
+      }
     };
     const seek = (t) => new Promise((r) => { v.addEventListener('seeked', r, { once: true }); v.currentTime = t; });
     const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -101,12 +114,27 @@ for (const [name, edit] of Object.entries(EDITS)) {
     rec.start(250);
     for (const sg of edit.segs) {
       await seek(sg.a);
-      v.playbackRate = sg.rate;
+      const [r0, r1] = Array.isArray(sg.rate) ? sg.rate : [sg.rate, sg.rate];
+      v.playbackRate = r0;
       await v.play();
+      const t0 = performance.now();
       await new Promise((done) => {
         const tick = () => {
           const k = Math.min(1, (v.currentTime - sg.a) / (sg.b - sg.a));
-          draw(sg.z[0] + (sg.z[1] - sg.z[0]) * ease(Math.max(0, k)), sg.f);
+          // speed ramp across the first 45% of the segment, then hold
+          const rate = r0 + (r1 - r0) * ease(Math.min(1, Math.max(0, k) / 0.45));
+          if (Math.abs(v.playbackRate - rate) > 0.01) v.playbackRate = Math.max(0.0625, rate);
+          // the cut's punch: zoom kick + shake + flash, decaying over ~0.4 s of output
+          const age = (performance.now() - t0) / 1000;
+          const kick = (sg.kick ?? 0) * Math.exp(-age * 9);
+          const shake = kick * 14;
+          const slow = 1 - Math.min(1, rate);
+          draw(sg.z[0] + (sg.z[1] - sg.z[0]) * ease(Math.max(0, k)) + kick * 0.09, sg.f, {
+            sx: Math.sin(age * 83) * shake,
+            sy: Math.cos(age * 67) * shake,
+            flash: (sg.kick ?? 0) * Math.exp(-age * 22) * 0.85,
+            trail: (sg.trail ?? 0) * slow,
+          });
           if (v.currentTime >= sg.b || v.ended) return done();
           requestAnimationFrame(tick);
         };

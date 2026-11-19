@@ -3,7 +3,8 @@ import { crystalGeometry, crystalMaterial, environment, network, particles, WORL
 import { backdropTex, glowTex } from './textures';
 import { droplets, fracture, panelShards, shardMaterial, spray } from './burst';
 import { debris, type DebrisMesh } from './debris';
-import { heroMedia, heroSlides } from '@/config/hero';
+import { heroCrew, heroMedia, heroSlides } from '@/config/hero';
+import { swell, type OceanMesh } from './ocean';
 
 /** wrap a sphere's equirect texture (the basketball's seams) around fractured pieces */
 function seamed(g: THREE.BufferGeometry) {
@@ -31,7 +32,7 @@ function seamed(g: THREE.BufferGeometry) {
 export interface EngineOptions {
   canvas: HTMLCanvasElement;
   hud: HTMLCanvasElement;
-  labels: { spec: HTMLElement; read: HTMLElement; readValue: HTMLElement; explore: HTMLElement };
+  labels: { spec: HTMLElement; read: HTMLElement; readValue: HTMLElement };
   ids: string[];
   productUrl: (slug: string) => string;
   fontFamily: string;
@@ -54,7 +55,11 @@ interface World {
   back: THREE.Mesh;
   backAspect?: number;
   /** the sport's film on the back wall (poster first, then the playing video) */
-  film?: { plane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; src: string; el: HTMLVideoElement | null; tex: THREE.VideoTexture | null; aspect: number };
+  film?: { plane: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>; src: string; el: HTMLVideoElement | null; tex: THREE.VideoTexture | null; aspect: number };
+  /** more of the sport's products, thrown out by the break to hang around the hero product */
+  crew: { mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; spin: number }[];
+  /** swimming: the 3D ocean in front of the film */
+  sea?: OceanMesh;
   base: { roughness: number; normal: number; dispersion: number };
   orb?: { pos: Float32Array; nrm: Float32Array };
   shards: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
@@ -70,6 +75,49 @@ interface World {
 /** placeholder map so a film plane compiles once with a texture slot (no recompile when the poster lands) */
 const BLANK = new THREE.DataTexture(new Uint8Array([167, 178, 192, 255]), 1, 1);
 BLANK.needsUpdate = true;
+
+/**
+ * The film is the whole backdrop: object-fit cover on a plane filling the view, graded cool (part
+ * desaturated, steel-blue shadows), with a slow push-in the engine punches on the break.
+ */
+const FILM_VS = /* glsl */ `
+  varying vec2 vUv;
+  void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+`;
+const FILM_FS = /* glsl */ `
+  uniform sampler2D uMap;
+  uniform vec2 uRep;
+  uniform vec2 uOff;
+  uniform float uZoom;
+  uniform vec2 uDrift;
+  uniform float uSat;
+  uniform float uGain;
+  varying vec2 vUv;
+  void main() {
+    vec2 q = clamp((vUv - 0.5) / uZoom + 0.5 + uDrift, 0.0, 1.0);
+    vec3 c = texture2D(uMap, uOff + uRep * q).rgb;
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    c = mix(vec3(l), c, uSat);
+    c *= mix(vec3(0.74, 0.84, 1.0), vec3(1.0, 1.0, 1.02), smoothstep(0.0, 0.5, l));
+    gl_FragColor = vec4(c * uGain, 1.0);
+  }
+`;
+
+/**
+ * Where the crew hangs around the hero product: x as a fraction of the half-width visible at the
+ * product's depth (so nobody leaves the frame on narrow screens), y and z in world units. Clear of
+ * the callouts (upper left, right) and the statement (lower left).
+ */
+const CREW_HOME = [
+  [-0.68, -0.25, -1.4],
+  [0.36, 1.75, -2.6],
+  [0.6, -1.15, 0.5],
+] as const;
+const CREW_HOME_PHONE = [
+  [-0.62, -0.3, -1.2],
+  [0.62, -0.9, -2.0],
+  [0.32, -1.85, 0.6],
+] as const;
 
 /** opening beats (seconds): the crystal forms, then breaks */
 const FORM = 0.9;
@@ -257,6 +305,8 @@ export class CrystalEngine {
   private h = 1;
   private dpr = 1;
   private dist = 7;
+  /** half the width of the view at the product's depth (world units) */
+  private halfW = 2;
   private mobile = false;
   private visible = true;
   /** how much of the stage is on screen; below half it renders every other frame (it's on its way out) */
@@ -357,6 +407,7 @@ export class CrystalEngine {
   private showPieces(w: World, on: boolean) {
     w.shards.visible = w.spray.visible = on;
     w.debris.forEach((d) => (d.mesh.visible = on));
+    w.crew.forEach((c) => (c.mesh.visible = on));
   }
 
   /** builds the first world, compiles shaders, then reports ready and pre-builds the rest */
@@ -518,7 +569,11 @@ export class CrystalEngine {
     if (hit) return hit;
     const p = (async () => {
       const spec = WORLDS[id]!;
-      const tex = await this.loader.loadAsync(this.o.productUrl(spec.product));
+      const crewSpec = heroCrew[id] ?? [];
+      const [tex, ...crewTex] = await Promise.all([
+        this.loader.loadAsync(this.o.productUrl(spec.product)),
+        ...crewSpec.map((c) => this.loader.loadAsync(this.o.productUrl(c.slug)).catch(() => null)),
+      ]);
       performance.mark(`crystal:tex:${id}`);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
@@ -530,10 +585,25 @@ export class CrystalEngine {
       group.add(envr.group);
       let film: World['film'];
       if (media) {
-        // the wall behind the set: a cool-graded film under the bare (word-only) backdrop
+        // the backdrop is the film, under the bare (word-only) sky
         const plane = new THREE.Mesh(
           new THREE.PlaneGeometry(64, 32),
-          new THREE.MeshBasicMaterial({ map: BLANK, color: '#A7B2C0', fog: false, toneMapped: false }),
+          new THREE.ShaderMaterial({
+            vertexShader: FILM_VS,
+            fragmentShader: FILM_FS,
+            uniforms: {
+              uMap: { value: BLANK },
+              uRep: { value: new THREE.Vector2(1, 1) },
+              uOff: { value: new THREE.Vector2(0, 0) },
+              uZoom: { value: 1.06 },
+              uDrift: { value: new THREE.Vector2(0, 0) },
+              uSat: { value: 0.62 },
+              uGain: { value: 0.8 },
+            },
+            fog: false,
+            toneMapped: false,
+            depthWrite: false,
+          }),
         );
         plane.position.copy(envr.back.position);
         plane.position.z -= 0.05;
@@ -544,9 +614,9 @@ export class CrystalEngine {
           .loadAsync(media.poster)
           .then((t) => {
             t.colorSpace = THREE.SRGBColorSpace;
-            if (f.plane.material.map === BLANK) {
+            if (f.plane.material.uniforms.uMap!.value === BLANK) {
               f.aspect = t.image.width / t.image.height;
-              f.plane.material.map = t;
+              f.plane.material.uniforms.uMap!.value = t;
               this.fitFilm(world);
             }
           })
@@ -575,6 +645,22 @@ export class CrystalEngine {
       );
       product.position.y = 0.15;
       group.add(product);
+
+      // the crew: real cut-outs that the break throws out around the hero product
+      const crew: World['crew'] = [];
+      crewTex.forEach((ct, i) => {
+        if (!ct) return;
+        ct.colorSpace = THREE.SRGBColorSpace;
+        ct.anisotropy = tex.anisotropy;
+        const cw = crewSpec[i]!.w;
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(cw, (cw * ct.image.height) / ct.image.width),
+          new THREE.MeshBasicMaterial({ map: ct, alphaTest: 0.45, alphaToCoverage: true, side: THREE.DoubleSide, color: '#E4EAF1' }),
+        );
+        mesh.visible = false;
+        group.add(mesh);
+        crew.push({ mesh, spin: (i % 2 ? 1 : -1) * (5 + i * 2) });
+      });
 
       const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color: spec.light, transparent: true, opacity: 0.55, depthWrite: false, fog: false }));
       halo.scale.set(7, 7, 1);
@@ -627,6 +713,8 @@ export class CrystalEngine {
         beams: envr.beams,
         broke: false,
         film,
+        crew,
+        sea: envr.sea,
       };
       if (spec.crystal === 'orb') {
         const pos = geo.attributes.position!;
@@ -647,7 +735,8 @@ export class CrystalEngine {
     this.active = w;
     w.group.visible = true;
     const s = w.spec;
-    this.scene.fog = new THREE.Fog(s.fog, 6, 24);
+    // in front of a film, only the far distance hazes (the products stay as crisp as the footage)
+    this.scene.fog = w.film ? new THREE.Fog(s.fog, 16, 40) : new THREE.Fog(s.fog, 6, 24);
     this.scene.background = new THREE.Color(s.fog);
     const hex = heroSlides.find((h) => h.id === s.id)?.accent ?? '#2B59FF';
     const n = parseInt(hex.slice(1), 16);
@@ -681,7 +770,7 @@ export class CrystalEngine {
         () => {
           f.tex ??= new THREE.VideoTexture(el);
           f.tex.colorSpace = THREE.SRGBColorSpace;
-          f.plane.material.map = f.tex;
+          f.plane.material.uniforms.uMap!.value = f.tex;
           this.fitFilm(w);
         },
         { once: true },
@@ -694,17 +783,19 @@ export class CrystalEngine {
   /** object-fit: cover for the film on the wall */
   private fitFilm(w: World) {
     const f = w.film;
-    const map = f?.plane.material.map;
-    if (!f || !map || map === BLANK) return;
+    if (!f) return;
+    const u = f.plane.material.uniforms;
     const plane = (64 * f.plane.scale.x) / (32 * f.plane.scale.y);
-    map.repeat.set(1, 1);
-    map.offset.set(0, 0);
+    const rep = u.uRep!.value as THREE.Vector2;
+    const off = u.uOff!.value as THREE.Vector2;
+    rep.set(1, 1);
+    off.set(0, 0);
     if (plane > f.aspect) {
-      map.repeat.y = f.aspect / plane;
-      map.offset.y = (1 - map.repeat.y) / 2;
+      rep.y = f.aspect / plane;
+      off.y = (1 - rep.y) / 2;
     } else {
-      map.repeat.x = plane / f.aspect;
-      map.offset.x = (1 - map.repeat.x) / 2;
+      rep.x = plane / f.aspect;
+      off.x = (1 - rep.x) / 2;
     }
   }
 
@@ -790,6 +881,7 @@ export class CrystalEngine {
     this.camera.aspect = aspect;
     const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     this.dist = Math.max(2.45 / tan, (this.mobile ? 1.62 : 2.05) / (tan * aspect));
+    this.halfW = this.dist * tan * aspect;
     this.camera.updateProjectionMatrix();
     const hud = this.o.hud;
     hud.width = Math.round(this.w * this.dpr);
@@ -938,6 +1030,36 @@ export class CrystalEngine {
     w.product.rotation.y = Math.sin(t * 0.45) * 0.16 * idle + this.pointer.x * 0.35 + this.tilt;
     w.product.rotation.z = Math.sin(t * 0.33) * 0.03 * idle;
     w.product.scale.setScalar(1 + hit * 0.12 * Math.sin(Math.min(age, 0.5) * 6.3 + 0.6));
+
+    // the crew: thrown out of the break on an arc, spinning down to rest around the hero product
+    // (on the water for swimming), parting as you scroll on
+    const homes = this.mobile ? CREW_HOME_PHONE : CREW_HOME;
+    const shown = formed && age >= 0;
+    w.crew.forEach((c, i) => {
+      c.mesh.visible = shown;
+      if (!shown) return;
+      const [fx, hy, hz] = homes[i % homes.length]!;
+      const hx = fx * this.halfW;
+      const a = reduced ? 9 : age - i * 0.06;
+      const k = outExpo(seg(a, 0, 1.05));
+      const g = c.mesh.geometry.parameters;
+      const restY = w.sea ? swell(hx, hz, t) + g.height * 0.3 : hy + Math.sin(t * 0.7 + i * 1.9) * 0.08 * idle;
+      const part = 1 + this.scrollS * 0.7;
+      c.mesh.position.set(
+        THREE.MathUtils.lerp(0, hx * part, k),
+        THREE.MathUtils.lerp(0.15, restY + this.scrollS * 0.6, k) + Math.sin(k * Math.PI) * 0.7,
+        THREE.MathUtils.lerp(0, hz, k),
+      );
+      c.mesh.scale.setScalar(reduced ? 1 : 0.15 + 0.85 * outBack(seg(a, 0, 0.75), 1.5));
+      c.mesh.rotation.z = (1 - k) * c.spin + Math.sin(t * 0.4 + i * 2.1) * (w.sea ? 0.14 : 0.07) * idle;
+      c.mesh.rotation.y = Math.sin(t * 0.35 + i * 2) * 0.28 * idle + this.pointer.x * 0.3;
+    });
+    if (w.sea) {
+      w.sea.material.uniforms.uTime!.value = t;
+      w.sea.material.uniforms.uAge!.value = reduced ? -1 : age;
+      w.sea.material.uniforms.uNear!.value = this.dist + 3;
+      w.sea.material.uniforms.uFar!.value = this.dist + 13;
+    }
     const m = w.crystal.material;
     m.normalScale.setScalar(w.base.normal * (1 + charge * 1.6));
     m.roughness = w.base.roughness + charge * 0.06;
@@ -985,6 +1107,13 @@ export class CrystalEngine {
       dist,
     );
     this.camera.lookAt(0, this.mobile ? -0.55 : -0.05, 0);
+
+    // the film: a slow push-in, punched by the break, drifting against the pointer
+    if (w.film) {
+      const fu = w.film.plane.material.uniforms;
+      fu.uZoom!.value = 1.06 + Math.sin(t * 0.07) * 0.025 * idle + hit * 0.07 + sc * 0.1;
+      (fu.uDrift!.value as THREE.Vector2).set(this.pointer.x * -0.012, this.pointer.y * 0.01);
+    }
 
     // shockwave from the break point, in screen space
     if (hit > 0.01) {
@@ -1074,7 +1203,6 @@ export class CrystalEngine {
     };
     place(L.spec, this.project(-0.7, 0.95, 0.35, w.group), 'left', -40);
     place(L.read, this.project(0.85, 0.55, 0.35, w.group), 'right', -30);
-    place(L.explore, this.project(0.55, -0.9, 0.35, w.group), 'right', 70);
 
     // live readout
     this.readTick += 1;

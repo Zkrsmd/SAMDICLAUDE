@@ -758,8 +758,8 @@ export function backdropTex(word: string, sky: [string, string], fontFamily: str
   ctx.restore();
 
   if (art) soft(ctx, w, h, 'screen', (s, sw, sh) => art.light(s, sw, sh, (hz / h) * sh, rng(seed + 1)));
-  // haze sitting on the floor line
-  soft(ctx, w, h, 'source-over', (s, sw, sh) => {
+  // haze sitting on the floor line (no floor in front of a film)
+  if (!bare) soft(ctx, w, h, 'source-over', (s, sw, sh) => {
     const y = (hz / h) * sh;
     const hg = s.createLinearGradient(0, y - sh * 0.2, 0, y + sh * 0.05);
     hg.addColorStop(0, 'rgba(255,255,255,0)');
