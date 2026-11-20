@@ -1,6 +1,43 @@
 {
   "version": 1,
-  "products": {},
+  "products": {
+    "wilson-caitlin-clark-fuse-outdoor-basketball": {
+      "name": "Caitlin Clark Fuse Outdoor Basketball",
+      "brand": "wilson",
+      "sport": "basketball",
+      "sub": "balls",
+      "price": 2499,
+      "compareAt": null,
+      "cost": null,
+      "short": "Match-ready construction for true flight and touch.",
+      "description": "Wilson Caitlin Clark Fuse Outdoor Basketball. Match-ready construction for true flight and touch. Demo listing using the brand's official product image and list price (USD) — replace with your own product data.",
+      "sizes": [
+        "5",
+        "6",
+        "7"
+      ],
+      "stock": {
+        "5": 19,
+        "6": 9,
+        "7": 36
+      },
+      "sku": "SM-1129",
+      "colorName": "Standard",
+      "swatch": "#7B7BA9",
+      "tags": [
+        "wilson",
+        "basketball",
+        "balls",
+        "standard"
+      ],
+      "bestSeller": false,
+      "isNew": false,
+      "featured": false,
+      "status": "active",
+      "seoTitle": "",
+      "seoDescription": ""
+    }
+  },
   "created": [],
   "deleted": [],
   "orders": {
@@ -14,7 +51,10 @@
           "text": "sent"
         }
       ]
+    },
+    "o1385": {
+      "fulfillment": "unfulfilled"
     }
   },
-  "updatedAt": "2026-11-19T20:12:38.744Z"
+  "updatedAt": "2026-11-19T20:36:26.448Z"
 }

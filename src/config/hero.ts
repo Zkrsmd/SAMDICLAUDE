@@ -24,12 +24,12 @@ export const heroFilm = (id: string) => ({
 /** screens at least this tall for their width get the portrait cut */
 export const HERO_TALL_QUERY = '(max-aspect-ratio: 4/5)';
 
-/** The product that stands on each sport's arena card on the homepage. */
-export const arenaPicks: Record<string, string> = {
-  football: 'adidas-predator-elite-fg-soccer-cleats-white',
+/** The cut-out that stands for each sport in the homepage "Pick your sport" circles. */
+export const sportIcons: Record<string, string> = {
+  football: 'nike-control-soccer-ball',
   boxing: 'everlast-powerlock-og-pro-training-glove-lace-up',
   swimming: 'speedo-fastskin-speed-socket-20-mirrored-goggles-smokeblue',
-  basketball: 'nike-lebron-xxiv-stars-basketball-shoes',
+  basketball: 'wilson-evolution-game-basketball',
   running: 'nike-apex-road-racing-shoes',
   fitness: 'everlast-1910-pro-leather-medicine-ball',
 };

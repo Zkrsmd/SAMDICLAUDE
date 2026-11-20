@@ -31,8 +31,8 @@ campaign and a real store at once. Real product photos (background removed) and 
   the index, a swipe or the arrow keys: the new film wipes in from its side (`hero-wipe-in`, `--d`). The hero is sticky;
   the store after it is one `.home-sheet` that slides up over it while `--p` pushes the film in and darkens it.
   Smooth wheel scrolling site-wide is Lenis (`SmoothScroll.tsx`, `src/lib/smooth-scroll.ts`; dialogs hold it via `useDialog`).
-  Slides, arena-card product picks (`arenaPicks`) and category photos: `src/config/hero.ts`.
-- Homepage order: hero (sport films) → brands → shop by sport (`SportShop.tsx`: a photo tile per sport that opens that
+  Slides, the sport-circle cut-outs (`sportIcons`) and category photos: `src/config/hero.ts`.
+- Homepage order: hero (sport films) → brands → shop by sport (`SportShop.tsx`: a small circle per sport with one cut-out that opens that
   sport IN PLACE — its best sellers, new releases, all its products with category chips and "See all"; `?sport=` keeps it) →
   best sellers (2 rows) → new in (3 rows, newest per sport) → everything else (`ProductStream`, 20 at a time + Show more).
   Product cards keep a short name, the price (was-price when on sale) and the quick-add `+` INSIDE the card, no brand

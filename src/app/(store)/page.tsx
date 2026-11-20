@@ -6,7 +6,7 @@ import { ProductGrid, ProductStream, RecentlyViewed } from '@/components/product
 import { Icon } from '@/components/ui/Icon';
 import { SplitWords } from '@/components/ui/SplitWords';
 import { brands } from '@/data/brands';
-import { categoryMedia } from '@/config/hero';
+import { sportIcons } from '@/config/hero';
 import { applyListing, bestSellers, getAllProducts, getSports, productsFor, toCard, type CardData } from '@/lib/catalog';
 
 /** deterministic shuffle (the page is prerendered: same order on server and client) */
@@ -44,7 +44,7 @@ function Heading({ id, eyebrow, title, accent, action }: { id: string; eyebrow: 
 export default function Home() {
   const all = getAllProducts();
   const sports = getSports();
-  // every sport as a big tile that opens in place: its best sellers, what's new, everything
+  // every sport as a small circle that opens in place: its best sellers, what's new, everything
   const shop: SportShopItem[] = sports.map((s) => {
     const list = applyListing(productsFor(s.slug), { q: '', brand: [], color: [], size: [], min: undefined, max: undefined, sort: 'featured' });
     const best = bestSellers(s.slug, undefined, 4).map((p) => p.slug);
@@ -59,7 +59,7 @@ export default function Home() {
       slug: s.slug,
       name: s.name,
       tagline: s.tagline,
-      photo: categoryMedia[s.slug],
+      icon: sportIcons[s.slug] ?? productsFor(s.slug)[0]?.slug,
       subs: s.subs.map((x) => ({ slug: x.slug, name: x.name, count: productsFor(s.slug, x.slug).length })),
       cards: list.map((p) => (fresh.includes(p.slug) ? { ...toCard(p), isNew: true } : toCard(p))),
       best,

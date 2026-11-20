@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ProductGrid } from '@/components/product/ProductRail';
@@ -12,8 +11,8 @@ export interface SportShopItem {
   slug: string;
   name: string;
   tagline: string;
-  /** category photo (falls back to the first product's cut-out) */
-  photo?: string;
+  /** product slug whose cut-out stands for the sport in its circle */
+  icon?: string;
   subs: { slug: string; name: string; count: number }[];
   /** every product of the sport, best first */
   cards: CardData[];
@@ -24,7 +23,7 @@ export interface SportShopItem {
 const FIRST = 8;
 
 /**
- * Shop by sport: big sport tiles. A tile opens that sport right here on the homepage — its best
+ * Shop by sport: a small circle per sport. A tile opens that sport right here on the homepage — its best
  * sellers, what's new and everything it has (filter by category, "See all" grows the grid in
  * place). The open sport is kept in the address (?sport=…) so it can be shared and survives reload.
  */
@@ -63,8 +62,9 @@ export function SportShop({ items }: { items: SportShopItem[] }) {
     if (next) url.searchParams.set('sport', next);
     else url.searchParams.delete('sport');
     window.history.replaceState(window.history.state, '', url);
-    // bring the opened sport up under the header (after it has rendered)
-    if (next) requestAnimationFrame(() => requestAnimationFrame(() => scrollTo(panel.current, -84)));
+    // bring the circles + the opened sport up under the header (after it has rendered), so the picked
+    // circle stays in view and another sport is one tap away
+    if (next) requestAnimationFrame(() => requestAnimationFrame(() => scrollTo(tiles.current, -96)));
   };
 
   const close = () => {
@@ -84,29 +84,24 @@ export function SportShop({ items }: { items: SportShopItem[] }) {
             <button
               type="button"
               className="sport-tile"
+              aria-label={`${s.name}, ${s.cards.length} products`}
               aria-expanded={open === s.slug}
               aria-controls="sport-panel"
               data-open={open === s.slug ? '' : undefined}
               onClick={() => choose(s.slug)}
             >
-              <span className="sport-tile-media" aria-hidden>
-                {s.photo ? (
-                  <Image src={s.photo} alt="" fill sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 17vw" className="object-cover" />
-                ) : s.cards[0] ? (
-                  <span className="absolute inset-[14%]">
-                    <ProductImage slug={s.cards[0].slug} colorId="standard" alt="" sizes="30vw" />
+              <span className="sport-tile-orb" aria-hidden>
+                {s.icon && (
+                  <span className="sport-tile-obj">
+                    <ProductImage slug={s.icon} colorId="standard" alt="" sizes="120px" />
                   </span>
-                ) : null}
+                )}
               </span>
-              <span className="sport-tile-word display" style={{ ['--n' as string]: s.name.length }} aria-hidden>
+              <span className="sport-tile-name" aria-hidden>
                 {s.name}
               </span>
-              <span className="sport-tile-meta">
-                <span className="sr-only">{s.name}, </span>
-                <span className="mono">{s.cards.length} products</span>
-                <span className="sport-tile-go" aria-hidden>
-                  <Icon name={open === s.slug ? 'close' : 'arrow-right'} size={15} />
-                </span>
+              <span className="sport-tile-count mono" aria-hidden>
+                {s.cards.length} products
               </span>
             </button>
           </li>
