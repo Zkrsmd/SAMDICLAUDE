@@ -20,14 +20,15 @@ export const slugRule = z
   .min(2)
   .max(96)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Lowercase letters, numbers and dashes only');
-const cents = z.number().int().min(0).max(10_000_000);
+/** money in centimes (DA × 100) */
+const cents = z.number().int().min(0).max(1_000_000_000);
 
 const ProductFields = z.object({
   name: z.string().trim().min(2, 'Add a title').max(120),
   brand: z.string().trim().min(2, 'Choose a vendor').max(40).regex(/^[a-z0-9-]+$/, 'Vendor id: lowercase letters, numbers, dashes'),
   sport: z.enum(SPORT_SLUGS),
   sub: slugRule,
-  price: z.number().int().positive('Price must be above 0').max(10_000_000),
+  price: z.number().int().positive('Price must be above 0').max(1_000_000_000),
   compareAt: cents.nullable(),
   cost: cents.nullable(),
   short: z.string().trim().min(4, 'Add a short line (4+ characters)').max(200),
@@ -41,6 +42,8 @@ const ProductFields = z.object({
   bestSeller: z.boolean(),
   isNew: z.boolean(),
   featured: z.boolean(),
+  /** shown as "Coming soon" and not sold yet, whatever the stock */
+  comingSoon: z.boolean().default(false),
   status: z.enum(PRODUCT_STATUS),
   seoTitle: z.string().trim().max(70),
   seoDescription: z.string().trim().max(320),
@@ -67,8 +70,21 @@ export const OrderPatchSchema = z.object({
 });
 export type OrderPatch = z.infer<typeof OrderPatchSchema>;
 
+/** A wilaya's delivery prices in DA (null: that kind of delivery isn't offered there). */
+export const TariffSchema = z.object({
+  home: z.number().int().min(0).max(100_000).nullable(),
+  desk: z.number().int().min(0).max(100_000).nullable(),
+});
+export type Tariff = z.infer<typeof TariffSchema>;
+export const DeliverySchema = z.object({
+  /** by wilaya code ("16"); a missing wilaya uses the built-in starting price */
+  tariffs: z.record(z.string().regex(/^\d{1,2}$/), TariffSchema),
+});
+
 export const OverridesSchema = z.object({
   version: z.literal(1),
+  /** prices are in dinars (files saved before the switch held US cents and are converted on read) */
+  currency: z.literal('DZD').optional(),
   /** edits to catalogue products, by slug (the full edited record, not a diff) */
   products: z.record(z.string(), ProductInputSchema),
   /** products added in the admin, in the order they were added */
@@ -76,13 +92,15 @@ export const OverridesSchema = z.object({
   /** catalogue products removed in the admin */
   deleted: z.array(z.string()),
   orders: z.record(z.string(), OrderPatchSchema),
+  /** delivery prices per wilaya, edited in Admin → Delivery */
+  delivery: DeliverySchema.optional(),
   updatedAt: z.string().nullable(),
 });
 export type Overrides = z.infer<typeof OverridesSchema>;
 
-export const EMPTY_OVERRIDES: Overrides = { version: 1, products: {}, created: [], deleted: [], orders: {}, updatedAt: null };
+export const EMPTY_OVERRIDES: Overrides = { version: 1, currency: 'DZD', products: {}, created: [], deleted: [], orders: {}, updatedAt: null };
 
-export const BULK_ACTIONS = ['active', 'draft', 'archived', 'best-on', 'best-off', 'new-on', 'new-off', 'delete'] as const;
+export const BULK_ACTIONS = ['active', 'draft', 'archived', 'best-on', 'best-off', 'new-on', 'new-off', 'soon-on', 'soon-off', 'delete'] as const;
 export type BulkAction = (typeof BULK_ACTIONS)[number];
 export const BulkSchema = z.object({ slugs: z.array(slugRule).min(1).max(500), action: z.enum(BULK_ACTIONS) });
 

@@ -9,7 +9,7 @@ import { ConfirmDialog, toast } from './client';
 
 export type ProductRow = Pick<
   AdminProduct,
-  'slug' | 'name' | 'brand' | 'brandName' | 'sport' | 'sportName' | 'sub' | 'subName' | 'price' | 'compareAt' | 'status' | 'sizes' | 'stock' | 'image' | 'bestSeller' | 'isNew' | 'sku' | 'createdAt' | 'created'
+  'slug' | 'name' | 'brand' | 'brandName' | 'sport' | 'sportName' | 'sub' | 'subName' | 'price' | 'compareAt' | 'status' | 'sizes' | 'stock' | 'image' | 'bestSeller' | 'isNew' | 'comingSoon' | 'sku' | 'createdAt' | 'created'
 >;
 
 const TABS = [
@@ -238,6 +238,12 @@ export function ProductsTable({ rows, sports, vendors }: { rows: ProductRow[]; s
             <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run('new-on', 'Marked as new')}>
               Mark new
             </button>
+            <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run('soon-on', 'Marked as coming soon')}>
+              Coming soon
+            </button>
+            <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run('soon-off', 'Now on sale')}>
+              Not coming soon
+            </button>
             <button type="button" className="adm-btn adm-btn-sm adm-btn-danger" disabled={pending} onClick={() => setConfirmDelete(true)}>
               Delete
             </button>
@@ -297,6 +303,15 @@ export function ProductsTable({ rows, sports, vendors }: { rows: ProductRow[]; s
                         <StatusBadge status={p.status} />
                       </td>
                       <td className="whitespace-nowrap">
+                        {p.comingSoon ? (
+                          <span className="mr-1.5">
+                            <Badge tone="info">Coming soon</Badge>
+                          </span>
+                        ) : u === 0 ? (
+                          <span className="mr-1.5">
+                            <Badge tone="bad">Out of stock</Badge>
+                          </span>
+                        ) : null}
                         <span className={u === 0 ? 'font-semibold text-[#b42318]' : ''}>{u} in stock</span>
                         <span className="block text-[12px] text-[#66707c]">
                           {p.sizes.length} variant{p.sizes.length === 1 ? '' : 's'}

@@ -6,7 +6,7 @@ import { formatPrice } from '@/lib/format';
 export const money = (cents: number) => formatPrice(cents);
 export const moneyShort = (cents: number) => {
   const v = cents / 100;
-  return v >= 10_000 ? `$${(v / 1000).toFixed(v >= 100_000 ? 0 : 1)}k` : formatPrice(cents).replace(/\.00$/, '');
+  return v >= 10_000 ? `${(v / 1000).toFixed(v >= 100_000 ? 0 : 1)}k DA` : formatPrice(cents);
 };
 // dates are shown in UTC so the server and the browser always print the same thing
 const dtf = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -218,12 +218,31 @@ export function Badge({ tone, children, plain }: { tone?: Tone; children: React.
   );
 }
 
-export const statusTone = (s: string): Tone =>
-  ({ active: 'good', draft: 'info', archived: undefined, paid: 'good', pending: 'warn', refunded: 'bad', fulfilled: undefined, unfulfilled: 'warn' })[s] as Tone;
+const TONES: Record<string, Tone> = {
+  active: 'good',
+  draft: 'info',
+  archived: undefined,
+  paid: 'good',
+  pending: 'warn',
+  refunded: 'bad',
+  fulfilled: undefined,
+  unfulfilled: 'warn',
+  // cash on delivery
+  cod: 'warn',
+  void: undefined,
+  new: 'bad',
+  confirmed: 'info',
+  shipped: 'info',
+  delivered: 'good',
+  returned: 'bad',
+  cancelled: undefined,
+};
+export const statusTone = (s: string): Tone => TONES[s];
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const LABEL: Record<string, string> = { paid: 'Paid', pending: 'Payment pending', cod: 'Cash on delivery', void: 'Not collected', new: 'To confirm' };
 
 export function StatusBadge({ status }: { status: string }) {
-  return <Badge tone={statusTone(status)}>{status === 'paid' ? 'Paid' : status === 'pending' ? 'Payment pending' : cap(status)}</Badge>;
+  return <Badge tone={statusTone(status)}>{LABEL[status] ?? cap(status)}</Badge>;
 }
 
 export function Thumb({ src, alt = '' }: { src: string; alt?: string }) {

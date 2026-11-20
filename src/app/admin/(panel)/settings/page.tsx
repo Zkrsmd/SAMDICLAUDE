@@ -13,9 +13,9 @@ export default async function SettingsPage() {
   const rows: [string, string][] = [
     ['Store name', brand.name],
     ['Tagline', brand.tagline],
-    ['Currency', `${brand.commerce.currency} (${brand.commerce.locale})`],
+    ['Currency', `${brand.commerce.currency} · Algerian dinar`],
     ['Contact email', brand.contact.email],
-    ['Checkout', brand.commerce.demoCheckout ? 'Demonstration — no payments taken' : 'Live'],
+    ['Checkout', 'Cash on delivery · Algeria only (58 wilayas)'],
   ];
   return (
     <div className="adm-page adm-page-narrow">

@@ -383,7 +383,7 @@ body:has(.adm) {
   pointer-events: none;
 }
 .adm-affix > .adm-input {
-  padding-left: 22px;
+  padding-left: 34px;
 }
 .adm-check {
   width: 16px;

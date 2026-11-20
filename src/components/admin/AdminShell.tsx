@@ -24,6 +24,7 @@ const NAV: { href: string; label: string; icon: IconName; count?: 'orders'; subs
     ],
   },
   { href: '/admin/customers', label: 'Customers', icon: 'customers' },
+  { href: '/admin/delivery', label: 'Delivery', icon: 'truck' },
   { href: '/admin/analytics', label: 'Analytics', icon: 'analytics' },
 ];
 

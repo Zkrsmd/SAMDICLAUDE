@@ -1585,6 +1585,16 @@
   color: #fff;
   box-shadow: none;
 }
+/* coming soon: an ink pill; out of stock: the photo steps back */
+.pcard-badge-soon {
+  background: var(--color-ink);
+  color: #fff;
+  box-shadow: none;
+}
+.pcard[data-availability='out'] .pcard-img {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
 /* no hover churn mid-scroll on the photo; the + and the heart stay tappable at all times */
 .is-scrolling .pcard-media {
   pointer-events: none;
@@ -2087,4 +2097,144 @@ html.vt-product::view-transition-new(root) {
   .pdp-build > :not(:first-child) {
     animation: none;
   }
+}
+
+/* ── checkout (cash on delivery) ── */
+.co-card {
+  border-radius: 18px;
+  background: #fff;
+  padding: 20px;
+  box-shadow:
+    inset 0 0 0 1px var(--color-line),
+    0 18px 40px -32px rgb(15 18 22 / 0.35);
+}
+@media (min-width: 768px) {
+  .co-card {
+    padding: 26px;
+  }
+}
+.co-h {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.co-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.co-input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+  padding: 12px 14px;
+  /* 16px: phones don't zoom into the field */
+  font-size: 16px;
+  color: var(--color-ink);
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.co-input::placeholder {
+  color: rgb(15 18 22 / 0.35);
+}
+.co-input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--color-cobalt);
+  box-shadow: 0 0 0 3px rgb(43 89 255 / 0.16);
+}
+.co-input[aria-invalid='true'] {
+  border-color: #c4321f;
+  background: #fff;
+}
+.co-textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.co-select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%230F1216' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+.co-help {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--color-muted);
+}
+.co-err {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #c4321f;
+}
+.co-option {
+  display: flex;
+  min-height: 64px;
+  cursor: pointer;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
+  background: var(--color-bg);
+  padding: 12px 16px;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
+}
+.co-option:hover {
+  background: #fff;
+}
+.co-option:has(input:checked) {
+  background: #fff;
+  box-shadow: inset 0 0 0 2px var(--color-cobalt);
+}
+.co-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+.co-option[data-off] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.co-cod {
+  border-radius: 12px;
+  background: var(--color-bg);
+  padding: 12px 14px;
+}
+/* honeypot: off screen, never shown */
+.co-hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.co-done {
+  border-radius: 24px;
+  background: #fff;
+  padding: 40px 22px 34px;
+  box-shadow:
+    inset 0 0 0 1px var(--color-line),
+    0 30px 60px -40px rgb(15 18 22 / 0.4);
+}
+.co-done-mark {
+  display: inline-grid;
+  height: 64px;
+  width: 64px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-cobalt);
+  color: #fff;
+  font-size: 28px;
 }

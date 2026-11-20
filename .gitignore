@@ -33,3 +33,6 @@ npm-debug.log*
 
 # artifact preview snapshot
 /.snapshot/
+
+# real orders from the checkout: customer names, phones and addresses — never commit
+/.data/

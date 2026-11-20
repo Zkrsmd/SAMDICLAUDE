@@ -12,7 +12,7 @@ export function Footer({ nav }: { nav: NavSport[] }) {
             <Wordmark />
           </div>
           <p className="mt-4 max-w-sm text-[15px] text-muted">{brand.description}</p>
-          <p className="eyebrow mt-6 text-muted">Demonstration store — no payments are taken.</p>
+          <p className="eyebrow mt-6 text-muted">Cash on delivery · all of Algeria</p>
         </div>
         <FooterCol title="Sports">
           {nav.map((s) => (

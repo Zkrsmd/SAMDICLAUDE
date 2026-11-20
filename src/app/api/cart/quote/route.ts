@@ -75,8 +75,12 @@ export async function POST(req: Request) {
       rejected.push({ key, reason: 'Variant no longer available' });
       continue;
     }
+    if (p.comingSoon) {
+      rejected.push({ key, reason: 'Coming soon — not on sale yet' });
+      continue;
+    }
     if (!sizeAvailable(p, item.size)) {
-      rejected.push({ key, reason: 'Sold out' });
+      rejected.push({ key, reason: 'Out of stock' });
       continue;
     }
     lines.push({
@@ -96,7 +100,7 @@ export async function POST(req: Request) {
     lines,
     rejected,
     subtotal: lines.reduce((n, l) => n + l.total, 0),
-    currency: 'EUR',
+    currency: 'DZD',
   };
   return NextResponse.json(body, { headers: { 'Cache-Control': 'no-store' } });
 }

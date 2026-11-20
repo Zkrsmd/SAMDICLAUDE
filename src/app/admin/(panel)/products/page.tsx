@@ -29,6 +29,7 @@ export default async function ProductsPage() {
     image: p.image,
     bestSeller: p.bestSeller,
     isNew: p.isNew,
+    comingSoon: p.comingSoon,
     sku: p.sku,
     createdAt: p.createdAt,
     created: p.created,

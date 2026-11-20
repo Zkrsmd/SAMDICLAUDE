@@ -84,7 +84,7 @@ const money = z
   .transform((v) => {
     const raw = Array.isArray(v) ? v[0] : v;
     const n = raw === undefined || raw === '' ? NaN : Number(raw);
-    return Number.isFinite(n) && n >= 0 && n < 100000 ? Math.round(n * 100) : undefined;
+    return Number.isFinite(n) && n >= 0 && n < 100_000_000 ? Math.round(n * 100) : undefined;
   });
 
 /** Listing filters parsed from URL search params (untrusted input). */

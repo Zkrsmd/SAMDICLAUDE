@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CartLine } from '@/stores/cart';
 import type { QuoteResponse } from '@/app/api/cart/quote/route';
 
-const EMPTY: QuoteResponse = { lines: [], rejected: [], subtotal: 0, currency: 'EUR' };
+const EMPTY: QuoteResponse = { lines: [], rejected: [], subtotal: 0, currency: 'DZD' };
 
 /** Fetches a server-side price quote for the cart lines (debounced). The client never sends prices. */
 export function useQuote(lines: CartLine[], enabled = true) {

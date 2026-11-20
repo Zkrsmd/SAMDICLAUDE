@@ -16,6 +16,7 @@ export function QuickAdd({
   colorId,
   sizes,
   soldOut = [],
+  availability = 'in',
 }: {
   slug: string;
   name: string;
@@ -23,8 +24,10 @@ export function QuickAdd({
   sizes: string[];
   /** sizes that are out of stock: shown, but can't be picked */
   soldOut?: string[];
+  /** "soon" (coming soon) and "out" (out of stock) can't be added */
+  availability?: 'in' | 'out' | 'soon';
 }) {
-  const none = sizes.every((s) => soldOut.includes(s));
+  const none = availability !== 'in' || sizes.every((s) => soldOut.includes(s));
   const add = useCart((s) => s.add);
   const set = useUi((s) => s.set);
   const [open, setOpen] = useState(false);
@@ -88,7 +91,7 @@ export function QuickAdd({
         type="button"
         onClick={() => (many ? setOpen((o) => !o) : commit(sizes[0] ?? 'One size'))}
         disabled={none}
-        aria-label={none ? `${name} is sold out` : `Add ${name} to bag`}
+        aria-label={none ? `${name} is ${availability === 'soon' ? 'coming soon' : 'out of stock'}` : `Add ${name} to bag`}
         aria-expanded={many ? open : undefined}
         aria-controls={many ? sheet : undefined}
         className={`quick-add grid h-11 w-11 place-items-center rounded-full disabled:opacity-35 ${done ? 'is-done' : ''}`}

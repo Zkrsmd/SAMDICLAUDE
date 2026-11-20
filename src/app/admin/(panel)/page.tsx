@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BarList, SalesChart, Sparkline } from '@/components/admin/charts';
 import { AIcon, Card, PageHead, RangeTabs, SampleNote, StatusBadge, Thumb, day, money, pct } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
-import { RANGES, getOrders, parseRange, report } from '@/lib/admin/orders';
+import { RANGES, getOrders, parseRange, report, showingSamples } from '@/lib/admin/orders';
 import { getAdminProducts } from '@/lib/catalog';
 
 export const metadata: Metadata = { title: 'Home' };
@@ -41,10 +41,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <PageHead title={hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'}>
         <RangeTabs range={range} base="/admin" />
       </PageHead>
-      <SampleNote>
-        Orders, customers and sales here are <strong>sample data</strong> — the store’s checkout doesn’t take orders yet. Products, prices, stock and
-        everything you edit are real and show on the store.
-      </SampleNote>
+      {showingSamples() ? (
+        <SampleNote>
+          Orders, customers and sales here are <strong>sample data</strong> until the first real order comes in from the checkout. Products, prices,
+          stock and everything you edit are real and show on the store.
+        </SampleNote>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (

@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
 import { cartCount, isMobile, openHome } from './helpers';
 
 test.describe('core shopping journeys', () => {
@@ -72,9 +74,10 @@ test.describe('core shopping journeys', () => {
     await page.goto('/cart');
     await expect(page.getByRole('link', { name: /Giant 2.0/ }).first()).toBeVisible();
     const subtotal = page.locator('aside dd').first();
-    await expect(subtotal).toContainText('249.99');
+    // prices are in dinars ($249.99 demo list price × 250, rounded to 100 DA)
+    await expect(subtotal).toContainText(/62\s500\sDA/);
     await page.getByRole('button', { name: 'Increase quantity' }).first().click();
-    await expect(subtotal).toContainText('499.98');
+    await expect(subtotal).toContainText(/125\s000\sDA/);
     await page.getByRole('button', { name: /Remove Giant 2.0/ }).click();
     await expect(page.getByText('Your bag is waiting').first()).toBeVisible();
   });
@@ -130,8 +133,65 @@ test.describe('API security', () => {
     });
     expect(ok.status()).toBe(200);
     const json = await ok.json();
-    expect(json.subtotal).toBe(14400);
+    // centimes: 2 × 18 000 DA (the client's "price: 1" is ignored)
+    expect(json.subtotal).toBe(3_600_000);
     const cross = await request.post('/api/cart/quote', { headers: { origin: 'https://evil.example' }, data: { items: [] } });
     expect(cross.status()).toBe(403);
+  });
+});
+
+test.describe('cash on delivery checkout', () => {
+  test('asks for the details, prices delivery by wilaya, and adds it to the total (no order placed)', async ({ page }) => {
+    // one size: no size to pick
+    await page.goto('/product/arena-cobra-tri-swipe-mirror-goggles');
+    await page.getByRole('button', { name: 'Add to bag' }).first().click();
+    await expect.poll(() => cartCount(page)).toBe(1);
+    await page.goto('/checkout');
+    await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
+    // nothing filled in: each field says what's missing
+    await page.getByRole('button', { name: 'Confirm order' }).click();
+    await expect(page.getByText('Enter your first name')).toBeVisible();
+    await expect(page.getByText(/Enter a mobile number/)).toBeVisible();
+    await expect(page.getByText('Choose your wilaya').last()).toBeVisible();
+    // Alger: 18 000 DA goggles + 650 DA home delivery, or 470 DA at the stop desk
+    await page.locator('#co-wilaya').selectOption('16');
+    await expect(page.getByTestId('co-total')).toHaveText(/18\s650\sDA/);
+    await page.locator('label').filter({ hasText: 'Stop desk' }).click();
+    await expect(page.getByTestId('co-total')).toHaveText(/18\s470\sDA/);
+    // both ways to confirm are offered
+    await expect(page.getByText('We call you within about an hour')).toBeVisible();
+    await page.locator('label').filter({ hasText: 'Send me an SMS' }).click();
+    await expect(page.getByText('We’ll text you to confirm.')).toBeVisible();
+  });
+});
+
+test.describe('orders API', () => {
+  const ORDERS = path.join(process.cwd(), '.data', 'orders.json');
+  const count = () => (fs.existsSync(ORDERS) ? JSON.parse(fs.readFileSync(ORDERS, 'utf8')).orders.length : 0);
+  const order = {
+    firstName: 'Test',
+    lastName: 'Client',
+    phone: '0555 12 34 56',
+    wilaya: 16,
+    commune: 'Bab Ezzouar',
+    address: 'Cité test, bloc 1',
+    method: 'home',
+    confirm: 'call',
+    note: '',
+    items: [{ productId: 'speedo-fastskin-cap-pink', colorId: 'standard', size: 'M', qty: 1 }],
+  };
+  test('validates the form, refuses other sites, and drops bot orders without saving', async ({ request }) => {
+    const before = count();
+    const badPhone = await request.post('/api/orders', { data: { ...order, phone: '0212 34' } });
+    expect(badPhone.status()).toBe(400);
+    expect((await badPhone.json()).fields.phone).toMatch(/mobile number/);
+    const noDesk = await request.post('/api/orders', { data: { ...order, wilaya: 57, method: 'desk' } });
+    expect(noDesk.status()).toBe(400);
+    const cross = await request.post('/api/orders', { headers: { origin: 'https://evil.example' }, data: order });
+    expect(cross.status()).toBe(403);
+    // the hidden honeypot field filled in: answered like a success, nothing saved
+    const bot = await request.post('/api/orders', { data: { ...order, website: 'http://spam.example' } });
+    expect(bot.status()).toBe(202);
+    expect(count()).toBe(before);
   });
 });

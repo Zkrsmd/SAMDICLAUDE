@@ -27,10 +27,10 @@ export function CartView() {
             </div>
             <div className="flex justify-between text-muted">
               <dt>Delivery</dt>
-              <dd>Calculated at checkout (placeholder)</dd>
+              <dd>By wilaya, at checkout</dd>
             </div>
           </dl>
-          <p className="mt-4 text-[12px] text-muted">Prices are calculated on the server from the catalogue — the browser never sets the price.</p>
+          <p className="mt-4 text-[12px] text-muted">Cash on delivery: you pay the courier when your order arrives.</p>
           <Link
             href="/checkout"
             aria-disabled={!lines.length}

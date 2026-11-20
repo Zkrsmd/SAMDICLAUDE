@@ -36,10 +36,21 @@ campaign and a real store at once. Real product photos (background removed) and 
   sport IN PLACE — its best sellers, new releases, all its products with category chips and "See all"; `?sport=` keeps it) →
   best sellers (2 rows) → new in (3 rows, newest per sport) → everything else (`ProductStream`, 20 at a time + Show more).
   Product cards keep a short name, the price (was-price when on sale) and the quick-add `+` INSIDE the card, no brand
-  (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked).
+  (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked). Availability (`availability()` in `catalog.ts`):
+  "Coming soon" (admin switch `comingSoon`, with or without stock: shown, not sold) wins over "Out of stock" (every size
+  at 0); both badge the card, disable the `+` and replace the buy box; the quote and order APIs refuse them.
 - Product page: pinned viewer (desktop) / scroll drop into the buy box (phones) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
+- Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA". The demo catalogue
+  came with US list prices: `usdToDzd` converts them (`brand.commerce.demoUsdRate`, rounded to 100 DA).
+- Checkout = cash on delivery, Algeria only (`/checkout`, `CodCheckout.tsx`): first/last name, Algerian mobile, wilaya
+  (58), commune, address, ZR Express home or stop desk, confirm by a call (≈ within the hour) or an SMS, note.
+  `POST /api/orders` re-validates (`src/lib/validation/order.ts`), prices from the catalogue + `deliveryFee()`
+  (`src/lib/delivery.ts`; starting prices in `src/data/delivery/wilayas.ts`, edited in Admin → Delivery), checks stock,
+  and saves to `.data/orders.json` (`src/lib/store/orders.ts`) — git-ignored because it holds customers' names, phones
+  and addresses: never commit it. Tracked stock goes down on order and back up on cancel/return. Fake-order guards: a
+  honeypot field and 6 valid orders / 10 min per address. Nothing sends SMS: the admin calls or texts by hand.
 - Admin (`/admin`, Shopify-style): home dashboard, orders, products (index + editor), collections, inventory, customers,
   analytics, settings. Sign-in: `ADMIN_PASSWORD` in `.env.local` (`src/lib/admin/auth.ts`, signed http-only cookie;
   every page and action calls the guard itself). Writes go through server actions (`src/app/admin/actions.ts`, Zod
@@ -47,8 +58,9 @@ campaign and a real store at once. Real product photos (background removed) and 
   products, stock, order status), which `src/lib/catalog.ts` merges over the catalogue on every render — so the store
   shows admin changes at once; commit the file to publish them. Photo uploads: `/api/admin/media` (sharp → webp in
   `public/products`). Hosted (Vercel) the file system is read-only, so the admin is view-only there.
-  Orders/customers/sales are SAMPLE data (`src/lib/admin/orders.ts`, seeded per day, labelled in the UI) until the
-  checkout takes real orders.
+  Orders: real website orders with statuses new (to confirm) → confirmed → shipped → delivered, or cancelled /
+  returned (`setOrderStatus`). Until the first real order exists the admin shows SAMPLE orders instead
+  (`src/lib/admin/orders.ts`, seeded per day, labelled), so fake sales never mix with real ones.
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 
 ## Commands

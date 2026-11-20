@@ -17,17 +17,28 @@ export interface OrderRow {
   payment: string;
   fulfillment: string;
   archived: boolean;
+  /** website orders: new / confirmed / shipped / delivered / returned / cancelled */
+  status?: string;
+  phone?: string;
+  wilaya?: string;
 }
 const TABS = [
   { id: 'all', label: 'All' },
+  { id: 'confirm', label: 'To confirm' },
   { id: 'unfulfilled', label: 'Unfulfilled' },
   { id: 'unpaid', label: 'Unpaid' },
   { id: 'archived', label: 'Archived' },
 ] as const;
 const PAGE = 50;
 
-const inTab = (o: OrderRow, tab: string) =>
-  tab === 'archived' ? o.archived : !o.archived && (tab === 'all' || (tab === 'unfulfilled' ? o.fulfillment === 'unfulfilled' && o.payment !== 'refunded' : o.payment === 'pending'));
+const inTab = (o: OrderRow, tab: string) => {
+  if (tab === 'archived') return o.archived;
+  if (o.archived) return false;
+  if (tab === 'confirm') return o.status === 'new';
+  if (tab === 'unfulfilled') return o.fulfillment === 'unfulfilled' && o.payment !== 'refunded' && o.payment !== 'void';
+  if (tab === 'unpaid') return o.payment === 'pending' || o.payment === 'cod';
+  return true;
+};
 
 export function OrdersTable({ rows }: { rows: OrderRow[] }) {
   const params = useSearchParams();
@@ -52,7 +63,10 @@ export function OrdersTable({ rows }: { rows: OrderRow[] }) {
 
   const filtered = useMemo(() => {
     const t = (params.get('q') ?? '').toLowerCase().replace(/^#/, '');
-    return rows.filter((o) => inTab(o, tab) && (!t || String(o.number).includes(t) || o.customer.toLowerCase().includes(t)));
+    const digits = t.replace(/\D/g, '');
+    return rows.filter(
+      (o) => inTab(o, tab) && (!t || String(o.number).includes(t) || o.customer.toLowerCase().includes(t) || (digits.length >= 4 && (o.phone ?? '').includes(digits))),
+    );
   }, [rows, params, tab]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const p = Math.min(page, pages);
@@ -93,7 +107,7 @@ export function OrdersTable({ rows }: { rows: OrderRow[] }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onBlur={() => q.trim() !== (params.get('q') ?? '') && set({ q: q.trim() || null })}
-            placeholder="Search by order number or customer"
+            placeholder="Search by order number, customer or phone"
             className="adm-input !pl-8"
             aria-label="Search orders"
           />
@@ -102,12 +116,17 @@ export function OrdersTable({ rows }: { rows: OrderRow[] }) {
       {selected.size > 0 && (
         <div className="adm-bulkbar" role="region" aria-label="Bulk actions">
           <span className="mr-2 font-semibold">{selected.size} selected</span>
-          <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run({ fulfillment: 'fulfilled' }, 'Marked as fulfilled')}>
-            <AIcon name="truck" size={14} /> Mark as fulfilled
-          </button>
-          <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run({ fulfillment: 'unfulfilled' }, 'Marked as unfulfilled')}>
-            Mark as unfulfilled
-          </button>
+          {/* website orders move by their own statuses, on the order page */}
+          {!rows.some((o) => o.status) && (
+            <>
+              <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run({ fulfillment: 'fulfilled' }, 'Marked as fulfilled')}>
+                <AIcon name="truck" size={14} /> Mark as fulfilled
+              </button>
+              <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run({ fulfillment: 'unfulfilled' }, 'Marked as unfulfilled')}>
+                Mark as unfulfilled
+              </button>
+            </>
+          )}
           {tab === 'archived' ? (
             <button type="button" className="adm-btn adm-btn-sm" disabled={pending} onClick={() => run({ archived: false }, 'Unarchived')}>
               Unarchive
@@ -139,10 +158,10 @@ export function OrdersTable({ rows }: { rows: OrderRow[] }) {
                 <th>Order</th>
                 <th>Date</th>
                 <th>Customer</th>
-                <th className="hidden lg:table-cell">Channel</th>
+                <th className="hidden lg:table-cell">Wilaya</th>
                 <th className="r">Total</th>
                 <th>Payment</th>
-                <th>Fulfilment</th>
+                <th>Status</th>
                 <th className="hidden md:table-cell">Items</th>
               </tr>
             </thead>
@@ -172,12 +191,12 @@ export function OrdersTable({ rows }: { rows: OrderRow[] }) {
                   </td>
                   <td className="whitespace-nowrap text-[#4a525c]">{dateTime(o.createdAt)}</td>
                   <td className="whitespace-nowrap">{o.customer}</td>
-                  <td className="hidden whitespace-nowrap text-[#4a525c] lg:table-cell">{o.channel}</td>
+                  <td className="hidden whitespace-nowrap text-[#4a525c] lg:table-cell">{o.wilaya ?? o.channel}</td>
                   <td className="num r whitespace-nowrap font-medium">{money(o.total)}</td>
                   <td>
                     <StatusBadge status={o.payment} />
                   </td>
-                  <td>{o.archived ? <Badge>Archived</Badge> : <StatusBadge status={o.fulfillment} />}</td>
+                  <td>{o.archived ? <Badge>Archived</Badge> : <StatusBadge status={o.status ?? o.fulfillment} />}</td>
                   <td className="hidden text-[#4a525c] md:table-cell">
                     {o.items} item{o.items === 1 ? '' : 's'}
                   </td>

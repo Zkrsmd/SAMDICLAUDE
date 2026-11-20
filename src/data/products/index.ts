@@ -1,5 +1,6 @@
 import type { ModelKind, Product, SportSlug } from '@/types/catalog';
 import generated from './generated.json';
+import { usdToDzd } from '@/lib/format';
 
 /**
  * Demo catalogue built from official brand listings (scripts/build-catalog.mjs).
@@ -87,9 +88,10 @@ export const rawProducts: (Product & { images: string[] })[] = (generated as Row
     brand: r.brand,
     sport: r.sport,
     sub: r.sub,
-    price: r.price,
+    // the source rows carry US list prices (cents): the store sells in dinars
+    price: usdToDzd(r.price),
     short,
-    description: `${BRAND_LABEL[r.brand] ?? r.brand} ${displayName(r.name, r.brand)}. ${short} Demo listing using the brand's official product image and list price (USD) — replace with your own product data.`,
+    description: `${BRAND_LABEL[r.brand] ?? r.brand} ${displayName(r.name, r.brand)}. ${short} Demo listing using the brand's official product image; the price is its US list price converted to dinars — set your own in the admin.`,
     features: [],
     specs: [
       { label: 'Colour', value: r.colorName },

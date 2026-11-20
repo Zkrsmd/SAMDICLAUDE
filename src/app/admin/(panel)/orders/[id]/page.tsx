@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OrderActions, OrderNotes } from '@/components/admin/OrderView';
+import { CodActions, OrderActions, OrderNotes } from '@/components/admin/OrderView';
+import { brand } from '@/config/brand';
+import { COURIER } from '@/data/delivery/wilayas';
+import { formatPhone } from '@/lib/validation/order';
 import { AIcon, Badge, Card, PageHead, StatusBadge, Thumb, dateTime, longDate, money } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getOrder, getOrders } from '@/lib/admin/orders';
@@ -24,11 +27,24 @@ export default async function OrderPage({ params }: Props) {
   const newer = all[i - 1];
   const older = all[i + 1];
   const history = all.filter((x) => x.customer.id === o.customer.id);
+  const cod = o.cod;
+  const STEP: Record<string, string> = {
+    new: 'Order placed on the website · cash on delivery',
+    confirmed: 'Confirmed with the customer',
+    shipped: `Handed to ${COURIER}`,
+    delivered: `Delivered · ${money(o.total)} collected in cash`,
+    returned: 'Returned · stock put back',
+    cancelled: 'Cancelled · stock put back',
+  };
   const events = [
     ...o.notes.map((n) => ({ at: n.at, text: n.text, note: true })),
-    { at: o.createdAt, text: `Order placed on ${o.channel}`, note: false },
-    ...(o.payment === 'paid' ? [{ at: o.createdAt, text: `Payment of ${money(o.total)} captured`, note: false }] : []),
-    ...(o.payment === 'refunded' ? [{ at: o.createdAt, text: `Refunded ${money(o.total)}`, note: false }] : []),
+    ...(cod
+      ? cod.history.map((h) => ({ at: h.at, text: STEP[h.status] ?? h.status, note: false }))
+      : [
+          { at: o.createdAt, text: `Order placed on ${o.channel}`, note: false },
+          ...(o.payment === 'paid' ? [{ at: o.createdAt, text: `Payment of ${money(o.total)} captured`, note: false }] : []),
+          ...(o.payment === 'refunded' ? [{ at: o.createdAt, text: `Refunded ${money(o.total)}`, note: false }] : []),
+        ]),
   ].sort((a, b) => b.at.localeCompare(a.at));
 
   return (
@@ -39,7 +55,7 @@ export default async function OrderPage({ params }: Props) {
         meta={
           <span className="flex gap-1.5">
             <StatusBadge status={o.payment} />
-            {o.archived ? <Badge>Archived</Badge> : <StatusBadge status={o.fulfillment} />}
+            {o.archived ? <Badge>Archived</Badge> : <StatusBadge status={cod?.status ?? o.fulfillment} />}
           </span>
         }
       >
@@ -57,14 +73,14 @@ export default async function OrderPage({ params }: Props) {
         </span>
       </PageHead>
       <p className="-mt-3 mb-4 text-[#66707c]">
-        {longDate(o.createdAt)} · {o.channel}
+        {longDate(o.createdAt)} · {cod ? 'Website · cash on delivery' : o.channel}
       </p>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-3">
           <Card
             title={
               <span className="flex items-center gap-2">
-                <StatusBadge status={o.fulfillment} /> {o.items} item{o.items === 1 ? '' : 's'}
+                <StatusBadge status={cod?.status ?? o.fulfillment} /> {o.items} item{o.items === 1 ? '' : 's'}
               </span>
             }
           >
@@ -87,7 +103,11 @@ export default async function OrderPage({ params }: Props) {
                 </li>
               ))}
             </ul>
-            <OrderActions id={o.id} fulfillment={o.fulfillment} archived={o.archived} refunded={o.payment === 'refunded'} writable={storeWritable()} />
+            {cod ? (
+              <CodActions id={o.id} status={cod.status} archived={o.archived} writable={storeWritable()} />
+            ) : (
+              <OrderActions id={o.id} fulfillment={o.fulfillment} archived={o.archived} refunded={o.payment === 'refunded'} writable={storeWritable()} />
+            )}
           </Card>
           <Card title={<span className="flex items-center gap-2"><StatusBadge status={o.payment} /> Payment</span>}>
             <dl className="space-y-1.5">
@@ -96,20 +116,37 @@ export default async function OrderPage({ params }: Props) {
                 <dd className="num">{money(o.subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-[#4a525c]">Shipping</dt>
+                <dt className="text-[#4a525c]">
+                  Delivery · {COURIER}
+                  {cod ? `, ${cod.method === 'home' ? 'home' : 'stop desk'}` : ''}
+                </dt>
                 <dd className="num">{o.shipping ? money(o.shipping) : 'Free'}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-[#4a525c]">Tax (8%)</dt>
-                <dd className="num">{money(o.tax)}</dd>
-              </div>
+              {o.tax > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-[#4a525c]">Tax</dt>
+                  <dd className="num">{money(o.tax)}</dd>
+                </div>
+              )}
               <div className="adm-sep flex justify-between pt-2 font-semibold">
                 <dt>Total</dt>
                 <dd className="num">{money(o.total)}</dd>
               </div>
               <div className="flex justify-between text-[#4a525c]">
-                <dt>{o.payment === 'paid' ? 'Paid by customer' : o.payment === 'refunded' ? 'Refunded' : 'Awaiting payment'}</dt>
-                <dd className="num">{o.payment === 'pending' ? money(0) : money(o.total)}</dd>
+                <dt>
+                  {o.payment === 'paid'
+                    ? cod
+                      ? 'Collected in cash'
+                      : 'Paid by customer'
+                    : o.payment === 'refunded'
+                      ? 'Refunded'
+                      : o.payment === 'cod'
+                        ? 'Cash to collect on delivery'
+                        : o.payment === 'void'
+                          ? 'Nothing collected'
+                          : 'Awaiting payment'}
+                </dt>
+                <dd className="num">{o.payment === 'pending' || o.payment === 'void' ? money(0) : money(o.total)}</dd>
               </div>
             </dl>
           </Card>
@@ -132,18 +169,57 @@ export default async function OrderPage({ params }: Props) {
             <Link href={`/admin/orders?q=${encodeURIComponent(o.customer.name)}`} className="adm-link text-[12.5px]">
               {history.length} order{history.length === 1 ? '' : 's'}
             </Link>
-            <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Contact</p>
-            <p className="break-all">{o.customer.email}</p>
-            <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Shipping address</p>
-            <p>
-              {o.customer.name}
-              <br />
-              {o.customer.city}, {o.customer.country}
-            </p>
+            {cod ? (
+              <>
+                <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Phone</p>
+                <p className="num text-[15px] font-semibold">{formatPhone(cod.phone)}</p>
+                <p className="mt-1 flex gap-3 text-[12.5px]">
+                  <a href={`tel:${cod.phone}`} className="adm-link">
+                    Call
+                  </a>
+                  <a href={`sms:${cod.phone}`} className="adm-link">
+                    SMS
+                  </a>
+                </p>
+                <p className="mt-3 rounded-lg bg-[#f6f7f9] px-3 py-2 text-[12.5px]" data-testid="confirm-by">
+                  {cod.confirm === 'call' ? `Wants a call to confirm (${brand.commerce.confirmCall})` : 'Wants an SMS to confirm'}
+                </p>
+                <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Delivery address</p>
+                <p className="whitespace-pre-wrap">
+                  {o.customer.name}
+                  <br />
+                  {cod.address}
+                  <br />
+                  {cod.commune}
+                  <br />
+                  {String(cod.wilaya).padStart(2, '0')} · {cod.wilayaName}
+                </p>
+                <p className="mt-2 text-[12.5px] text-[#4a525c]">{cod.method === 'home' ? `${COURIER} · home delivery` : `${COURIER} · stop desk (pick-up at the office)`}</p>
+                {cod.note && (
+                  <>
+                    <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Customer note</p>
+                    <p className="whitespace-pre-wrap">{cod.note}</p>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Contact</p>
+                <p className="break-all">{o.customer.email}</p>
+                <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Shipping address</p>
+                <p>
+                  {o.customer.name}
+                  <br />
+                  {o.customer.city}, {o.customer.country}
+                </p>
+              </>
+            )}
           </Card>
-          <Card title="Sample data">
-            <p className="text-[#66707c]">This order is generated so the admin can be tried out. The store’s checkout doesn’t take real orders yet.</p>
-          </Card>
+          {!cod && (
+            <Card title="Sample data">
+              <p className="text-[#66707c]">This order is generated so the admin can be tried out. Sample orders disappear once the first real order comes in.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>

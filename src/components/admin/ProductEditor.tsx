@@ -21,7 +21,8 @@ const toCents = (s: string) => {
   const n = Number(s.replace(/[^0-9.]/g, ''));
   return s.trim() === '' || !Number.isFinite(n) ? null : Math.round(n * 100);
 };
-const fromCents = (c: number | null) => (c === null ? '' : (c / 100).toFixed(2));
+/** centimes → "6200" (whole dinars), "6200.50" only when there are centimes */
+const fromCents = (c: number | null) => (c === null ? '' : (c / 100).toFixed(c % 100 ? 2 : 0));
 
 const SIZE_PRESETS: { label: string; sizes: string[] }[] = [
   { label: 'One size', sizes: ['One size'] },
@@ -215,7 +216,7 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
                   Price
                 </label>
                 <div className="adm-affix">
-                  <span>$</span>
+                  <span>DA</span>
                   <input id="p-price" className="adm-input num" inputMode="decimal" value={prices.price} onChange={(e) => setPrices((p) => ({ ...p, price: e.target.value }))} {...inv('price')} />
                 </div>
                 {err('price')}
@@ -225,7 +226,7 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
                   Compare-at price
                 </label>
                 <div className="adm-affix">
-                  <span>$</span>
+                  <span>DA</span>
                   <input
                     id="p-compare"
                     className="adm-input num"
@@ -243,7 +244,7 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
                   Cost per item
                 </label>
                 <div className="adm-affix">
-                  <span>$</span>
+                  <span>DA</span>
                   <input id="p-cost" className="adm-input num" inputMode="decimal" value={prices.cost} onChange={(e) => setPrices((p) => ({ ...p, cost: e.target.value }))} placeholder="—" />
                 </div>
                 <p className="adm-help">Customers won’t see this.</p>
@@ -371,7 +372,25 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
               ))}
             </select>
             <p className="adm-help">
-              {form.status === 'active' ? 'On sale in the online store.' : form.status === 'draft' ? 'Hidden from the store while you work on it.' : 'Hidden and kept for the record.'}
+              {form.status === 'active' ? 'Shown in the online store.' : form.status === 'draft' ? 'Hidden from the store while you work on it.' : 'Hidden and kept for the record.'}
+            </p>
+            <div className="adm-sep mt-3 flex items-center justify-between gap-3 pt-3">
+              <div>
+                <p className="font-medium">Coming soon</p>
+                <p className="text-[12px] text-[#66707c]">Show it in the store, but it can’t be ordered yet</p>
+              </div>
+              <Switch checked={form.comingSoon} onChange={(v) => set('comingSoon', v)} label="Coming soon" />
+            </div>
+            <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[#4a525c]" data-testid="store-availability">
+              In the store:{' '}
+              {form.comingSoon ? <Badge tone="info">Coming soon</Badge> : units === 0 ? <Badge tone="bad">Out of stock</Badge> : <Badge tone="good">In stock</Badge>}
+            </p>
+            <p className="adm-help">
+              {form.comingSoon
+                ? units === 0
+                  ? 'No stock yet: it shows as Coming soon until you turn this off.'
+                  : `${units} in stock, held back as Coming soon until you turn this off.`
+                : 'Out of stock shows by itself when every size is at 0.'}
             </p>
           </Card>
 

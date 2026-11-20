@@ -1,11 +1,19 @@
 import { brand } from '@/config/brand';
 
-const fmt = new Intl.NumberFormat(brand.commerce.locale, {
-  style: 'currency',
-  currency: brand.commerce.currency,
-});
+/**
+ * "12 500 DA". Built by hand (not Intl) so the server and every browser print exactly the same
+ * characters — a different ICU build must not cause a hydration mismatch.
+ */
+/** no-break space: "12 500 DA" never wraps */
+const NBSP = String.fromCharCode(160);
+export const formatPrice = (centimes: number) => {
+  const da = Math.round(centimes / 100);
+  const digits = String(Math.abs(da)).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+  return `${da < 0 ? '-' : ''}${digits}${NBSP}DA`;
+};
 
-export const formatPrice = (cents: number) => fmt.format(cents / 100);
+/** A demo US list price (cents) → dinars (centimes), rounded to 100 DA. */
+export const usdToDzd = (usdCents: number) => Math.max(1, Math.round(((usdCents / 100) * brand.commerce.demoUsdRate) / 100)) * 100 * 100;
 
 /**
  * A product name short enough for a card: the part before any " - " / "(" / "," detail (colourway,

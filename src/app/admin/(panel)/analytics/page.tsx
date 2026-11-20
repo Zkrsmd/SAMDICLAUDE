@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BarList, SalesChart } from '@/components/admin/charts';
 import { Card, PageHead, RangeTabs, SampleNote, Thumb, money, pct } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
-import { RANGES, parseRange, report } from '@/lib/admin/orders';
+import { RANGES, parseRange, report, showingSamples } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Analytics' };
 
@@ -23,7 +23,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       <PageHead title="Analytics">
         <RangeTabs range={range} base="/admin/analytics" />
       </PageHead>
-      <SampleNote>Reports are built from the sample orders, compared with the {r.days} days before.</SampleNote>
+      {showingSamples() ? <SampleNote>Reports are built from the sample orders, compared with the {r.days} days before.</SampleNote> : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {stats.map(([label, value, delta]) => (
           <div key={label} className="adm-card adm-card-pad">

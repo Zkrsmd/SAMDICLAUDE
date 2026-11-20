@@ -76,6 +76,8 @@ export interface Product {
   compareAt?: number;
   /** Units per size, when the admin tracks stock (a size at 0 is sold out). */
   stock?: Record<string, number>;
+  /** Announced but not on sale yet (set in the admin): shown as "Coming soon", whatever the stock. */
+  comingSoon?: boolean;
   short: string;
   description: string;
   features: string[];

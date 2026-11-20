@@ -52,6 +52,12 @@ export function ProductExperience({
   const setUi = useUi((s) => s.set);
   const setPending = useTransitionStore((s) => s.setPending);
   const color = product.colors.find((c) => c.id === colorId)!;
+  // coming soon (admin switch) wins over stock; out of stock = every size at 0
+  const avail: 'in' | 'out' | 'soon' = product.comingSoon
+    ? 'soon'
+    : product.stock && product.sizes.every((s) => (product.stock?.[s] ?? 0) <= 0)
+      ? 'out'
+      : 'in';
   const images = product.images?.length ? product.images : [renderUrl(product.slug)];
   const exhibit = useRef<HTMLDivElement>(null);
   const purchase = useRef<HTMLDivElement>(null);
@@ -419,6 +425,30 @@ export function ProductExperience({
               )}
             </fieldset>
 
+            {avail !== 'in' ? (
+              <div className="mt-6" role="status">
+                <div className="flex items-center gap-3">
+                  <p className={`flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-semibold ${avail === 'soon' ? 'bg-ink text-white' : 'border border-line bg-white text-muted'}`}>
+                    {avail === 'soon' ? 'Coming soon' : 'Out of stock'}
+                  </p>
+                  <button
+                    type="button"
+                    className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white"
+                    aria-pressed={hydrated ? wished : false}
+                    aria-label="Save to wishlist"
+                    onClick={() => toggleWish(product.slug)}
+                  >
+                    <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
+                  </button>
+                </div>
+                <p className="mt-3 text-[14px] text-muted">
+                  {avail === 'soon'
+                    ? 'This product arrives soon and can’t be ordered yet. Save it to your wishlist to find it again.'
+                    : 'Sold out for now. Save it to your wishlist to find it again when it’s back.'}
+                </p>
+              </div>
+            ) : (
+            <>
             <div className="mt-6 flex items-center gap-3">
               <div className="flex items-center rounded-full border border-line bg-white" role="group" aria-label="Quantity">
                 <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label="Decrease quantity" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
@@ -448,6 +478,8 @@ export function ProductExperience({
             <button type="button" className="btn btn-line mt-3 h-12 w-full rounded-full" onClick={() => addToCart(true)}>
               Buy now
             </button>
+            </>
+            )}
             {added && (
               <p className="mt-3 text-[14px]" role="status">
                 Added to your bag.{' '}
@@ -459,11 +491,15 @@ export function ProductExperience({
             <dl className="mt-6 space-y-2 border-t border-line pt-4 text-[13px] text-muted">
               <div className="flex justify-between gap-4">
                 <dt>Availability</dt>
-                <dd className="text-right">Not tracked in this demo — confirmed at checkout</dd>
+                <dd className={`text-right ${avail === 'in' ? 'text-ink' : ''}`}>{avail === 'soon' ? 'Coming soon' : avail === 'out' ? 'Out of stock' : 'In stock'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt>Delivery</dt>
-                <dd className="text-right">Delivery information placeholder</dd>
+                <dd className="text-right">ZR Express to all 58 wilayas · home or stop desk</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Payment</dt>
+                <dd className="text-right">Cash on delivery</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt>Returns</dt>
@@ -528,15 +564,19 @@ export function ProductExperience({
               {formatPrice(product.price)} {size ? `· ${size}` : ''}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-ink h-11 px-4"
-            onClick={() => {
-              if (!addToCart()) purchase.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }}
-          >
-            Add to bag
-          </button>
+          {avail !== 'in' ? (
+            <span className="eyebrow rounded-full border border-line px-4 py-3 text-muted">{avail === 'soon' ? 'Coming soon' : 'Out of stock'}</span>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ink h-11 px-4"
+              onClick={() => {
+                if (!addToCart()) purchase.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+            >
+              Add to bag
+            </button>
+          )}
         </div>
       </div>
 

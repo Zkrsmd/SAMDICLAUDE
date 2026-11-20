@@ -1,13 +1,19 @@
 import 'server-only';
+import { WILAYAS, wilayaName } from '@/data/delivery/wilayas';
 import { getAdminProducts } from '@/lib/catalog';
 import { readOverrides } from '@/lib/store/overrides';
+import { listCodOrders, type CodOrder, type CodStatus } from '@/lib/store/orders';
 import type { Fulfillment } from '@/lib/validation/admin';
+import type { ConfirmBy, DeliveryMethod } from '@/lib/validation/order';
 
 /**
- * SAMPLE orders, so the dashboard, orders, customers and analytics have something real-shaped to
- * show. The store takes no orders yet (the checkout is a demonstration), so these are generated:
- * the same orders on every load (seeded per day), from the live catalogue. Fulfilment, archive and
- * notes you set in the admin are saved for real (store file → orders).
+ * Orders for the admin.
+ *
+ * - REAL orders from the website's cash-on-delivery checkout (src/lib/store/orders.ts).
+ * - Until the first real order arrives, SAMPLE orders instead, so the dashboard, orders, customers
+ *   and analytics have something real-shaped to show: generated the same on every load (seeded per
+ *   day) from the live catalogue. They disappear by themselves once a real order comes in, so fake
+ *   sales never mix with real ones.
  */
 
 export interface OrderLine {
@@ -25,10 +31,13 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
+  /** website customers: the mobile they ordered with */
+  phone?: string;
   city: string;
   country: string;
 }
-export type Payment = 'paid' | 'pending' | 'refunded';
+/** cod: cash to collect on delivery · void: cancelled or returned, nothing collected */
+export type Payment = 'paid' | 'pending' | 'refunded' | 'cod' | 'void';
 export interface Order {
   id: string;
   number: number;
@@ -45,14 +54,27 @@ export interface Order {
   fulfillment: Fulfillment;
   archived: boolean;
   notes: { at: string; text: string }[];
+  /** set on real website orders (cash on delivery); absent on sample orders */
+  cod?: {
+    status: CodStatus;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    wilaya: number;
+    wilayaName: string;
+    commune: string;
+    address: string;
+    method: DeliveryMethod;
+    confirm: ConfirmBy;
+    note: string;
+    history: { at: string; status: CodStatus }[];
+  };
 }
 
 const FIRST = ['Lena', 'Omar', 'Sofia', 'Yusuf', 'Maya', 'Ilias', 'Nora', 'Karim', 'Elif', 'Jonas', 'Amira', 'Theo', 'Sara', 'Adam', 'Lina', 'Rayan', 'Mila', 'Noah', 'Ines', 'Samir', 'Hana', 'Lucas', 'Aya', 'Felix'];
 const LAST = ['Berg', 'Haddad', 'Moreau', 'Kaya', 'Novak', 'Rossi', 'Amrani', 'Fischer', 'Silva', 'Jansen', 'Benali', 'Costa', 'Lindqvist', 'Mendes', 'Okafor', 'Duarte'];
-const PLACES: [string, string][] = [
-  ['Amsterdam', 'NL'], ['Lyon', 'FR'], ['Berlin', 'DE'], ['Madrid', 'ES'], ['Milan', 'IT'], ['Brussels', 'BE'], ['Lisbon', 'PT'],
-  ['Stockholm', 'SE'], ['Vienna', 'AT'], ['Casablanca', 'MA'], ['Dublin', 'IE'], ['Copenhagen', 'DK'],
-];
+/** sample customers live in the busiest wilayas */
+const PLACES = [16, 31, 25, 19, 9, 35, 6, 15, 23, 5, 42, 13];
 
 const DAY = 86_400_000;
 /** the first sample day (order numbers count up from #1001 here) */
@@ -73,14 +95,62 @@ const customers: Customer[] = Array.from({ length: 64 }, (_, i) => {
   const r = rng(9000 + i);
   const first = FIRST[Math.floor(r() * FIRST.length)]!;
   const last = LAST[Math.floor(r() * LAST.length)]!;
-  const [city, country] = PLACES[Math.floor(r() * PLACES.length)]!;
-  return { id: `c${1000 + i}`, name: `${first} ${last}`, email: `${first}.${last}${i}@example.com`.toLowerCase(), city, country };
+  const code = PLACES[Math.floor(r() * PLACES.length)]!;
+  return { id: `c${1000 + i}`, name: `${first} ${last}`, email: `${first}.${last}${i}@example.com`.toLowerCase(), city: wilayaName(code), country: 'DZ' };
 });
 
 let memo: { key: string; orders: Order[] } | null = null;
 
-/** Every sample order up to today, newest first, with the admin's saved changes applied. */
+const homeFee = (city: string) => (WILAYAS.find((w) => w.name === city)?.home ?? 800) * 100;
+
+/** A real website order, shaped like every other order in the admin. */
+function fromCod(c: CodOrder): Order {
+  const name = `${c.firstName} ${c.lastName}`;
+  const city = `${c.commune}, ${wilayaName(c.wilaya)}`;
+  return {
+    id: c.id,
+    number: c.number,
+    createdAt: c.createdAt,
+    channel: 'Online store',
+    customer: { id: `tel:${c.phone}`, name, email: '', phone: c.phone, city, country: 'DZ' },
+    lines: c.lines.map((l) => ({ slug: l.slug, name: l.name, brandName: l.brandName, sport: l.sport, size: l.size, qty: l.qty, unit: l.unit, total: l.total, image: l.image })),
+    items: c.lines.reduce((n, l) => n + l.qty, 0),
+    subtotal: c.subtotal,
+    shipping: c.delivery,
+    tax: 0,
+    total: c.total,
+    payment: c.status === 'delivered' ? 'paid' : c.status === 'returned' || c.status === 'cancelled' ? 'void' : 'cod',
+    fulfillment: c.status === 'new' || c.status === 'confirmed' ? 'unfulfilled' : 'fulfilled',
+    archived: c.archived,
+    notes: c.notes,
+    cod: {
+      status: c.status,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      phone: c.phone,
+      wilaya: c.wilaya,
+      wilayaName: wilayaName(c.wilaya),
+      commune: c.commune,
+      address: c.address,
+      method: c.method,
+      confirm: c.confirm,
+      note: c.note,
+      history: c.history,
+    },
+  };
+}
+
+/** true while the admin shows sample orders (no real order yet) */
+export const showingSamples = () => listCodOrders().length === 0;
+
+/** Every order, newest first: the real ones, or (before the first real order) the samples. */
 export function getOrders(): Order[] {
+  const real = listCodOrders();
+  return real.length ? real.map(fromCod) : sampleOrders();
+}
+
+/** Every sample order up to today, newest first, with the admin's saved changes applied. */
+function sampleOrders(): Order[] {
   const o = readOverrides();
   const today = Math.floor(Date.now() / DAY) * DAY;
   const products = getAdminProducts().filter((p) => p.status !== 'archived');
@@ -119,8 +189,8 @@ export function getOrders(): Order[] {
         });
       }
       const subtotal = lines.reduce((s, l) => s + l.total, 0);
-      const shipping = subtotal >= 15000 ? 0 : 695;
-      const tax = Math.round(subtotal * 0.08);
+      const shipping = homeFee(customer.city);
+      const tax = 0;
       const at = day + Math.floor((8 + r() * 14) * 3_600_000);
       // later today hasn't happened yet: keep the order number, skip the order
       if (at > now) {
@@ -163,7 +233,7 @@ export const RANGES = { '7': 7, '30': 30, '90': 90 } as const;
 export type RangeKey = keyof typeof RANGES;
 export const parseRange = (v: unknown): RangeKey => (typeof v === 'string' && v in RANGES ? (v as RangeKey) : '30');
 
-const counted = (o: Order) => o.payment !== 'refunded';
+const counted = (o: Order) => o.payment !== 'refunded' && o.payment !== 'void';
 
 export function report(days: number) {
   const orders = getOrders();

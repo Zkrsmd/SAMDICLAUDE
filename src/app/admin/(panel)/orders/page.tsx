@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { OrdersTable } from '@/components/admin/OrdersTable';
 import { PageHead, SampleNote } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
-import { getOrders } from '@/lib/admin/orders';
+import { getOrders, showingSamples } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Orders' };
 
@@ -19,13 +19,19 @@ export default async function OrdersPage() {
     payment: o.payment,
     fulfillment: o.fulfillment,
     archived: o.archived,
+    status: o.cod?.status,
+    phone: o.cod?.phone,
+    wilaya: o.cod ? `${o.cod.wilayaName}` : undefined,
   }));
   return (
     <div className="adm-page">
       <PageHead title="Orders" />
-      <SampleNote>
-        Sample orders (the checkout doesn’t take orders yet). Fulfilment, archiving and notes you set here are saved.
-      </SampleNote>
+      {showingSamples() ? (
+        <SampleNote>
+          Sample orders, shown until the first real order comes in from the checkout (then they disappear). Real orders are kept in{' '}
+          <span className="mono">.data/orders.json</span>, never in git.
+        </SampleNote>
+      ) : null}
       <OrdersTable rows={rows} />
     </div>
   );

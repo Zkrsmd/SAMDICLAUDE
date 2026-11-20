@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { addOrderNote, updateOrders } from '@/app/admin/actions';
+import { addOrderNote, setOrderStatus, updateOrders } from '@/app/admin/actions';
 import { AIcon } from './ui';
 import { toast } from './client';
 
@@ -62,5 +62,56 @@ export function OrderNotes({ id, writable }: { id: string; writable: boolean }) 
         {pending ? 'Posting…' : 'Post'}
       </button>
     </form>
+  );
+}
+
+const NEXT: Record<string, { to: string; label: string; primary?: boolean; done: string }[]> = {
+  new: [
+    { to: 'confirmed', label: 'Confirm order', primary: true, done: 'Order confirmed' },
+    { to: 'cancelled', label: 'Cancel', done: 'Order cancelled, stock put back' },
+  ],
+  confirmed: [
+    { to: 'shipped', label: 'Mark as shipped', primary: true, done: 'Marked as shipped' },
+    { to: 'cancelled', label: 'Cancel', done: 'Order cancelled, stock put back' },
+  ],
+  shipped: [
+    { to: 'delivered', label: 'Delivered · cash collected', primary: true, done: 'Marked as delivered' },
+    { to: 'returned', label: 'Returned', done: 'Marked as returned, stock put back' },
+  ],
+  delivered: [{ to: 'returned', label: 'Returned', done: 'Marked as returned, stock put back' }],
+  returned: [{ to: 'confirmed', label: 'Reopen', done: 'Order reopened' }],
+  cancelled: [{ to: 'confirmed', label: 'Reopen', done: 'Order reopened' }],
+};
+
+/** Website (cash on delivery) orders: confirm after the call/SMS, ship, deliver — or cancel / return. */
+export function CodActions({ id, status, archived, writable }: { id: string; status: string; archived: boolean; writable: boolean }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const go = (fn: () => ReturnType<typeof setOrderStatus>, done: string) =>
+    start(async () => {
+      const res = await fn();
+      if (res.ok) {
+        toast(done);
+        router.refresh();
+      } else toast(res.error, 'bad');
+    });
+  return (
+    <div className="adm-sep mt-1 flex flex-wrap justify-end gap-2 pt-3">
+      <button type="button" className="adm-btn" disabled={pending || !writable} onClick={() => go(() => updateOrders([id], { archived: !archived }), archived ? 'Unarchived' : 'Archived')}>
+        {archived ? 'Unarchive' : 'Archive'}
+      </button>
+      {(NEXT[status] ?? []).map((n) => (
+        <button
+          key={n.to}
+          type="button"
+          className={`adm-btn ${n.primary ? 'adm-btn-primary' : ''}`}
+          disabled={pending || !writable}
+          onClick={() => go(() => setOrderStatus(id, n.to as Parameters<typeof setOrderStatus>[1]), n.done)}
+        >
+          {n.primary && n.to === 'shipped' ? <AIcon name="truck" size={15} /> : null}
+          {n.label}
+        </button>
+      ))}
+    </div>
   );
 }

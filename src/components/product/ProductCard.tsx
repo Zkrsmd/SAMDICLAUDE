@@ -78,7 +78,7 @@ export function ProductCard({
     });
   };
   return (
-    <article className={`pcard group ${className}`} style={style}>
+    <article className={`pcard group ${className}`} style={style} data-availability={p.availability}>
       <Link href={href} className="pcard-media" aria-label={`${p.brandName} ${p.name}`} onClick={open}>
         <span className="pcard-stage">
           <span className="pcard-shadow" aria-hidden />
@@ -88,9 +88,17 @@ export function ProductCard({
         </span>
       </Link>
       <div className="pointer-events-none absolute left-2.5 top-2.5 flex gap-1.5">
-        {p.isNew && <span className="pcard-badge pcard-badge-new">New</span>}
-        {p.soldOut ? <span className="pcard-badge">Sold out</span> : p.compareAt ? <span className="pcard-badge pcard-badge-new">Sale</span> : null}
-        {p.bestSeller && !p.soldOut && <span className="pcard-badge">Best seller</span>}
+        {p.availability === 'soon' ? (
+          <span className="pcard-badge pcard-badge-soon">Coming soon</span>
+        ) : p.availability === 'out' ? (
+          <span className="pcard-badge">Out of stock</span>
+        ) : (
+          <>
+            {p.isNew && <span className="pcard-badge pcard-badge-new">New</span>}
+            {p.compareAt ? <span className="pcard-badge pcard-badge-new">Sale</span> : null}
+            {p.bestSeller && <span className="pcard-badge">Best seller</span>}
+          </>
+        )}
       </div>
       <button
         type="button"
@@ -118,7 +126,7 @@ export function ProductCard({
             ) : null}
           </span>
         </div>
-        <QuickAdd slug={p.slug} name={p.name} colorId={colorId} sizes={p.sizes} soldOut={p.soldOutSizes} />
+        <QuickAdd slug={p.slug} name={p.name} colorId={colorId} sizes={p.sizes} soldOut={p.soldOutSizes} availability={p.availability} />
       </div>
     </article>
   );

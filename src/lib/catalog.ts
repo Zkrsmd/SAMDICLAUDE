@@ -50,6 +50,7 @@ const inputFrom = (p: Product, i: number): ProductInput => ({
   bestSeller: !!p.bestSeller,
   isNew: !!p.isNew,
   featured: !!p.featured,
+  comingSoon: !!p.comingSoon,
   status: 'active',
   seoTitle: '',
   seoDescription: '',
@@ -71,6 +72,7 @@ const applyInput = (p: Product, i: ProductInput): Product => ({
   bestSeller: i.bestSeller,
   isNew: i.isNew,
   featured: i.featured,
+  comingSoon: i.comingSoon,
   colors: [{ id: p.colors[0]!.id, name: i.colorName, swatch: [i.swatch], palette: { primary: i.swatch, secondary: i.swatch, accent: i.swatch } }],
   specs: p.specs.map((s) => (s.label === 'Colour' ? { ...s, value: i.colorName } : s)),
   model: p.sub === i.sub ? p.model : { kind: KIND[i.sub] ?? 'bag' },
@@ -179,6 +181,15 @@ export const isCatalogSlug = (slug: string) => baseSlugs.has(slug);
 export const soldOut = (p: Pick<Product, 'stock' | 'sizes'>) => !!p.stock && p.sizes.every((s) => (p.stock?.[s] ?? 0) <= 0);
 export const sizeAvailable = (p: Pick<Product, 'stock'>, size: string) => !p.stock || (p.stock[size] ?? 0) > 0;
 
+/**
+ * What the store says about a product:
+ * - "soon": the admin ticked Coming soon (with or without stock) — shown, not sold yet
+ * - "out": not coming soon and every size is at 0
+ * - "in": on sale
+ */
+export type Availability = 'in' | 'out' | 'soon';
+export const availability = (p: Pick<Product, 'stock' | 'sizes' | 'comingSoon'>): Availability => (p.comingSoon ? 'soon' : soldOut(p) ? 'out' : 'in');
+
 export interface CardData {
   slug: string;
   name: string;
@@ -189,6 +200,8 @@ export interface CardData {
   price: number;
   compareAt: number | null;
   soldOut: boolean;
+  /** "in" on sale, "out" out of stock, "soon" coming soon (not sold yet) */
+  availability: Availability;
   /** sizes at 0 when stock is tracked */
   soldOutSizes: string[];
   short: string;
@@ -210,6 +223,7 @@ export const toCard = (p: Product): CardData => ({
   price: p.price,
   compareAt: p.compareAt ?? null,
   soldOut: soldOut(p),
+  availability: availability(p),
   soldOutSizes: p.stock ? p.sizes.filter((s) => (p.stock?.[s] ?? 0) <= 0) : [],
   short: p.short,
   colors: p.colors.map(({ id, name, swatch }) => ({ id, name, swatch })),

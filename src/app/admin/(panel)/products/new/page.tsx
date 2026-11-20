@@ -34,6 +34,7 @@ export default async function NewProductPage() {
           bestSeller: false,
           isNew: true,
           featured: false,
+          comingSoon: false,
           status: 'draft',
           seoTitle: '',
           seoDescription: '',

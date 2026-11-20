@@ -6,9 +6,13 @@ import { checkPassword, endSession, isAdmin, startSession } from '@/lib/admin/au
 import { getAdminProduct, getAdminProducts, isCatalogSlug } from '@/lib/catalog';
 import { getOrder } from '@/lib/admin/orders';
 import { clientKey, rateLimit } from '@/lib/security/rateLimit';
-import { ReadOnlyStoreError, replaceOverrides, updateOverrides } from '@/lib/store/overrides';
+import { ReadOnlyStoreError, replaceOverrides, toDinars, updateOverrides } from '@/lib/store/overrides';
+import { inputOf, patchProduct } from '@/lib/store/product-patch';
+import { COD_STATUS, StockError, addCodNote, getCodOrder, patchCodOrders, setCodStatus, type CodStatus } from '@/lib/store/orders';
+import { WILAYAS } from '@/data/delivery/wilayas';
 import {
   BulkSchema,
+  DeliverySchema,
   EMPTY_OVERRIDES,
   FULFILLMENT,
   InventorySchema,
@@ -16,7 +20,6 @@ import {
   ProductInputSchema,
   fieldErrors,
   type ActionResult,
-  type AdminProduct,
   type BulkAction,
   type Overrides,
   type ProductInput,
@@ -46,39 +49,6 @@ async function write(change: (d: Overrides) => void) {
   // the whole storefront reads the catalogue: refresh every page
   revalidatePath('/', 'layout');
   return null;
-}
-
-/** the editable part of an admin product */
-const inputOf = (p: AdminProduct): ProductInput => ({
-  name: p.name,
-  brand: p.brand,
-  sport: p.sport,
-  sub: p.sub,
-  price: p.price,
-  compareAt: p.compareAt,
-  cost: p.cost,
-  short: p.short,
-  description: p.description,
-  sizes: p.sizes,
-  stock: p.stock,
-  sku: p.sku,
-  colorName: p.colorName,
-  swatch: p.swatch,
-  tags: p.tags,
-  bestSeller: p.bestSeller,
-  isNew: p.isNew,
-  featured: p.featured,
-  status: p.status,
-  seoTitle: p.seoTitle,
-  seoDescription: p.seoDescription,
-});
-
-/** apply a change to a product, wherever it is kept (an edit of a catalogue product, or an added one) */
-function patchProduct(d: Overrides, p: AdminProduct, change: (input: ProductInput) => ProductInput) {
-  if (p.created) {
-    const i = d.created.findIndex((c) => c.slug === p.slug);
-    if (i >= 0) d.created[i] = { ...d.created[i]!, ...change(d.created[i]!) };
-  } else d.products[p.slug] = change(d.products[p.slug] ?? inputOf(p));
 }
 
 /* --------------------------------- session -------------------------------- */
@@ -168,6 +138,8 @@ const BULK: Record<Exclude<BulkAction, 'delete'>, Partial<ProductInput>> = {
   'best-off': { bestSeller: false },
   'new-on': { isNew: true },
   'new-off': { isNew: false },
+  'soon-on': { comingSoon: true },
+  'soon-off': { comingSoon: false },
 };
 
 export async function bulkProducts(slugs: string[], action: BulkAction): Promise<ActionResult> {
@@ -207,11 +179,23 @@ export async function saveInventory(changes: { slug: string; size: string; qty: 
 export async function updateOrders(ids: string[], patch: { fulfillment?: (typeof FULFILLMENT)[number]; archived?: boolean }): Promise<ActionResult> {
   const denied = await guard();
   if (denied) return denied;
-  if (!Array.isArray(ids) || !ids.length || ids.length > 1000 || ids.some((id) => typeof id !== 'string' || !/^o\d{4,7}$/.test(id)))
+  if (!Array.isArray(ids) || !ids.length || ids.length > 1000 || ids.some((id) => typeof id !== 'string' || !/^[ow]\d{4,7}$/.test(id)))
     return fail('Choose some orders first.');
   if (patch.fulfillment !== undefined && !FULFILLMENT.includes(patch.fulfillment)) return fail('Unknown status.');
+  // website orders (w…) live in the orders file and move by their own statuses; only archiving applies here
+  const web = ids.filter((id) => id.startsWith('w'));
+  const sample = ids.filter((id) => id.startsWith('o'));
+  if (web.length && typeof patch.archived === 'boolean') {
+    try {
+      await patchCodOrders(web, { archived: patch.archived });
+    } catch (e) {
+      return fail(e instanceof ReadOnlyStoreError ? e.message : 'Could not save.');
+    }
+    revalidatePath('/admin', 'layout');
+  }
+  if (!sample.length) return { ok: true };
   const err = await write((d) => {
-    for (const id of ids) {
+    for (const id of sample) {
       d.orders[id] = {
         ...d.orders[id],
         ...(patch.fulfillment ? { fulfillment: patch.fulfillment } : {}),
@@ -228,9 +212,56 @@ export async function addOrderNote(id: string, text: string): Promise<ActionResu
   const note = typeof text === 'string' ? text.trim() : '';
   if (!note || note.length > 1000) return fail('Write a note of up to 1000 characters.');
   if (!getOrder(id)) return fail('This order no longer exists.');
+  if (id.startsWith('w')) {
+    try {
+      await addCodNote(id, note);
+    } catch (e) {
+      return fail(e instanceof ReadOnlyStoreError ? e.message : 'Could not save the note.');
+    }
+    revalidatePath('/admin', 'layout');
+    return { ok: true };
+  }
   const err = await write((d) => {
     const cur = d.orders[id] ?? {};
     d.orders[id] = { ...cur, notes: [...(cur.notes ?? []), { at: new Date().toISOString(), text: note }].slice(-100) };
+  });
+  return err ?? { ok: true };
+}
+
+/** Move a website order along: confirm it after the call/SMS, ship, deliver, cancel, mark returned. */
+export async function setOrderStatus(id: string, status: CodStatus): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (typeof id !== 'string' || !/^w\d{5,7}$/.test(id) || !getCodOrder(id)) return fail('This order no longer exists.');
+  if (!COD_STATUS.includes(status)) return fail('Unknown status.');
+  try {
+    await setCodStatus(id, status);
+  } catch (e) {
+    if (e instanceof StockError) return fail(`Not enough stock to reopen it: ${e.message}.`);
+    if (e instanceof ReadOnlyStoreError) return fail(e.message);
+    console.error('[admin] order status failed', e);
+    return fail('Could not save. Check the server log.');
+  }
+  // stock may have moved: refresh the store too
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/* -------------------------------- delivery -------------------------------- */
+
+/** Save delivery prices per wilaya (DA; null = not offered). Prices equal to the starting list are not stored. */
+export async function saveDelivery(tariffs: Record<string, { home: number | null; desk: number | null }>): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  const parsed = DeliverySchema.safeParse({ tariffs });
+  if (!parsed.success) return fail('Prices must be whole dinars from 0 to 100 000.');
+  const keep: Record<string, { home: number | null; desk: number | null }> = {};
+  for (const w of WILAYAS) {
+    const t = parsed.data.tariffs[String(w.code)];
+    if (t && (t.home !== w.home || t.desk !== w.desk)) keep[String(w.code)] = t;
+  }
+  const err = await write((d) => {
+    d.delivery = { tariffs: keep };
   });
   return err ?? { ok: true };
 }
@@ -250,7 +281,8 @@ export async function importStore(json: string): Promise<ActionResult> {
   const parsed = OverridesSchema.safeParse(data);
   if (!parsed.success) return fail('That file is not a SMADI store export.');
   try {
-    await replaceOverrides(parsed.data);
+    // an export saved before the switch to dinars is converted on the way in
+    await replaceOverrides(toDinars(parsed.data));
   } catch (e) {
     return fail(e instanceof ReadOnlyStoreError ? e.message : 'Could not import.');
   }

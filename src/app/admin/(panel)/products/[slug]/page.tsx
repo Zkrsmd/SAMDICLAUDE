@@ -39,6 +39,7 @@ export default async function EditProductPage({ params }: Props) {
     bestSeller: p.bestSeller,
     isNew: p.isNew,
     featured: p.featured,
+    comingSoon: p.comingSoon,
     status: p.status,
     seoTitle: p.seoTitle,
     seoDescription: p.seoDescription,

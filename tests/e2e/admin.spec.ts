@@ -12,6 +12,8 @@ function adminPassword() {
     return undefined;
   }
 }
+/** prices print with no-break spaces: "39 900 DA" */
+const NBSP = String.fromCharCode(160);
 const STORE = path.join(process.cwd(), 'src', 'data', 'store', 'overrides.json');
 
 test('shop by sport opens a sport in place, with best sellers, new releases and see all', async ({ page }) => {
@@ -66,20 +68,57 @@ test.describe('admin', () => {
       await page.goto('/admin/products?q=control+soccer');
       await page.getByRole('link', { name: /Control Soccer Ball/ }).first().click();
       await expect(page.getByLabel('Title', { exact: true })).toHaveValue(/Control Soccer Ball/);
-      await page.getByLabel('Compare-at price').fill('199.00');
+      await page.getByLabel('Compare-at price').fill('39900');
       await expect(page.getByRole('region', { name: 'Unsaved changes' })).toBeVisible();
       await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
       await expect(page.getByText('Product saved')).toBeVisible();
 
       await page.goto('/product/nike-control-soccer-ball');
-      await expect(page.getByLabel('Was $199.00').first()).toBeVisible();
+      await expect(page.getByLabel(`Was 39${NBSP}900${NBSP}DA`).first()).toBeVisible();
 
       await page.goto('/admin/products/nike-control-soccer-ball');
       await page.getByLabel('Compare-at price').fill('');
       await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
       await expect(page.getByText('Product saved')).toBeVisible();
       await page.goto('/product/nike-control-soccer-ball');
-      await expect(page.getByLabel('Was $199.00')).toHaveCount(0);
+      await expect(page.getByLabel(`Was 39${NBSP}900${NBSP}DA`)).toHaveCount(0);
+    } finally {
+      fs.writeFileSync(STORE, original);
+    }
+  });
+
+  test('coming soon: switched on in the admin, the store shows it and won’t sell it; then put it back', async ({ page }, info) => {
+    const pw = adminPassword();
+    test.skip(!pw, 'ADMIN_PASSWORD is not set');
+    test.skip(info.project.name !== 'desktop', 'writes run once, on desktop');
+    const original = fs.readFileSync(STORE, 'utf8');
+    const slug = 'speedo-fastskin-cap-pink';
+    try {
+      await page.goto('/admin/login');
+      await page.getByLabel('Password').fill(pw!);
+      await page.getByRole('button', { name: 'Sign in' }).click();
+      await expect(page).toHaveURL(/\/admin$/);
+      await page.goto(`/admin/products/${slug}`);
+      await page.getByRole('switch', { name: 'Coming soon' }).click();
+      await expect(page.getByTestId('store-availability')).toContainText('Coming soon');
+      await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByText('Product saved')).toBeVisible();
+
+      await page.goto(`/product/${slug}`);
+      await expect(page.getByRole('status').filter({ hasText: 'Coming soon' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Add to bag' })).toHaveCount(0);
+      const quote = await page.request.post('/api/cart/quote', { data: { items: [{ productId: slug, colorId: 'standard', size: 'M', qty: 1 }] } });
+      expect((await quote.json()).rejected[0].reason).toMatch(/Coming soon/);
+      await page.goto('/swimming/caps');
+      await expect(page.locator(`.pcard[data-availability="soon"]:has(a[href="/product/${slug}"])`)).toHaveCount(1);
+
+      // switch it off in the admin (that also refreshes the cached product page), then it sells again
+      await page.goto(`/admin/products/${slug}`);
+      await page.getByRole('switch', { name: 'Coming soon' }).click();
+      await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByText('Product saved')).toBeVisible();
+      await page.goto(`/product/${slug}`);
+      await expect(page.getByRole('button', { name: 'Add to bag' }).first()).toBeVisible();
     } finally {
       fs.writeFileSync(STORE, original);
     }

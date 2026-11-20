@@ -35,11 +35,15 @@ export const brand = {
     blue: '#218FB0',
   },
   commerce: {
-    currency: 'USD',
-    locale: 'en-US',
-    /** The checkout is a demonstration until a real payment provider is integrated. */
-    demoCheckout: true,
-    freeShippingThresholdCents: null as number | null,
+    /** Algerian dinars; amounts are kept in centimes (DA × 100) everywhere, like cents. */
+    currency: 'DZD',
+    /** Cash on delivery only, Algeria only. */
+    country: 'DZ',
+    /** The demo catalogue came with US list prices: they are shown converted at this rate (DA per $),
+     *  rounded to 100 DA. Real prices are set per product in the admin. */
+    demoUsdRate: 250,
+    /** What the customer is told after ordering. */
+    confirmCall: 'within about an hour',
   },
 } as const;
 

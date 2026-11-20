@@ -49,7 +49,7 @@ export function CartDrawer() {
             <span className="eyebrow text-muted">Subtotal</span>
             <span className="mono text-[18px] font-semibold">{data ? formatPrice(data.subtotal) : '—'}</span>
           </div>
-          <p className="mt-1 text-[12px] text-muted">Priced by the server from the catalogue. Delivery calculated at checkout (placeholder).</p>
+          <p className="mt-1 text-[12px] text-muted">Delivery priced by wilaya at checkout · cash on delivery.</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Link href="/cart" className="btn btn-line" onClick={close}>
               View bag

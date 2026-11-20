@@ -11,7 +11,7 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
   const [sort, setSort] = useState<Sort>('spent');
   const view = useMemo(() => {
     const t = q.toLowerCase();
-    const out = rows.filter((c) => !t || `${c.name} ${c.email} ${c.city}`.toLowerCase().includes(t));
+    const out = rows.filter((c) => !t || `${c.name} ${c.email} ${c.phone ?? ''} ${c.city}`.toLowerCase().includes(t));
     const by: Record<Sort, (a: CustomerRow, b: CustomerRow) => number> = {
       spent: (a, b) => b.spent - a.spent,
       orders: (a, b) => b.orders - a.orders,
@@ -74,7 +74,7 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
                         </span>
                         <span className="min-w-0">
                           <span className="block font-semibold">{c.name}</span>
-                          <span className="block truncate text-[12px] text-[#66707c]">{c.email}</span>
+                          <span className="block truncate text-[12px] text-[#66707c]">{c.email || c.phone}</span>
                         </span>
                       </div>
                     </td>
