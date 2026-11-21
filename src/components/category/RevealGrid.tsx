@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { ProductCard } from '@/components/product/ProductCard';
 import type { CardData } from '@/lib/catalog';
+import { useT } from '@/i18n/client';
 
 /**
  * Product listing with the "explode" reveal: on the first visit to a listing in this session,
@@ -9,6 +10,7 @@ import type { CardData } from '@/lib/catalog';
  * The grid is interactive immediately; reduced motion disables the effect.
  */
 export function RevealGrid({ items, revealKey }: { items: CardData[]; revealKey: string }) {
+  const t = useT();
   const ref = useRef<HTMLUListElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -49,8 +51,8 @@ export function RevealGrid({ items, revealKey }: { items: CardData[]; revealKey:
   if (!items.length)
     return (
       <div className="py-20 text-center">
-        <p className="display text-[44px] text-ink/20">No matches</p>
-        <p className="mt-2 text-muted">Try removing a filter.</p>
+        <p className="display text-[44px] text-ink/20">{t('No matches')}</p>
+        <p className="mt-2 text-muted">{t('Try removing a filter.')}</p>
       </div>
     );
   return (

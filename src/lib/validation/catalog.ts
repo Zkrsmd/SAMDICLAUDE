@@ -21,6 +21,7 @@ export const ProductSchema = z.object({
   price: z.number().int().positive(),
   compareAt: z.number().int().positive().optional(),
   stock: z.record(z.string(), z.number().int().min(0)).optional(),
+  comingSoon: z.boolean().optional(),
   short: z.string().min(4),
   description: z.string().min(4),
   features: z.array(z.string()),
@@ -39,8 +40,11 @@ export const ProductSchema = z.object({
   featured: z.boolean().optional(),
   verified: z.boolean(),
   sourceNote: z.string().optional(),
-  pairsWith: z.array(z.string().regex(/^[a-z]+\/[a-z0-9-]+$/)).optional(),
+  pairsWith: z.array(z.string().regex(/^[a-z-]+\/[a-z0-9-]+$/)).optional(),
   images: z.array(z.string().regex(/^\/products\/[a-z0-9-]+\.webp$/)).optional(),
+  /** false when the product has no real photo yet (a placeholder is shown) */
+  photo: z.boolean().optional(),
+  sku: z.string().max(64).optional(),
 });
 
 export const CatalogSchema = z.array(ProductSchema).superRefine((items, ctx) => {

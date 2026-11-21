@@ -2,6 +2,7 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { renderUrl } from '@/lib/format';
 import { categoryMedia } from '@/config/hero';
 import type { SportSlug } from '@/types/catalog';
+import { getT } from '@/i18n/server';
 
 const GLOW: Partial<Record<SportSlug, string>> = {
   football: 'rgba(120,160,130,.5)',
@@ -13,7 +14,7 @@ const GLOW: Partial<Record<SportSlug, string>> = {
 };
 
 /** Category header: the sport's campaign still, the word as architecture, the hero product floating. */
-export function CategoryHero({
+export async function CategoryHero({
   sport,
   title,
   description,
@@ -30,6 +31,7 @@ export function CategoryHero({
   hero?: { slug: string; color: string; name: string };
   compact?: boolean;
 }) {
+  const t = await getT();
   const media = categoryMedia[sport];
   const glow = GLOW[sport] ?? 'rgba(255,255,255,.4)';
   const letters = title.toUpperCase().split('');
@@ -42,7 +44,7 @@ export function CategoryHero({
       <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,.55),transparent_30%,transparent_50%,rgba(0,0,0,.85))]" />
       <div aria-hidden className="absolute inset-0 -z-10" style={{ background: `radial-gradient(50% 40% at 65% 55%, ${glow}, transparent 70%)`, mixBlendMode: 'soft-light' }} />
       <div className="container-x relative flex h-full min-h-[inherit] flex-col pb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 96px)' }}>
-        <Breadcrumbs items={crumbs} light />
+        <Breadcrumbs items={crumbs} light label={t('Breadcrumb')} />
         <h1
           className="display relative z-0 mt-6 whitespace-nowrap leading-[0.8]"
           style={{ fontSize: `${Math.min(24, 96 / Math.max(4, title.length))}cqw`, filter: 'drop-shadow(0 10px 30px rgba(0,0,0,.35))' }}
@@ -75,7 +77,7 @@ export function CategoryHero({
             {description}
           </p>
           <p className="mono text-[12px] uppercase tracking-[0.16em] text-white/80">
-            <span className="font-bold text-white">{count}</span> products
+            {t('{n} products', { n: count })}
           </p>
         </div>
       </div>

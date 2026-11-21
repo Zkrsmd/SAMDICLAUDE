@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { HERO_TALL_QUERY, heroFilm, heroSlides } from '@/config/hero';
 import { useReducedMotion } from '@/hooks/useHydrated';
+import { useLocale, useT } from '@/i18n/client';
 
 /** how long a slide waits when its film can't play (autoplay blocked, data saver) */
 const STILL_MS = 7000;
@@ -22,7 +23,12 @@ const N = heroSlides.length;
  * no React state per frame.
  */
 export function Hero() {
+  const t = useT();
+  // Arabic letters join: the word rises in whole, not letter by letter
+  const joined = useLocale() === 'ar';
   const reduced = useReducedMotion();
+  // first visit: the language picker is open over the hero — the films wait for it (the page reloads after)
+  const gated = typeof document !== 'undefined' && document.documentElement.hasAttribute('data-lang-gate');
   const [index, setIndex] = useState(0);
   const [leaving, setLeaving] = useState<number | null>(null);
   const [dir, setDir] = useState<1 | -1>(1);
@@ -35,7 +41,7 @@ export function Hero() {
   const bar = useRef<HTMLSpanElement>(null);
   const indexRef = useRef(0);
   indexRef.current = index;
-  const hold = hover || userPaused || away || reduced;
+  const hold = hover || userPaused || away || reduced || gated;
   const holdRef = useRef(hold);
   holdRef.current = hold;
 
@@ -67,7 +73,7 @@ export function Hero() {
   useEffect(() => {
     const v = films.current[index];
     if (!v) return;
-    if (away || userPaused) {
+    if (away || userPaused || gated) {
       v.pause();
       return;
     }
@@ -199,7 +205,7 @@ export function Hero() {
     <section
       ref={section}
       aria-roledescription="carousel"
-      aria-label="Featured sports"
+      aria-label={t('Featured sports')}
       data-testid="hero-stage"
       data-moved={moved ? '' : undefined}
       className="hero-stage"
@@ -216,7 +222,7 @@ export function Hero() {
         }
       }}
     >
-      <h1 className="sr-only">SMADI — sports equipment for football, boxing, swimming and basketball</h1>
+      <h1 className="sr-only">{t('MODE S — sports equipment for football, boxing, swimming, fitness, martial arts and more')}</h1>
 
       <div className="hero-slides" aria-hidden>
         {heroSlides.map((s, i) => {
@@ -258,18 +264,18 @@ export function Hero() {
         {heroSlides.map((s, i) => {
           const pos = i === index ? 'current' : i === leaving ? 'leaving' : null;
           if (!pos) return null;
-          const letters = s.word.toUpperCase().split('');
+          const letters = joined ? [t(s.word)] : t(s.word).toUpperCase().split('');
           const word = letters.map((c, k) => (
             <span key={k} className="hero-ch" style={{ '--i': k } as React.CSSProperties}>
               {c}
             </span>
           ));
           return pos === 'current' ? (
-            <Link key={s.id} href={s.href} aria-label={s.cta} data-pos="current" className="hero-word display" style={{ '--n': letters.length } as React.CSSProperties}>
+            <Link key={s.id} href={s.href} aria-label={t(s.cta)} data-pos="current" className="hero-word display" style={{ '--n': joined ? Math.max(4, Math.round(t(s.word).length * 0.8)) : letters.length } as React.CSSProperties}>
               {word}
             </Link>
           ) : (
-            <span key={s.id} aria-hidden data-pos="leaving" className="hero-word display" style={{ '--n': letters.length } as React.CSSProperties}>
+            <span key={s.id} aria-hidden data-pos="leaving" className="hero-word display" style={{ '--n': joined ? Math.max(4, Math.round(t(s.word).length * 0.8)) : letters.length } as React.CSSProperties}>
               {word}
             </span>
           );
@@ -280,22 +286,22 @@ export function Hero() {
       <div className="hero-ui pointer-events-none absolute inset-x-0 top-0 z-[4]" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 92px)' }}>
         <div className="container-x flex items-start justify-between gap-6">
           <div className="mono text-[10.5px] uppercase leading-[1.55] tracking-[0.14em] [@media(max-height:560px)]:hidden">
-            <p>{'// SMADI © 2026'}</p>
-            <p className="mt-2 text-white/75">Season 01</p>
+            <p dir="ltr">{'// MODE S © 2026'}</p>
+            <p className="mt-2 text-white/75">{t('Season 01')}</p>
           </div>
-          <nav aria-label="Sports index" className="pointer-events-auto ml-auto text-right">
-            <ol className="[@media(max-height:560px)]:flex [@media(max-height:560px)]:gap-4" role="group" aria-label="Choose sport">
+          <nav aria-label={t('Sports index')} className="pointer-events-auto ml-auto text-right">
+            <ol className="[@media(max-height:560px)]:flex [@media(max-height:560px)]:gap-4" role="group" aria-label={t('Choose sport')}>
               {heroSlides.map((s, i) => (
                 <li key={s.id}>
                   <button
                     type="button"
                     onClick={() => go(i)}
-                    aria-label={s.word}
+                    aria-label={t(s.word)}
                     aria-current={i === index ? 'true' : undefined}
                     className={`mono group relative inline-flex min-h-[26px] items-center gap-2 text-[10.5px] uppercase tracking-[0.14em] transition-colors duration-500 ${i === index ? 'text-white' : 'text-white/55 hover:text-white'}`}
                   >
                     <span className={`h-px transition-all duration-700 ${i === index ? 'w-6 bg-white' : 'w-2 bg-white/50 group-hover:w-4'}`} />
-                    {String(i + 1).padStart(2, '0')} {s.word}
+                    {String(i + 1).padStart(2, '0')} {t(s.word)}
                     {i === index && (
                       <span aria-hidden className="absolute -bottom-0.5 right-0 h-px w-full overflow-hidden bg-white/20">
                         <span ref={bar} className="block h-full origin-left bg-white" style={{ transform: 'scaleX(0)' }} />
@@ -314,33 +320,33 @@ export function Hero() {
         <div className="container-x flex items-end justify-between gap-6 pb-[calc(100lvh-100svh+max(24px,env(safe-area-inset-bottom)))]">
           <p className="mono text-[10.5px] uppercase tracking-[0.18em] text-white/80">
             <span className="text-white">{String(index + 1).padStart(2, '0')}</span> / {String(N).padStart(2, '0')}
-            <span className="sr-only"> — {slide.word}</span>
+            <span className="sr-only"> — {t(slide.word)}</span>
           </p>
           <p aria-hidden className="hero-scroll mono hidden text-[10.5px] uppercase tracking-[0.18em] text-white/75 sm:flex">
-            Scroll
+            {t('Scroll')}
           </p>
           {!reduced && (
             <button
               type="button"
               onClick={() => setUserPaused((v) => !v)}
               aria-pressed={userPaused}
-              aria-label={userPaused ? 'Play the films' : 'Pause the films'}
+              aria-label={userPaused ? t('Play the films') : t('Pause the films')}
               className="mono pointer-events-auto inline-flex min-h-[32px] items-center gap-2 text-[10.5px] uppercase tracking-[0.18em] text-white/80 transition-colors hover:text-white"
             >
               <span aria-hidden className="hero-pp" data-paused={userPaused ? '' : undefined} />
-              {userPaused ? 'Play' : 'Pause'}
+              {userPaused ? t('Play') : t('Pause')}
             </button>
           )}
         </div>
       </div>
 
       {/* two arrows on the edges of the screen: they say "slide" without a word */}
-      <button type="button" onClick={back} aria-label="Previous sport" className="hero-arrow hero-arrow-prev">
+      <button type="button" onClick={back} aria-label={t('Previous sport')} className="hero-arrow hero-arrow-prev">
         <svg viewBox="0 0 22 44" aria-hidden>
           <path d="M17 3 5 22l12 19" />
         </svg>
       </button>
-      <button type="button" onClick={next} aria-label="Next sport" className="hero-arrow hero-arrow-next">
+      <button type="button" onClick={next} aria-label={t('Next sport')} className="hero-arrow hero-arrow-next">
         <svg viewBox="0 0 22 44" aria-hidden>
           <path d="M5 3l12 19L5 41" />
         </svg>

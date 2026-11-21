@@ -1,7 +1,7 @@
 # CLAUDE.md — project guide
 
 ## Purpose
-Premium, mobile-first sports e-commerce prototype for **SMADI** (hand mark logo) that feels like an award-site
+Premium, mobile-first sports e-commerce store **MODE S** (slanted chrome badge with an italic S — `Wordmark.tsx`, `app/icon.svg`) that feels like an award-site
 campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
 (the owner rejected the procedural/"comic" look).
 
@@ -42,29 +42,47 @@ campaign and a real store at once. Real product photos (background removed) and 
 - Product page: pinned viewer (desktop) / scroll drop into the buy box (phones) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
-- Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA". The demo catalogue
-  came with US list prices: `usdToDzd` converts them (`brand.commerce.demoUsdRate`, rounded to 100 DA).
+- Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA".
+- Catalogue = the shop's Odoo export + the jersey collection: `scripts/odoo-xlsx.py` (xlsx → JSON) →
+  `scripts/import-odoo.mjs` (English names, sports/categories, sizes, skip list, jerseys, image queries) →
+  `scripts/fetch-images.mjs` (photo per product, `media-src/odoo/images.json` keeps the picks; `<slug> <n|url>` re-picks)
+  → `scripts/odoo-catalog.mjs` writes `src/data/products/generated.json`. Every product starts "Coming soon";
+  stock starts from Odoo for one-size items, 0 for sized ones. Luxury-brand copies are never listed.
 - Checkout = cash on delivery, Algeria only (`/checkout`, `CodCheckout.tsx`): first/last name, Algerian mobile, wilaya
   (58), commune, address, ZR Express home or stop desk, confirm by a call (≈ within the hour) or an SMS, note.
   `POST /api/orders` re-validates (`src/lib/validation/order.ts`), prices from the catalogue + `deliveryFee()`
   (`src/lib/delivery.ts`; starting prices in `src/data/delivery/wilayas.ts`, edited in Admin → Delivery), checks stock,
-  and saves to `.data/orders.json` (`src/lib/store/orders.ts`) — git-ignored because it holds customers' names, phones
-  and addresses: never commit it. Tracked stock goes down on order and back up on cancel/return. Fake-order guards: a
+  and saves to the D1 `orders` table (`src/lib/store/orders.ts`), returning a private receipt link `/order/<token>`
+  (only the token's hash is stored). Tracked stock goes down on order and back up on cancel/return. Fake-order guards: a
   honeypot field and 6 valid orders / 10 min per address. Nothing sends SMS: the admin calls or texts by hand.
 - Admin (`/admin`, Shopify-style): home dashboard, orders, products (index + editor), collections, inventory, customers,
   analytics, settings. Sign-in: `ADMIN_PASSWORD` in `.env.local` (`src/lib/admin/auth.ts`, signed http-only cookie;
   every page and action calls the guard itself). Writes go through server actions (`src/app/admin/actions.ts`, Zod
-  schemas in `src/lib/validation/admin.ts`) into ONE store file, `src/data/store/overrides.json` (edits, added/deleted
-  products, stock, order status), which `src/lib/catalog.ts` merges over the catalogue on every render — so the store
-  shows admin changes at once; commit the file to publish them. Photo uploads: `/api/admin/media` (sharp → webp in
-  `public/products`). Hosted (Vercel) the file system is read-only, so the admin is view-only there.
+  schemas in `src/lib/validation/admin.ts`) into the D1 database (`src/lib/store/overrides.ts`: `store_products`,
+  `store_meta`; a version token makes a page view one tiny read), which `src/lib/catalog.ts` merges over the catalogue —
+  so the store shows admin changes at once. EVERY page/route/action calls `ensureStore()` (admin: `loadAdminData()`)
+  before using the catalogue. Photo uploads: browser → WebP → `/api/admin/media` → D1 `media`, served at `/media/…`.
   Orders: real website orders with statuses new (to confirm) → confirmed → shipped → delivered, or cancelled /
   returned (`setOrderStatus`). Until the first real order exists the admin shows SAMPLE orders instead
   (`src/lib/admin/orders.ts`, seeded per day, labelled), so fake sales never mix with real ones.
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 
+## Languages
+English, French, Arabic (right to left). Write text in English in the code as `t('…')` (`useT()` in client components,
+`await getT()` in server ones, `src/i18n/`); add its French and Arabic to `src/i18n/fr.ts` / `ar.ts` and check with
+`node scripts/i18n-keys.mjs` (must say 100% for both). The `lang` cookie holds the choice; without it a picker opens
+first (`LanguageGate`, the hero waits). Use logical classes (`ms-/me-/ps-/start-/end-/text-end`), not left/right.
+Product names stay as written; the admin stays English.
+
+## Hosting
+Cloudflare Workers via OpenNext (`wrangler.jsonc`, `open-next.config.ts`), D1 database `smadi` (schema in
+`migrations/`), live at https://smadi.zkrsmdndr.workers.dev. Secrets: `wrangler secret put ADMIN_PASSWORD` /
+`ADMIN_SESSION_SECRET`. The free plan's 10 ms CPU limit is too low for page renders (40–70 ms): Workers Paid needed.
+
 ## Commands
-`npm run dev` · `npm run build` · `npm run typecheck` · `npm run lint` · `npm run test:e2e` · `npm run catalog` · `npm run cutout`
+`npm run dev` · `npm run preview` (Workers runtime + local D1, port 8787; tests run against it) · `npm run deploy` ·
+`npm run db:local` / `db:remote` (migrations) · `npm run typecheck` · `npm run lint` · `npm run test:e2e` ·
+`npm run catalog` · `npm run photos`
 
 ## Quality standards
 - Typecheck, lint and Playwright must pass before committing.

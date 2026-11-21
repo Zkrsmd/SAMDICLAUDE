@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { openHome } from './helpers';
 
-const ROUTES = ['/', '/football', '/football/boots', '/boxing/gloves', '/swimming/goggles', '/running', '/product/speedo-fastskin-cap-pink', '/search?q=cap', '/cart', '/wishlist', '/checkout'];
+const ROUTES = ['/', '/football', '/football/jerseys', '/boxing/gloves', '/swimming/goggles', '/fishing', '/pool', '/product/psg-2026-27-home-jersey', '/product/fox-40-classic-whistle', '/search?q=intex', '/cart', '/wishlist', '/checkout'];
 
 test('key routes render without page errors', async ({ page }) => {
-  // 11 image-heavy pages in a row: don't wait for every product photo to finish loading
+  // 13 image-heavy pages in a row: don't wait for every product photo to finish loading
   test.setTimeout(180_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -36,4 +36,25 @@ test('security headers are present', async ({ request }) => {
   expect(h['content-security-policy']).toContain("frame-ancestors 'none'");
   expect(h['x-content-type-options']).toBe('nosniff');
   expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
+});
+
+test('first visit asks for a language; French and Arabic switch the whole store', async ({ browser, baseURL }, info) => {
+  test.skip(info.project.name !== 'desktop', 'once, on desktop');
+  const context = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+  const page = await context.newPage();
+  await page.goto('/');
+  const gate = page.getByRole('dialog', { name: /Choose your language/ });
+  await expect(gate).toBeVisible();
+  await page.getByTestId('lang-fr').click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+  await expect(gate).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /Choisissez votre/ })).toBeAttached();
+  await page.goto('/football');
+  await expect(page.getByRole('heading', { level: 1, name: 'Football' })).toBeVisible();
+  await expect(page.locator('#listing').getByText(/\d+ résultats/)).toBeVisible();
+  // the switcher: Arabic, right to left
+  await page.locator('footer').getByRole('button', { name: 'العربية' }).click();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('heading', { level: 1, name: 'كرة القدم' })).toBeVisible();
+  await context.close();
 });

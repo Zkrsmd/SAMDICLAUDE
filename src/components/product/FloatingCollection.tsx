@@ -4,9 +4,11 @@ import { useEffect, useRef } from 'react';
 import { ProductImage } from './ProductImage';
 import { formatPrice } from '@/lib/format';
 import type { CardData } from '@/lib/catalog';
+import { useT } from '@/i18n/client';
 
 /** MORE FROM THIS COLLECTION — renders floating in a bright gallery band, drifting with scroll. */
 export function FloatingCollection({ items, title }: { items: CardData[]; title: string }) {
+  const t = useT();
   const band = useRef<HTMLUListElement>(null);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -33,7 +35,7 @@ export function FloatingCollection({ items, title }: { items: CardData[]; title:
   return (
     <section aria-labelledby="coll-title" className="relative overflow-hidden py-16" style={{ background: 'radial-gradient(70% 90% at 50% 40%, #FFFFFF, #EFEEE8)' }}>
       <div className="container-x">
-        <p className="eyebrow text-muted">More from this collection</p>
+        <p className="eyebrow text-muted">{t('More from this collection')}</p>
         <h2 id="coll-title" className="display mt-3 text-[clamp(30px,6.2vw,72px)]">
           {title}
         </h2>

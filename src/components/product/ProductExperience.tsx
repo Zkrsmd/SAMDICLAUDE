@@ -13,6 +13,7 @@ import { useDialog } from '@/hooks/useDialog';
 import { formatPrice, renderUrl } from '@/lib/format';
 import { useScrollAssist } from '@/hooks/useScrollAssist';
 import type { Product } from '@/types/catalog';
+import { useT } from '@/i18n/client';
 
 /** Per-chapter pose of the floating cut-out (rotation in deg, scale). */
 const POSES = [
@@ -33,6 +34,7 @@ export function ProductExperience({
   sportName: string;
   subName: string;
 }) {
+  const t = useT();
   const router = useRouter();
   const hydrated = useHydrated();
   const reduced = useReducedMotion();
@@ -74,8 +76,8 @@ export function ProductExperience({
   useDialog(inspectRef, inspect, () => setInspect(false));
 
   const chapters = [
-    { title: 'The silhouette', text: product.short },
-    ...product.features.slice(0, 3).map((f, i) => ({ title: ['Built in', 'Made to', 'Finished with'][i] ?? 'Detail', text: f })),
+    { title: t('The silhouette'), text: product.short },
+    ...product.features.slice(0, 3).map((f, i) => ({ title: t(['Built in', 'Made to', 'Finished with'][i] ?? 'Detail'), text: f })),
   ].slice(0, 4);
   const pose = POSES[chapter % POSES.length]!;
 
@@ -232,7 +234,7 @@ export function ProductExperience({
 
   const addToCart = (buyNow = false) => {
     if (!size) {
-      setError('Please choose a size.');
+      setError(t('Please choose a size.'));
       document.querySelector<HTMLInputElement>('input[name="pdp-size"]')?.focus();
       return false;
     }
@@ -270,7 +272,7 @@ export function ProductExperience({
             style={{ viewTransitionName: 'pdp-hero' }}
             type="button"
             onClick={() => setInspect(true)}
-            aria-label="Zoom into the product photo"
+            aria-label={t('Zoom into the product photo')}
             className="absolute inset-x-[6%] top-[13%] bottom-[24svh] cursor-zoom-in lg:inset-x-[8%] lg:bottom-[12%] lg:top-[14%]"
           >
             <div ref={tilt} className="h-full w-full transition-transform duration-300 ease-out [transform-style:preserve-3d]">
@@ -305,13 +307,13 @@ export function ProductExperience({
 
           {/* photo switcher */}
           {images.length > 1 && (
-            <div className="absolute right-3 top-[84px] flex flex-col gap-2 lg:right-6 lg:top-[100px]" role="group" aria-label="Product photos">
+            <div className="absolute end-3 top-[84px] flex flex-col gap-2 lg:end-6 lg:top-[100px]" role="group" aria-label={t('Product photos')}>
               {images.map((src, i) => (
                 <button
                   key={src}
                   type="button"
                   onClick={() => setView(i)}
-                  aria-label={`Photo ${i + 1}`}
+                  aria-label={t('Photo {n}', { n: i + 1 })}
                   aria-pressed={i === view}
                   className={`glass relative h-16 w-16 overflow-hidden rounded-xl p-1.5 transition-all ${i === view ? 'ring-2 ring-ink' : 'opacity-70 hover:opacity-100'}`}
                 >
@@ -322,7 +324,7 @@ export function ProductExperience({
             </div>
           )}
           <p className="eyebrow pointer-events-none absolute bottom-[19svh] left-1/2 -translate-x-1/2 whitespace-nowrap text-ink/60 lg:bottom-6">
-            {images.length > 1 ? 'Swipe for more · tap to zoom' : 'Tap to zoom'}
+            {images.length > 1 ? t('Swipe for more · tap to zoom') : t('Tap to zoom')}
           </p>
         </div>
       </div>
@@ -337,7 +339,7 @@ export function ProductExperience({
       <div className="relative z-10 bg-bg lg:order-2">
         <div className="pdp-build container-x lg:px-10 lg:pb-16 lg:pt-24">
           <div className="pt-8 lg:pt-0">
-            <Breadcrumbs
+            <Breadcrumbs label={t('Breadcrumb')}
               items={[
                 { label: sportName, href: `/${product.sport}` },
                 { label: subName, href: `/${product.sport}/${product.sub}` },
@@ -349,14 +351,14 @@ export function ProductExperience({
             <div className="mt-4 flex items-center gap-3">
               <span className="mono text-[20px] font-semibold">{formatPrice(product.price)}</span>
               {product.compareAt ? (
-                <s className="mono text-[15px] text-muted" aria-label={`Was ${formatPrice(product.compareAt)}`}>
+                <s className="mono text-[15px] text-muted" aria-label={t('Was {price}', { price: formatPrice(product.compareAt) })}>
                   {formatPrice(product.compareAt)}
                 </s>
               ) : null}
               {product.verified ? (
-                <span className="eyebrow rounded-[2px] bg-ink px-2 py-1 text-[10px] text-white">Model verified</span>
+                <span className="eyebrow rounded-[2px] bg-ink px-2 py-1 text-[10px] text-white">{t('Model verified')}</span>
               ) : (
-                <span className="eyebrow rounded-[2px] border border-line px-2 py-1 text-[10px] text-muted">Demo listing</span>
+                <span className="eyebrow rounded-[2px] border border-line px-2 py-1 text-[10px] text-muted">{t('Coming soon')}</span>
               )}
             </div>
             <p className="mt-4 max-w-prose text-[16px] text-ink-2">{product.description}</p>
@@ -374,7 +376,7 @@ export function ProductExperience({
 
             <fieldset>
               <legend className="eyebrow text-muted">
-                Colour — <span className="text-ink">{color.name}</span>
+                {t('Colour')} — <span className="text-ink">{t(color.name)}</span>
               </legend>
               <div className="mt-3 flex flex-wrap gap-2">
                 {product.colors.map((c) => (
@@ -395,7 +397,7 @@ export function ProductExperience({
             </fieldset>
 
             <fieldset className="mt-6">
-              <legend className="eyebrow text-muted">Size {size ? <span className="text-ink">— {size}</span> : null}</legend>
+              <legend className="eyebrow text-muted">{t('Size')} {size ? <span className="text-ink">— {size}</span> : null}</legend>
               <div id="size-group" tabIndex={-1} className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6" aria-invalid={!!error} aria-describedby={error ? 'size-error' : undefined}>
                 {product.sizes.map((s) => (
                   <label key={s} className={product.stock && (product.stock[s] ?? 0) <= 0 ? 'cursor-not-allowed' : 'cursor-pointer'}>
@@ -413,7 +415,7 @@ export function ProductExperience({
                       data-active={size === s}
                     >
                       {s}
-                      {product.stock && (product.stock[s] ?? 0) <= 0 ? <span className="sr-only"> (sold out)</span> : null}
+                      {product.stock && (product.stock[s] ?? 0) <= 0 ? <span className="sr-only"> {t('(sold out)')}</span> : null}
                     </span>
                   </label>
                 ))}
@@ -429,13 +431,13 @@ export function ProductExperience({
               <div className="mt-6" role="status">
                 <div className="flex items-center gap-3">
                   <p className={`flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-semibold ${avail === 'soon' ? 'bg-ink text-white' : 'border border-line bg-white text-muted'}`}>
-                    {avail === 'soon' ? 'Coming soon' : 'Out of stock'}
+                    {avail === 'soon' ? t('Coming soon') : t('Out of stock')}
                   </p>
                   <button
                     type="button"
                     className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white"
                     aria-pressed={hydrated ? wished : false}
-                    aria-label="Save to wishlist"
+                    aria-label={t('Save to wishlist')}
                     onClick={() => toggleWish(product.slug)}
                   >
                     <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
@@ -443,67 +445,67 @@ export function ProductExperience({
                 </div>
                 <p className="mt-3 text-[14px] text-muted">
                   {avail === 'soon'
-                    ? 'This product arrives soon and can’t be ordered yet. Save it to your wishlist to find it again.'
-                    : 'Sold out for now. Save it to your wishlist to find it again when it’s back.'}
+                    ? t('This product arrives soon and can’t be ordered yet. Save it to your wishlist to find it again.')
+                    : t('Sold out for now. Save it to your wishlist to find it again when it’s back.')}
                 </p>
               </div>
             ) : (
             <>
             <div className="mt-6 flex items-center gap-3">
-              <div className="flex items-center rounded-full border border-line bg-white" role="group" aria-label="Quantity">
-                <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label="Decrease quantity" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
+              <div className="flex items-center rounded-full border border-line bg-white" role="group" aria-label={t('Quantity')}>
+                <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label={t('Decrease quantity')} disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
                   <Icon name="minus" size={16} />
                 </button>
                 <span className="mono w-8 text-center" aria-live="polite">
                   {qty}
                 </span>
-                <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label="Increase quantity" disabled={qty >= 10} onClick={() => setQty((q) => q + 1)}>
+                <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label={t('Increase quantity')} disabled={qty >= 10} onClick={() => setQty((q) => q + 1)}>
                   <Icon name="plus" size={16} />
                 </button>
               </div>
               <button type="button" className="btn-holo h-12 flex-1" onClick={() => addToCart()} data-edge="">
                 <HoloEdge halo={false} variant="btn" />
-                Add to bag
+                {t('Add to bag')}
               </button>
               <button
                 type="button"
                 className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white"
                 aria-pressed={hydrated ? wished : false}
-                aria-label="Save to wishlist"
+                aria-label={t('Save to wishlist')}
                 onClick={() => toggleWish(product.slug)}
               >
                 <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
               </button>
             </div>
             <button type="button" className="btn btn-line mt-3 h-12 w-full rounded-full" onClick={() => addToCart(true)}>
-              Buy now
+              {t('Buy now')}
             </button>
             </>
             )}
             {added && (
               <p className="mt-3 text-[14px]" role="status">
-                Added to your bag.{' '}
+                {t('Added to your bag.')}{' '}
                 <button type="button" className="underline" onClick={() => setUi({ cartOpen: true })}>
-                  View bag
+                  {t('View bag')}
                 </button>
               </p>
             )}
             <dl className="mt-6 space-y-2 border-t border-line pt-4 text-[13px] text-muted">
               <div className="flex justify-between gap-4">
-                <dt>Availability</dt>
-                <dd className={`text-right ${avail === 'in' ? 'text-ink' : ''}`}>{avail === 'soon' ? 'Coming soon' : avail === 'out' ? 'Out of stock' : 'In stock'}</dd>
+                <dt>{t('Availability')}</dt>
+                <dd className={`text-end ${avail === 'in' ? 'text-ink' : ''}`}>{avail === 'soon' ? t('Coming soon') : avail === 'out' ? t('Out of stock') : t('In stock')}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt>Delivery</dt>
-                <dd className="text-right">ZR Express to all 58 wilayas · home or stop desk</dd>
+                <dt>{t('Delivery')}</dt>
+                <dd className="text-end">{t('ZR Express to all 58 wilayas · home or stop desk')}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt>Payment</dt>
-                <dd className="text-right">Cash on delivery</dd>
+                <dt>{t('Payment')}</dt>
+                <dd className="text-end">{t('Cash on delivery')}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt>Returns</dt>
-                <dd className="text-right">Returns policy placeholder</dd>
+                <dt>{t('Returns')}</dt>
+                <dd className="text-end">{t('Exchange within 7 days if unused — call us')}</dd>
               </div>
             </dl>
           </div>
@@ -511,7 +513,7 @@ export function ProductExperience({
           {/* chapters on desktop scroll alongside the sticky viewer */}
           <ol className="mt-10 hidden space-y-3 lg:block">
             {chapters.map((c, i) => (
-              <li key={i} className={`border-l-2 py-1 pl-4 transition-colors ${i === chapter ? 'border-ink' : 'border-line text-muted'}`}>
+              <li key={i} className={`border-s-2 py-1 ps-4 transition-colors ${i === chapter ? 'border-ink' : 'border-line text-muted'}`}>
                 <p className="eyebrow">{String(i + 1).padStart(2, '0')} · {c.title}</p>
                 <p className="mt-1 text-[15px]">{c.text}</p>
               </li>
@@ -520,10 +522,10 @@ export function ProductExperience({
 
           <section aria-labelledby="specs-title" className="mt-10 pb-6">
             <h2 id="specs-title" className="eyebrow text-muted">
-              Specifications
+              {t('Specifications')}
             </h2>
             <dl className="mt-3 divide-y divide-line border-y border-line">
-              {[...product.specs, { label: 'Brand', value: brandName }, { label: 'Category', value: `${sportName} · ${subName}` }].map((s) => (
+              {[...product.specs.map((x) => ({ label: t(x.label), value: t(x.value) })), { label: t('Brand'), value: brandName }, { label: t('Category'), value: `${sportName} · ${subName}` }].map((s) => (
                 <div key={s.label} className="flex justify-between gap-6 py-3 text-[14px]">
                   <dt className="text-muted">{s.label}</dt>
                   <dd className="text-right">{s.value}</dd>
@@ -540,7 +542,7 @@ export function ProductExperience({
                 ))}
               </ul>
             )}
-            {product.sourceNote && <p className="mono mt-6 text-[11px] leading-relaxed text-muted">Source: {product.sourceNote}</p>}
+            
           </section>
         </div>
       </div>
@@ -565,7 +567,7 @@ export function ProductExperience({
             </p>
           </div>
           {avail !== 'in' ? (
-            <span className="eyebrow rounded-full border border-line px-4 py-3 text-muted">{avail === 'soon' ? 'Coming soon' : 'Out of stock'}</span>
+            <span className="eyebrow rounded-full border border-line px-4 py-3 text-muted">{avail === 'soon' ? t('Coming soon') : t('Out of stock')}</span>
           ) : (
             <button
               type="button"
@@ -574,7 +576,7 @@ export function ProductExperience({
                 if (!addToCart()) purchase.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
             >
-              Add to bag
+              {t('Add to bag')}
             </button>
           )}
         </div>
@@ -585,7 +587,7 @@ export function ProductExperience({
           ref={inspectRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Zoomed product photo"
+          aria-label={t('Zoomed product photo')}
           className="fixed inset-0 z-[90] cursor-zoom-out overflow-hidden bg-[#F4F2EC]"
           onClick={() => setInspect(false)}
           onPointerMove={(e) => {
@@ -594,11 +596,11 @@ export function ProductExperience({
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={zoomImg} src={images[view]} alt={`${brandName} ${product.name}, enlarged`} className="h-full w-full scale-[1.9] object-contain p-6 transition-transform duration-200" draggable={false} />
+          <img ref={zoomImg} src={images[view]} alt={t('{name}, enlarged', { name: `${brandName} ${product.name}` })} className="h-full w-full scale-[1.9] object-contain p-6 transition-transform duration-200" draggable={false} />
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
-            <p className="eyebrow text-muted">Move to explore · tap to close</p>
+            <p className="eyebrow text-muted">{t('Move to explore · tap to close')}</p>
             <button type="button" className="btn btn-ink h-11 px-4" onClick={() => setInspect(false)} autoFocus>
-              Close <Icon name="close" size={16} />
+              {t('Close')} <Icon name="close" size={16} />
             </button>
           </div>
         </div>

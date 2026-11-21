@@ -4,10 +4,12 @@ import { BarList, SalesChart } from '@/components/admin/charts';
 import { Card, PageHead, RangeTabs, SampleNote, Thumb, money, pct } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
 import { RANGES, parseRange, report, showingSamples } from '@/lib/admin/orders';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Analytics' };
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+  await loadAdminData();
   await requireAdmin();
   const range = parseRange((await searchParams).range);
   const r = report(RANGES[range]);

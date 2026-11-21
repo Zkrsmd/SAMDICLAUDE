@@ -11,6 +11,7 @@ test('with WebGL disabled the hero falls back and the store still works', async 
   await page.goto('/football/boots');
   await expect(page.getByRole('region', { name: 'The boot wall' })).toBeVisible();
   await expect(page.locator('#listing article').first()).toBeVisible();
-  await page.goto('/product/adidas-f50-hyperfast-elite-fg-soccer-cleats');
-  await expect(page.getByRole('img', { name: /F50 Hyperfast Elite/ }).first()).toBeVisible();
+  await page.goto('/product/psg-2026-27-home-jersey');
+  await expect(page.getByRole('heading', { level: 1, name: /PSG 2026\/27 home jersey/ })).toBeVisible();
+  await expect(page.locator('main img').first()).toBeVisible();
 });

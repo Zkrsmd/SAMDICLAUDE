@@ -4,10 +4,12 @@ import { Card, PageHead, dateTime } from '@/components/admin/ui';
 import { brand } from '@/config/brand';
 import { requireAdmin } from '@/lib/admin/auth';
 import { readOverrides, storeWritable } from '@/lib/store/overrides';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Settings' };
 
 export default async function SettingsPage() {
+  await loadAdminData();
   await requireAdmin();
   const o = readOverrides();
   const rows: [string, string][] = [
@@ -33,8 +35,8 @@ export default async function SettingsPage() {
         </Card>
         <Card title="Store data">
           <p className="text-[#4a525c]">
-            Everything you change in the admin is saved in <span className="mono">src/data/store/overrides.json</span> (photos in{' '}
-            <span className="mono">public/products</span>). Commit and deploy the project to put your changes on the live site.
+            Everything you change in the admin (products, stock, photos, delivery prices, orders) is saved in the store’s database on
+            Cloudflare and shows on the site at once. Download a backup from time to time with Export.
           </p>
           <dl className="mt-3 grid gap-2 rounded-[10px] bg-[#f6f7f9] p-3 sm:grid-cols-4">
             {[

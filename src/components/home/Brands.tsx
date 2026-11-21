@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import type { BrandEntry } from '@/types/catalog';
+import { useT } from '@/i18n/client';
 import { SplitWords } from '@/components/ui/SplitWords';
 
 type B = BrandEntry & { logo?: string; keepColor?: boolean };
@@ -10,6 +11,7 @@ type B = BrandEntry & { logo?: string; keepColor?: boolean };
  * Marks sit in ink and light up to full colour with a soft chrome glow on hover.
  */
 export function Brands({ brands }: { brands: B[] }) {
+  const t = useT();
   const r0 = useRef<HTMLUListElement>(null);
   const r1 = useRef<HTMLUListElement>(null);
   useEffect(() => {
@@ -84,11 +86,11 @@ export function Brands({ brands }: { brands: B[] }) {
   return (
     <section aria-labelledby="brands-title" className="relative overflow-hidden pb-16 pt-16 md:pt-24">
       <div className="container-x" data-reveal>
-        <p className="eyebrow text-muted">Brands we carry</p>
+        <p className="eyebrow text-muted">{t('Brands we carry')}</p>
         <h2 id="brands-title" className="display mt-3 max-w-[13ch] text-[clamp(30px,6.2vw,78px)]" data-reveal="words">
-          <SplitWords text="The brands behind the" /> <SplitWords text="performance" className="holo-text" from={4} />
+          <SplitWords text={t('The brands behind the')} /> <SplitWords text={t('performance')} className="holo-text" from={t('The brands behind the').split(' ').length} />
         </h2>
-        <p className="mt-4 max-w-md text-[15px] text-muted">Official products from the manufacturers we stock. Logos are trademarks of their owners; no partnership is implied.</p>
+        <p className="mt-4 max-w-md text-[15px] text-muted">{t('Brands we stock. Logos are trademarks of their owners; no partnership is implied.')}</p>
       </div>
       <div className="relative mt-12 space-y-2 border-y border-line py-4 md:mt-16">
         {/* edge fades are two still overlays: a mask over the moving rows was re-applied on every frame */}
@@ -102,7 +104,7 @@ export function Brands({ brands }: { brands: B[] }) {
           </div>
         ))}
       </div>
-      <ul className="sr-only" aria-label="Brands">
+      <ul className="sr-only" aria-label={t('Brands')}>
         {brands.map((b) => (
           <li key={b.id}>{b.name}</li>
         ))}

@@ -1,16 +1,18 @@
 import { expect, test } from '@playwright/test';
-import fs from 'node:fs';
-import path from 'node:path';
 import { cartCount, isMobile, openHome } from './helpers';
+import { ON_SALE } from './seed';
+
+/** Two products are put on sale in the local database before the run (seed.ts); everything else is "Coming soon". */
+const WHISTLE = ON_SALE.whistle.slug;
+const GLOVES = ON_SALE.gloves.slug;
 
 test.describe('core shopping journeys', () => {
-  test('1–5: homepage, skip loader, switch sports, scroll down', async ({ page }) => {
+  test('1–5: homepage, switch sports, scroll down', async ({ page }) => {
     await openHome(page);
-    await expect(page.getByRole('heading', { level: 1, name: /SMADI/ })).toBeAttached();
+    await expect(page.getByRole('heading', { level: 1, name: /MODE S/ })).toBeAttached();
     const current = page.getByRole('group', { name: 'Choose sport' }).locator('[aria-current="true"]');
-    // hovering the stage pauses the autoplay, so only our clicks change the sport
     await page.getByTestId('hero-stage').hover({ position: { x: 40, y: 300 } });
-    const order = ['Football', 'Boxing', 'Swimming', 'Basketball'];
+    const order = ['Football', 'Boxing', 'Swimming', 'Fitness', 'Martial arts', 'Basketball', 'Fishing'];
     for (let n = 0; n < 2; n++) {
       const now = (await current.getAttribute('aria-label')) ?? 'Football';
       const want = order[(order.indexOf(now) + 1) % order.length]!;
@@ -18,83 +20,82 @@ test.describe('core shopping journeys', () => {
       await expect(current).toHaveAttribute('aria-label', want);
       await expect(page.getByRole('link', { name: new RegExp(`Explore ${want}`, 'i') })).toBeVisible();
     }
-    // native vertical scroll must pass straight through the hero (no scroll trap)
     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 1.1));
     await expect(page.getByRole('heading', { name: /brands behind the performance/i })).toBeInViewport({ timeout: 15_000 });
   });
 
-  test('quick add: the + on a homepage object puts it in the bag (size sheet when needed)', async ({ page }) => {
-    await openHome(page);
+  test('quick add: one size goes straight in, sized products ask for a size', async ({ page }) => {
+    await page.goto('/football/referee');
     const before = await cartCount(page);
-    const icons = page.locator('section[aria-labelledby="best-title"]');
-    await icons.scrollIntoViewIfNeeded();
-    // goggles come in one size: the + adds straight away
-    await icons.getByRole('button', { name: /^Add Fastskin Speed Socket.* to bag$/ }).click();
+    await page.getByRole('button', { name: /^Add Fox 40 Classic whistle to bag$/ }).click();
     await expect.poll(() => cartCount(page)).toBe(before + 1);
-    // boots need a size: the + opens a size sheet first
-    await icons.getByRole('button', { name: /^Add Mercurial Vapor.* to bag$/ }).click();
-    const sheet = icons.getByRole('group', { name: /Choose a size for Mercurial Vapor/ });
+    await page.goto('/boxing/gloves');
+    const listing = page.locator('#listing');
+    await listing.getByRole('button', { name: /^Add Venum boxing gloves — black \/ gold to bag$/ }).click();
+    const sheet = listing.getByRole('group', { name: /Choose a size for Venum boxing gloves — black/ });
     await expect(sheet).toBeVisible();
-    await sheet.getByRole('button', { name: 'UK 9' }).click();
-    await expect(sheet).toHaveCount(0);
+    await sheet.getByRole('button', { name: '12 oz' }).click();
     await expect.poll(() => cartCount(page)).toBe(before + 2);
   });
 
-  test('6–9: football category → boot wall → product detail', async ({ page }) => {
-    await openHome(page);
-    await page.getByRole('group', { name: 'Choose sport' }).getByRole('button', { name: 'Football' }).click();
-    await page.getByRole('link', { name: /Explore football/i }).click();
-    await expect(page).toHaveURL(/\/football$/);
+  test('6–9: football category → boots → product detail', async ({ page }) => {
+    await page.goto('/football');
     await expect(page.getByRole('heading', { level: 1, name: 'Football' })).toBeVisible();
     await page.getByRole('link', { name: /Football boots/ }).first().click();
     await expect(page).toHaveURL(/\/football\/boots/);
-    await expect(page.getByRole('region', { name: 'The boot wall' })).toBeVisible();
-    await page.locator('#listing').getByRole('link', { name: /F50 Hyperfast Elite/ }).first().click();
-    await expect(page).toHaveURL(/\/product\/adidas-f50-hyperfast-elite-fg-soccer-cleats/);
-    await expect(page.getByRole('heading', { level: 1, name: /F50 Hyperfast Elite/ })).toBeVisible();
+    const first = page.locator('#listing .pcard a[href^="/product/"]').first();
+    const href = await first.getAttribute('href');
+    await first.click();
+    await expect(page).toHaveURL(new RegExp(href!));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
   test('10–14: zoom, size, add to bag, update quantity, remove', async ({ page }) => {
-    await page.goto('/product/venum-giant-20-mike-tyson-pro-boxing-gloves-blackgold');
-    // zoom into the product photo and close it again
+    await page.goto(`/product/${GLOVES}`);
     await page.getByRole('button', { name: 'Zoom into the product photo' }).click();
     const zoom = page.getByRole('dialog', { name: 'Zoomed product photo' });
     await expect(zoom).toBeVisible();
     await zoom.getByRole('button', { name: /Close/ }).click();
     await expect(zoom).toHaveCount(0);
-    // adding without a size shows a validation message
     await page.getByRole('button', { name: 'Add to bag' }).first().click();
     await expect(page.getByText('Please choose a size.')).toBeVisible();
-    // click the visible size label, as a shopper would; the native radio underneath must become checked
     await page.locator('label').filter({ hasText: /^12 oz$/ }).click();
     await expect(page.getByRole('radio', { name: '12 oz' })).toBeChecked();
     await page.getByRole('button', { name: 'Add to bag' }).first().click();
     await expect.poll(() => cartCount(page)).toBe(1);
 
     await page.goto('/cart');
-    await expect(page.getByRole('link', { name: /Giant 2.0/ }).first()).toBeVisible();
     const subtotal = page.locator('aside dd').first();
-    // prices are in dinars ($249.99 demo list price × 250, rounded to 100 DA)
-    await expect(subtotal).toContainText(/62\s500\sDA/);
+    await expect(subtotal).toContainText(/4\s300\sDA/);
     await page.getByRole('button', { name: 'Increase quantity' }).first().click();
-    await expect(subtotal).toContainText(/125\s000\sDA/);
-    await page.getByRole('button', { name: /Remove Giant 2.0/ }).click();
+    await expect(subtotal).toContainText(/8\s600\sDA/);
+    await page.getByRole('button', { name: /Remove Venum boxing gloves/ }).click();
     await expect(page.getByText('Your bag is waiting').first()).toBeVisible();
+  });
+
+  test('coming soon products are shown but not sold', async ({ page }) => {
+    await page.goto('/product/psg-2026-27-home-jersey');
+    await expect(page.getByRole('heading', { level: 1, name: /PSG 2026\/27 home jersey/ })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Coming soon' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add to bag' })).toHaveCount(0);
+    await page.goto('/football/jerseys');
+    await expect(page.locator('.pcard[data-availability="soon"]').first()).toBeVisible();
   });
 
   test('15: search finds products', async ({ page }) => {
     await page.goto('/search?q=venum');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('venum');
     await expect(page.locator('#listing article').first()).toBeVisible();
-    const count = await page.locator('#listing article').count();
-    expect(count).toBeGreaterThan(3);
+    expect(await page.locator('#listing article').count()).toBeGreaterThan(3);
   });
 
-  test('16: category filter narrows the listing via the URL', async ({ page }) => {
+  test('16: category filter narrows the listing via the URL; long lists page with "Show more"', async ({ page }) => {
     await page.goto('/football');
     const total = page.locator('#listing').getByText(/\d+ results/);
     await expect(total).toBeVisible();
     const before = Number((await total.textContent())?.match(/\d+/)?.[0]);
+    expect(await page.locator('#listing .pcard').count()).toBeLessThanOrEqual(48);
+    await expect(page.getByTestId('listing-more')).toBeVisible();
     await page.getByRole('button', { name: /^Filter/ }).click();
     await page.getByRole('dialog', { name: 'Filters' }).getByRole('button', { name: /^adidas/ }).click();
     await expect(page).toHaveURL(/brand=adidas/);
@@ -123,18 +124,17 @@ test.describe('core shopping journeys', () => {
 });
 
 test.describe('API security', () => {
-  test('quote API validates input and ignores client prices', async ({ request }) => {
+  test('quote API validates input, ignores client prices and refuses coming-soon products', async ({ request }) => {
     const bad = await request.post('/api/cart/quote', { data: { items: [{ productId: '../etc', colorId: 'x', size: 'M', qty: 1 }] } });
     expect(bad.status()).toBe(400);
-    const tooMany = await request.post('/api/cart/quote', { data: { items: [{ productId: 'arena-cobra-tri-swipe-mirror-goggles', colorId: 'standard', size: 'One size', qty: 999 }] } });
+    const tooMany = await request.post('/api/cart/quote', { data: { items: [{ productId: WHISTLE, colorId: 'standard', size: 'One size', qty: 999 }] } });
     expect(tooMany.status()).toBe(400);
-    const ok = await request.post('/api/cart/quote', {
-      data: { items: [{ productId: 'arena-cobra-tri-swipe-mirror-goggles', colorId: 'standard', size: 'One size', qty: 2, price: 1 }] },
-    });
+    const ok = await request.post('/api/cart/quote', { data: { items: [{ productId: WHISTLE, colorId: 'standard', size: 'One size', qty: 2, price: 1 }] } });
     expect(ok.status()).toBe(200);
-    const json = await ok.json();
-    // centimes: 2 × 18 000 DA (the client's "price: 1" is ignored)
-    expect(json.subtotal).toBe(3_600_000);
+    // centimes: 2 × 980 DA (the client's "price: 1" is ignored)
+    expect((await ok.json()).subtotal).toBe(196_000);
+    const soon = await request.post('/api/cart/quote', { data: { items: [{ productId: 'psg-2026-27-home-jersey', colorId: 'standard', size: 'M', qty: 1 }] } });
+    expect((await soon.json()).rejected[0].reason).toMatch(/Coming soon/);
     const cross = await request.post('/api/cart/quote', { headers: { origin: 'https://evil.example' }, data: { items: [] } });
     expect(cross.status()).toBe(403);
   });
@@ -142,32 +142,27 @@ test.describe('API security', () => {
 
 test.describe('cash on delivery checkout', () => {
   test('asks for the details, prices delivery by wilaya, and adds it to the total (no order placed)', async ({ page }) => {
-    // one size: no size to pick
-    await page.goto('/product/arena-cobra-tri-swipe-mirror-goggles');
+    await page.goto(`/product/${WHISTLE}`);
     await page.getByRole('button', { name: 'Add to bag' }).first().click();
     await expect.poll(() => cartCount(page)).toBe(1);
     await page.goto('/checkout');
     await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
-    // nothing filled in: each field says what's missing
     await page.getByRole('button', { name: 'Confirm order' }).click();
     await expect(page.getByText('Enter your first name')).toBeVisible();
     await expect(page.getByText(/Enter a mobile number/)).toBeVisible();
     await expect(page.getByText('Choose your wilaya').last()).toBeVisible();
-    // Alger: 18 000 DA goggles + 650 DA home delivery, or 470 DA at the stop desk
+    // Alger: 980 DA + 650 DA home delivery, or 470 DA at the stop desk
     await page.locator('#co-wilaya').selectOption('16');
-    await expect(page.getByTestId('co-total')).toHaveText(/18\s650\sDA/);
+    await expect(page.getByTestId('co-total')).toHaveText(/1\s630\sDA/);
     await page.locator('label').filter({ hasText: 'Stop desk' }).click();
-    await expect(page.getByTestId('co-total')).toHaveText(/18\s470\sDA/);
-    // both ways to confirm are offered
+    await expect(page.getByTestId('co-total')).toHaveText(/1\s450\sDA/);
     await expect(page.getByText('We call you within about an hour')).toBeVisible();
     await page.locator('label').filter({ hasText: 'Send me an SMS' }).click();
     await expect(page.getByText('We’ll text you to confirm.')).toBeVisible();
   });
 });
 
-test.describe('orders API', () => {
-  const ORDERS = path.join(process.cwd(), '.data', 'orders.json');
-  const count = () => (fs.existsSync(ORDERS) ? JSON.parse(fs.readFileSync(ORDERS, 'utf8')).orders.length : 0);
+test.describe('orders and receipts', () => {
   const order = {
     firstName: 'Test',
     lastName: 'Client',
@@ -177,11 +172,11 @@ test.describe('orders API', () => {
     address: 'Cité test, bloc 1',
     method: 'home',
     confirm: 'call',
-    note: '',
-    items: [{ productId: 'speedo-fastskin-cap-pink', colorId: 'standard', size: 'M', qty: 1 }],
+    note: 'e2e test order',
+    items: [{ productId: WHISTLE, colorId: 'standard', size: 'One size', qty: 1 }],
   };
-  test('validates the form, refuses other sites, and drops bot orders without saving', async ({ request }) => {
-    const before = count();
+
+  test('validates the form, refuses other sites and coming-soon items, drops bot orders', async ({ request }) => {
     const badPhone = await request.post('/api/orders', { data: { ...order, phone: '0212 34' } });
     expect(badPhone.status()).toBe(400);
     expect((await badPhone.json()).fields.phone).toMatch(/mobile number/);
@@ -189,9 +184,32 @@ test.describe('orders API', () => {
     expect(noDesk.status()).toBe(400);
     const cross = await request.post('/api/orders', { headers: { origin: 'https://evil.example' }, data: order });
     expect(cross.status()).toBe(403);
-    // the hidden honeypot field filled in: answered like a success, nothing saved
+    const soon = await request.post('/api/orders', { data: { ...order, items: [{ productId: 'psg-2026-27-home-jersey', colorId: 'standard', size: 'M', qty: 1 }] } });
+    expect(soon.status()).toBe(409);
     const bot = await request.post('/api/orders', { data: { ...order, website: 'http://spam.example' } });
     expect(bot.status()).toBe(202);
-    expect(count()).toBe(before);
+    expect((await bot.json()).receipt).toBeUndefined();
+  });
+
+  test('a placed order gets a private receipt link; other links show nothing', async ({ request, page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'places a real order: once, on desktop');
+    const res = await request.post('/api/orders', { data: order });
+    expect(res.status()).toBe(201);
+    const json = (await res.json()) as { number: number; receipt: string };
+    expect(json.receipt).toMatch(/^\/order\/[A-Za-z0-9_-]{43}$/);
+    await page.goto(json.receipt);
+    await expect(page.getByRole('heading', { name: 'Your receipt' })).toBeVisible();
+    await expect(page.getByText(`Order #${json.number}`)).toBeVisible();
+    await expect(page.getByTestId('receipt-total')).toHaveText(/1\s630\sDA/);
+    // the full phone number is not on the page
+    await expect(page.getByText('0555123456')).toHaveCount(0);
+    // a guessed or altered link shows nothing
+    const wrong = await page.goto(json.receipt.slice(0, -2) + (json.receipt.endsWith('AA') ? 'BB' : 'AA'));
+    expect(wrong?.status()).toBe(404);
+    expect((await page.goto(`/order/${json.number}`))?.status()).toBe(404);
+    // receipts are never cached or indexed
+    const head = await request.get(json.receipt);
+    expect(head.headers()['cache-control']).toContain('no-store');
+    expect(head.headers()['x-robots-tag']).toContain('noindex');
   });
 });

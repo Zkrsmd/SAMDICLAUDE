@@ -1,11 +1,9 @@
 import 'server-only';
-import fs from 'node:fs';
-import path from 'node:path';
 import { KIND, PAIRS, rawProducts } from '@/data/products';
 import { sports } from '@/data/categories';
 import { brandName } from '@/data/brands';
 import { colorFamily } from '@/lib/color';
-import { readOverrides } from '@/lib/store/overrides';
+import { loadStore, readOverrides, uploadedMedia } from '@/lib/store/overrides';
 import { CatalogSchema, type ListingParams } from '@/lib/validation/catalog';
 import type { AdminProduct, CreatedProduct, Overrides, ProductInput } from '@/lib/validation/admin';
 import type { Product, SportSlug } from '@/types/catalog';
@@ -15,21 +13,6 @@ const base: Product[] = CatalogSchema.parse(rawProducts) as Product[];
 const baseSlugs = new Set(base.map((p) => p.slug));
 
 /* --------------------------- admin edits (store) --------------------------- */
-
-/** small stable hash → sample stock that is the same on every render */
-const hash = (s: string) => {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return h >>> 0;
-};
-const sampleStock = (p: { slug: string; sizes: string[] }) =>
-  Object.fromEntries(
-    p.sizes.map((size) => {
-      const h = hash(`${p.slug}|${size}`);
-      // mostly healthy shelves, a few running low
-      return [size, h % 9 === 0 ? 1 + (h % 4) : 6 + (h % 38)];
-    }),
-  );
 
 const inputFrom = (p: Product, i: number): ProductInput => ({
   name: p.name,
@@ -42,8 +25,9 @@ const inputFrom = (p: Product, i: number): ProductInput => ({
   short: p.short,
   description: p.description,
   sizes: p.sizes,
-  stock: sampleStock(p),
-  sku: `SM-${1001 + i}`,
+  // the catalogue's own counts (from Odoo): sized products start at 0 until counted in the admin
+  stock: p.stock ?? Object.fromEntries(p.sizes.map((s) => [s, 0])),
+  sku: p.sku ?? `SM-${1001 + i}`,
   colorName: p.colors[0]!.name,
   swatch: /^#[0-9a-f]{6}$/i.test(p.colors[0]!.swatch[0] ?? '') ? p.colors[0]!.swatch[0]! : '#8E99A8',
   tags: p.tags,
@@ -103,19 +87,24 @@ const fromCreated = (c: CreatedProduct): Product =>
     c,
   );
 
-const second = new Map<string, string | null>();
-const secondImage = (slug: string) => {
-  if (!second.has(slug)) {
-    let found: string | null = null;
-    try {
-      if (fs.existsSync(path.join(process.cwd(), 'public', 'products', `${slug}-2.webp`))) found = `/products/${slug}-2.webp`;
-    } catch {
-      found = null;
-    }
-    second.set(slug, found);
-  }
-  return second.get(slug)!;
+/**
+ * Where a product's photo is: a photo uploaded in the admin (kept in the database, served from
+ * /media) wins over the catalogue photo in /products.
+ */
+export function imageFor(slug: string, slot: 1 | 2 = 1): string | null {
+  const v = uploadedMedia().get(`${slug}-${slot}`);
+  if (v) return `/media/${slug}-${slot}.webp?v=${v}`;
+  return slot === 1 ? `/products/${slug}-1.webp` : null;
+}
+
+/** The product's photos as the store shows them (admin uploads first). */
+const withPhotos = (p: Product): Product => {
+  const two = imageFor(p.slug, 2);
+  return { ...p, images: [imageFor(p.slug)!, ...(two ? [two] : [])] };
 };
+
+/** Call before using the catalogue in a page, route or action (brings the admin's changes up to date). */
+export const ensureStore = loadStore;
 
 interface State {
   admin: AdminProduct[];
@@ -149,27 +138,28 @@ function build(o: Overrides): State {
       slug: p.slug,
       created: false,
       edited: !!edit,
-      sampleStock: !edit,
+      sampleStock: false,
       createdAt: '2026-11-17T00:00:00.000Z',
-      image: `/products/${p.slug}-1.webp`,
-      image2: secondImage(p.slug),
+      image: imageFor(p.slug)!,
+      image2: imageFor(p.slug, 2),
     });
-    if (input.status === 'active') products.push(edit ? applyInput(p, edit) : p);
+    if (input.status === 'active') products.push(withPhotos(edit ? applyInput(p, edit) : p));
   });
   for (const c of o.created) {
     if (baseSlugs.has(c.slug)) continue;
-    admin.push({ ...c, ...names(c), created: true, edited: true, sampleStock: false, image: `/products/${c.slug}-1.webp`, image2: secondImage(c.slug) });
-    if (c.status === 'active') products.push(fromCreated(c));
+    admin.push({ ...c, ...names(c), created: true, edited: true, sampleStock: false, image: imageFor(c.slug)!, image2: imageFor(c.slug, 2) });
+    if (c.status === 'active') products.push(withPhotos(fromCreated(c)));
   }
   const liveSports = live(products);
   return { admin, products, liveSports, liveMap: new Map(liveSports.map((s) => [s.slug, s])), bySlug: new Map(products.map((p) => [p.slug, p])) };
 }
 
-let memo: { src: Overrides; state: State } | null = null;
-/** Catalogue + the admin's changes, rebuilt only when the store file changes. */
+let memo: { src: Overrides; media: Map<string, number>; state: State } | null = null;
+/** Catalogue + the admin's changes, rebuilt only when the store changes. */
 function state(): State {
   const src = readOverrides();
-  if (memo?.src !== src) memo = { src, state: build(src) };
+  const media = uploadedMedia();
+  if (memo?.src !== src || memo.media !== media) memo = { src, media, state: build(src) };
   return memo.state;
 }
 
@@ -211,6 +201,8 @@ export interface CardData {
   isNew: boolean;
   verified: boolean;
   kind: Product['model']['kind'];
+  /** the photo to show (an admin upload or the catalogue photo) */
+  image: string;
 }
 
 export const toCard = (p: Product): CardData => ({
@@ -232,6 +224,7 @@ export const toCard = (p: Product): CardData => ({
   isNew: !!p.isNew,
   verified: p.verified,
   kind: p.model.kind,
+  image: imageFor(p.slug)!,
 });
 
 export const getAllProducts = () => state().products;
@@ -359,6 +352,7 @@ export const searchIndex = () =>
     sport: p.sport,
     sub: p.sub,
     price: p.price,
+    image: imageFor(p.slug)!,
     colorId: p.colors[0]!.id,
     terms: [p.name, brandName(p.brand), p.sport, p.sub.replace(/-/g, ' '), ...p.tags].join(' ').toLowerCase(),
   }));

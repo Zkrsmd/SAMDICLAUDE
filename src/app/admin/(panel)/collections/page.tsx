@@ -6,11 +6,13 @@ import { categoryMedia } from '@/config/hero';
 import { sports } from '@/data/categories';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAdminProducts } from '@/lib/catalog';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Collections' };
 
 /** The store's structure: every sport and its categories, with what's in them. */
 export default async function CollectionsPage() {
+  await loadAdminData();
   await requireAdmin();
   const products = getAdminProducts();
   return (

@@ -1,18 +1,27 @@
 import type { BrandEntry } from '@/types/catalog';
+import { STORE_BRANDS } from '@/data/products';
 
 /**
  * Brands carried by the store (manufacturers whose products are listed — not partners).
  * Logos are the official marks from Wikimedia Commons (public/brands/*.svg); trademarks of their owners.
+ * Only the brands with a logo appear in the homepage brand strip.
  */
-export const brands: (BrandEntry & { logo?: string; keepColor?: boolean })[] = [
-  { id: 'nike', name: 'Nike', style: 'upper', weight: 900, tracking: 0, logo: '/brands/nike.svg' },
-  { id: 'adidas', name: 'adidas', style: 'lower', weight: 800, tracking: 0, logo: '/brands/adidas.svg' },
-  { id: 'puma', name: 'PUMA', style: 'upper', weight: 800, tracking: 0, logo: '/brands/puma.svg' },
-  { id: 'venum', name: 'VENUM', style: 'upper', weight: 900, tracking: 0.12 },
-  { id: 'everlast', name: 'Everlast', style: 'upper', weight: 800, tracking: 0, logo: '/brands/everlast.svg' },
-  { id: 'speedo', name: 'Speedo', style: 'lower', weight: 800, tracking: 0, logo: '/brands/speedo.svg' },
-  { id: 'arena', name: 'arena', style: 'lower', weight: 700, tracking: 0, logo: '/brands/arena.svg' },
-  { id: 'wilson', name: 'Wilson', style: 'title', weight: 800, tracking: 0, logo: '/brands/wilson.svg', keepColor: true },
-];
+const LOGOS: Record<string, { logo: string; keepColor?: boolean }> = {
+  nike: { logo: '/brands/nike.svg' },
+  adidas: { logo: '/brands/adidas.svg' },
+  puma: { logo: '/brands/puma.svg' },
+  everlast: { logo: '/brands/everlast.svg' },
+  arena: { logo: '/brands/arena.svg' },
+  wilson: { logo: '/brands/wilson.svg', keepColor: true },
+};
 
-export const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? id;
+export const brands: (BrandEntry & { logo?: string; keepColor?: boolean })[] = Object.entries(STORE_BRANDS).map(([id, name]) => ({
+  id,
+  name,
+  style: 'title',
+  weight: 800,
+  tracking: 0,
+  ...LOGOS[id],
+}));
+
+export const brandName = (id: string) => STORE_BRANDS[id] ?? id;

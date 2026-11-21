@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -48,11 +49,26 @@ const nextConfig: NextConfig = {
     qualities: [75, 90],
     deviceSizes: [360, 414, 640, 828, 1080, 1280, 1600, 1920],
     // static snapshot (scripts/snapshot.mjs) has no image optimizer: serve the files as they are
-    unoptimized: process.env.SMADI_STATIC === '1',
+    // Cloudflare Workers have no Next image optimizer: photos are already sized WebPs, serve them as they are
+    unoptimized: true,
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // private pages: never cached by a shared cache, never leak their URL in a Referer header
+      {
+        source: '/(order|admin|checkout)/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+    ];
   },
 };
 
 export default nextConfig;
+
+// `next dev` gets the Cloudflare bindings (the local D1 database) through Wrangler
+if (process.env.NODE_ENV === 'development') initOpenNextCloudflareForDev();

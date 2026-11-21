@@ -10,6 +10,8 @@ import { useWishlist } from '@/stores/lists';
 import { useUi } from '@/stores/ui';
 import { useHydrated } from '@/hooks/useHydrated';
 import { MobileMenu } from './MobileMenu';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useT } from '@/i18n/client';
 
 export interface NavSport {
   slug: string;
@@ -23,6 +25,7 @@ export interface NavSport {
  * tightens and brightens once you leave the top of the page.
  */
 export function Header({ nav }: { nav: NavSport[] }) {
+  const t = useT();
   const pathname = usePathname();
   const hydrated = useHydrated();
   const cartCount = useCartCount();
@@ -65,12 +68,12 @@ export function Header({ nav }: { nav: NavSport[] }) {
           data-edge=""
         >
           <HoloEdge />
-          <Link href="/" className="text-[19px] md:text-[21px]" aria-label="SMADI home">
+          <Link href="/" className="text-[19px] md:text-[21px]" aria-label={t('MODE S home')}>
             <Wordmark />
           </Link>
 
-          <nav aria-label="Sports" className="mx-auto hidden items-center gap-0.5 lg:flex">
-            {nav.map((s) => {
+          <nav aria-label={t('Sports')} className="mx-auto hidden items-center gap-0.5 lg:flex">
+            {nav.filter((s) => s.tier === 'major').map((s) => {
               const active = pathname.startsWith(`/${s.slug}`);
               return (
                 <Link
@@ -90,11 +93,12 @@ export function Header({ nav }: { nav: NavSport[] }) {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-0.5 lg:ml-0">
-            <button type="button" className="grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06]" aria-label="Search products" onClick={() => set({ searchOpen: true })}>
+          <div className="ms-auto flex items-center gap-0.5 lg:ms-0">
+            <LanguageSwitcher className="me-1 hidden lg:inline-flex" />
+            <button type="button" className="grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06]" aria-label={t('Search products')} onClick={() => set({ searchOpen: true })}>
               <Icon name="search" size={20} />
             </button>
-            <Link href="/wishlist" className="relative grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06]" aria-label={`Wishlist${hydrated ? `, ${wishCount} items` : ''}`}>
+            <Link href="/wishlist" className="relative grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06]" aria-label={hydrated ? t('Wishlist, {n} items', { n: wishCount }) : t('Wishlist')}>
               <Icon name="heart" size={20} />
               {hydrated && wishCount > 0 && <Badge n={wishCount} />}
             </Link>
@@ -102,7 +106,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
               type="button"
               id="cart-button"
               className={`holo-border relative grid h-11 w-11 place-items-center rounded-full bg-white text-ink shadow-[0_8px_20px_-10px_rgba(23,26,24,0.45)] transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
-              aria-label={`Open bag${hydrated ? `, ${cartCount} items` : ''}`}
+              aria-label={hydrated ? t('Open bag, {n} items', { n: cartCount }) : t('Open bag')}
               onClick={() => set({ cartOpen: true })}
               data-edge=""
             >
@@ -113,7 +117,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
             <button
               type="button"
               className="ml-0.5 grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06] lg:hidden"
-              aria-label="Open menu"
+              aria-label={t('Open menu')}
               aria-expanded={menuOpen}
               onClick={() => set({ menuOpen: true })}
             >

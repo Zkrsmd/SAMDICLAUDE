@@ -1,18 +1,33 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ProductImage } from '@/components/product/ProductImage';
 import { useUi } from '@/stores/ui';
 import { useDialog } from '@/hooks/useDialog';
 import { formatPrice } from '@/lib/format';
 import type { SearchIndexEntry } from '@/lib/catalog';
+import { useT } from '@/i18n/client';
 
-const SUGGESTIONS = ['Mercurial', 'Venum gloves', 'mirror goggles', 'shin guards', 'Fastskin cap', 'hand wraps'];
+const SUGGESTIONS = ['Algeria jersey', 'PSG', 'Venum gloves', 'swim goggles', 'Intex', 'burkini'];
 
-export function SearchOverlay({ index }: { index: SearchIndexEntry[] }) {
+/** Instant search. The index (every product, light) loads the first time the overlay opens. */
+export function SearchOverlay() {
+  const t = useT();
   const open = useUi((s) => s.searchOpen);
+  const [index, setIndex] = useState<SearchIndexEntry[]>([]);
+  const loaded = useRef(false);
+  useEffect(() => {
+    if (!open || loaded.current) return;
+    loaded.current = true;
+    fetch('/api/search-index')
+      .then((r) => (r.ok ? (r.json() as Promise<SearchIndexEntry[]>) : []))
+      .then(setIndex)
+      .catch(() => {
+        loaded.current = false;
+      });
+  }, [open]);
   const set = useUi((s) => s.set);
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -41,7 +56,7 @@ export function SearchOverlay({ index }: { index: SearchIndexEntry[] }) {
         ref={ref}
         role="dialog"
         aria-modal="true"
-        aria-label="Search"
+        aria-label={t('Search')}
         className={`absolute inset-x-0 top-0 max-h-[100svh] overflow-y-auto bg-bg transition-transform duration-700 ease-[var(--ease-expo)] ${
           open ? 'translate-y-0' : '-translate-y-full'
         }`}
@@ -51,27 +66,27 @@ export function SearchOverlay({ index }: { index: SearchIndexEntry[] }) {
           <form onSubmit={submit} role="search" className="flex items-center gap-3 border-b-2 border-ink">
             <Icon name="search" size={26} />
             <label htmlFor="site-search" className="sr-only">
-              Search products
+              {t('Search products')}
             </label>
             <input
               id="site-search"
               data-autofocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search boots, gloves, goggles…"
+              placeholder={t('Search jerseys, boots, goggles…')}
               autoComplete="off"
               enterKeyHint="search"
               maxLength={80}
               className="display h-16 flex-1 bg-transparent text-[clamp(30px,8vw,56px)] outline-none placeholder:text-ink/20"
             />
-            <button type="button" className="grid h-11 w-11 place-items-center" aria-label="Close search" onClick={close}>
+            <button type="button" className="grid h-11 w-11 place-items-center" aria-label={t('Close search')} onClick={close}>
               <Icon name="close" />
             </button>
           </form>
 
           {!q && (
             <div className="py-6">
-              <p className="eyebrow text-muted">Popular</p>
+              <p className="eyebrow text-muted">{t('Popular')}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {SUGGESTIONS.map((s) => (
                   <button key={s} type="button" className="chip" onClick={() => setQ(s)}>
@@ -90,7 +105,7 @@ export function SearchOverlay({ index }: { index: SearchIndexEntry[] }) {
                   <li key={r.slug}>
                     <Link href={`/product/${r.slug}`} onClick={close} className="flex items-center gap-4 rounded-[2px] p-2 hover:bg-stone">
                       <span className="relative h-16 w-16 shrink-0 bg-stone">
-                        <ProductImage slug={r.slug} colorId={r.colorId} alt="" sizes="64px" />
+                        <ProductImage src={r.image} slug={r.slug} colorId={r.colorId} alt="" sizes="64px" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="eyebrow block text-muted">{r.brandName}</span>

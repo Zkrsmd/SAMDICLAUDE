@@ -1,11 +1,11 @@
 /**
- * Central brand configuration. The final brand name has not been chosen —
- * change it here and it updates everywhere (wordmark, metadata, footer, loader).
+ * Central brand configuration: change the name here and it updates everywhere (metadata, footer…).
+ * The logo lock-up itself is src/components/ui/Wordmark.tsx.
  */
 export const brand = {
-  name: 'SMADI',
+  name: 'MODE S',
   /** Short form used in tight spaces (mobile header, favicon text). */
-  shortName: 'SM',
+  shortName: 'MS',
   tagline: 'Gear for every decisive moment.',
   description:
     'A curated sports equipment store for football, boxing, swimming and more — presented like a showroom, shopped like a store.',

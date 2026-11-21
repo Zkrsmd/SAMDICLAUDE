@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { ProductCard } from './ProductCard';
 import type { CardData } from '@/lib/catalog';
 import { useRecent } from '@/stores/lists';
+import { useCards } from '@/hooks/useCards';
 import { useHydrated } from '@/hooks/useHydrated';
+import { useT } from '@/i18n/client';
 
 export function ProductGrid({ items, cols = 4, priorityFirst }: { items: CardData[]; cols?: 3 | 4; priorityFirst?: boolean }) {
   return (
@@ -31,15 +33,14 @@ export function ProductRail({ items, label }: { items: CardData[]; label: string
 }
 
 /** Recently viewed products (stored locally on this device). */
-export function RecentlyViewed({ cards, exclude, title = 'Recently viewed' }: { cards: CardData[]; exclude?: string; title?: string }) {
+export function RecentlyViewed({ exclude, title }: { exclude?: string; title?: string }) {
+  const t = useT();
+  title = title ?? t('Recently viewed');
   const hydrated = useHydrated();
   const slugs = useRecent((s) => s.slugs);
-  if (!hydrated) return null;
-  const items = slugs
-    .filter((s) => s !== exclude)
-    .map((s) => cards.find((c) => c.slug === s))
-    .filter((c): c is CardData => !!c)
-    .slice(0, 8);
+  const cards = useCards(hydrated ? slugs.filter((s) => s !== exclude).slice(0, 8) : []);
+  if (!hydrated || !cards) return null;
+  const items = cards.slice(0, 8);
   if (!items.length) return null;
   return (
     <section aria-labelledby="recent-title" className="container-x py-12">
@@ -58,6 +59,7 @@ export function RecentlyViewed({ cards, exclude, title = 'Recently viewed' }: { 
  * near the bottom) — and a "Show more" button, so scrolling is never the only way.
  */
 export function ProductStream({ items, step = 20 }: { items: CardData[]; step?: number }) {
+  const t = useT();
   const [shown, setShown] = useState(step);
   const end = useRef<HTMLDivElement>(null);
   const more = shown < items.length;
@@ -73,11 +75,11 @@ export function ProductStream({ items, step = 20 }: { items: CardData[]; step?: 
       <ProductGrid items={items.slice(0, shown)} />
       <div ref={end} className="mt-8 flex flex-col items-center gap-2">
         <p className="mono text-[12px] text-muted" aria-live="polite">
-          Showing {Math.min(shown, items.length)} of {items.length}
+          {t('Showing {a} of {b}', { a: Math.min(shown, items.length), b: items.length })}
         </p>
         {more && (
           <button type="button" className="btn-holo h-12 px-7" onClick={() => setShown((n) => Math.min(items.length, n + step))}>
-            Show more
+            {t('Show more')}
           </button>
         )}
       </div>

@@ -4,21 +4,23 @@ import { CategoryHero } from '@/components/category/CategoryHero';
 import { SubNav } from '@/components/category/SubNav';
 import { Listing } from '@/components/category/Listing';
 import { getSport, getSports, productsFor } from '@/lib/catalog';
+import { ensureStore } from '@/lib/catalog';
+import { getT } from '@/i18n/server';
 
 // pages for products/sports added in the admin render on first visit (unknown ones still 404)
-export const dynamicParams = true;
-export function generateStaticParams() {
-  return getSports().map((s) => ({ sport: s.slug }));
-}
-
+export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ sport: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await ensureStore();
   const s = getSport((await params).sport);
-  return s ? { title: s.name, description: s.description } : {};
+  const t = await getT();
+  return s ? { title: t(s.name), description: t(s.description) } : {};
 }
 
 export default async function SportPage({ params, searchParams }: Props) {
+  const t = await getT();
+  await ensureStore();
   const { sport } = await params;
   const s = getSport(sport);
   if (!s) notFound();
@@ -27,22 +29,22 @@ export default async function SportPage({ params, searchParams }: Props) {
   const subs = s.subs.map((sub) => {
     const list = productsFor(s.slug, sub.slug);
     const pick = list.find((p) => p.featured) ?? list.find((p) => p.bestSeller) ?? list[0];
-    return { slug: sub.slug, name: sub.name, count: list.length, showroom: sub.showroom, image: pick ? { slug: pick.slug, color: pick.colors[0]!.id } : undefined };
+    return { slug: sub.slug, name: t(sub.name), count: list.length, showroom: sub.showroom, image: pick ? { slug: pick.slug, color: pick.colors[0]!.id } : undefined };
   });
   return (
     <>
       <CategoryHero
         sport={s.slug}
-        title={s.name}
-        description={s.description}
+        title={t(s.name)}
+        description={t(s.description)}
         count={all.length}
-        crumbs={[{ label: 'Home', href: '/' }, { label: s.name }]}
+        crumbs={[{ label: t('Home'), href: '/' }, { label: t(s.name) }]}
         hero={hero ? { slug: hero.slug, color: hero.colors[0]!.id, name: hero.name } : undefined}
       />
       <div className="container-x pt-8">
         <SubNav sport={s.slug} subs={subs} />
       </div>
-      <Listing base={all} searchParams={await searchParams} revealKey={s.slug} title={`All ${s.name.toLowerCase()}`} />
+      <Listing base={all} searchParams={await searchParams} revealKey={s.slug} title={t('All {name}', { name: t(s.name).toLowerCase() })} />
     </>
   );
 }

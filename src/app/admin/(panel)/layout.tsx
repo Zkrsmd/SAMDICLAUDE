@@ -3,10 +3,12 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { getOrders } from '@/lib/admin/orders';
 import { getAdminProducts } from '@/lib/catalog';
 import { storeWritable } from '@/lib/store/overrides';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
+  await loadAdminData();
   await requireAdmin();
   const orders = getOrders();
   const index = {

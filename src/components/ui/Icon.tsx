@@ -113,7 +113,8 @@ export function Icon({ name, size = 22, className = '' }: { name: Name; size?: n
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
-      className={className}
+      // arrows and chevrons point the other way in right-to-left languages
+      className={/arrow|chevron/.test(name) ? `rtl-flip ${className}` : className}
     >
       {paths[name]}
     </svg>

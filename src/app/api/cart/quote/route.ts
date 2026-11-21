@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getProduct, sizeAvailable } from '@/lib/catalog';
+import { getProduct, sizeAvailable, ensureStore } from '@/lib/catalog';
 import { brandName } from '@/data/brands';
 import { CartQuoteRequestSchema } from '@/lib/validation/catalog';
-import { clientKey, rateLimit } from '@/lib/security/rateLimit';
+import { clientKey, softRateLimit } from '@/lib/security/rateLimit';
 
 const MAX_BODY = 16 * 1024;
 
@@ -41,12 +41,13 @@ export async function POST(req: Request) {
     }
     if (!sameOrigin) return NextResponse.json({ error: 'Cross-origin request rejected' }, { status: 403 });
   }
-  if (!rateLimit(`quote:${clientKey(req.headers)}`, 120).ok) {
+  if (!softRateLimit(`quote:${clientKey(req.headers)}`, 120).ok) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
   if (!req.headers.get('content-type')?.includes('application/json')) {
     return NextResponse.json({ error: 'Expected JSON' }, { status: 415 });
   }
+  await ensureStore();
   const declared = Number(req.headers.get('content-length') ?? '0');
   if (declared > MAX_BODY) return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
   const text = await req.text();

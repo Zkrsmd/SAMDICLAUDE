@@ -2,19 +2,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openHome } from './helpers';
+import { ON_SALE } from './seed';
 
-/** ADMIN_PASSWORD from the environment, or from .env.local when the tests run on the dev machine. */
+/** The preview's admin password: E2E_ADMIN_PASSWORD, or the local test password in .dev.vars (never the real one). */
 function adminPassword() {
-  if (process.env.ADMIN_PASSWORD) return process.env.ADMIN_PASSWORD;
+  if (process.env.E2E_ADMIN_PASSWORD) return process.env.E2E_ADMIN_PASSWORD;
   try {
-    return fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8').match(/^ADMIN_PASSWORD=(.+)$/m)?.[1]?.trim();
+    return fs.readFileSync(path.join(process.cwd(), '.dev.vars'), 'utf8').match(/^ADMIN_PASSWORD=(.+)$/m)?.[1]?.trim();
   } catch {
     return undefined;
   }
 }
 /** prices print with no-break spaces: "39 900 DA" */
 const NBSP = String.fromCharCode(160);
-const STORE = path.join(process.cwd(), 'src', 'data', 'store', 'overrides.json');
+const SLUG = ON_SALE.whistle.slug;
+
+async function signIn(page: import('@playwright/test').Page, pw: string) {
+  await page.goto('/admin/login');
+  await page.getByLabel('Password').fill(pw);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+}
 
 test('shop by sport opens a sport in place, with best sellers, new releases and see all', async ({ page }) => {
   await openHome(page);
@@ -32,7 +40,7 @@ test('shop by sport opens a sport in place, with best sellers, new releases and 
   await panel.getByRole('button', { name: /^See all \d+/ }).click();
   await expect.poll(() => all.count()).toBeGreaterThan(before);
   // a category chip narrows the list in place
-  await panel.getByRole('button', { name: /^Boxing gloves/ }).click();
+  await panel.getByRole('button', { name: /^Boxing & MMA gloves/ }).click();
   await expect(panel.getByRole('heading', { name: /All boxing/ })).toBeVisible();
   await panel.getByRole('button', { name: 'Close Boxing' }).click();
   await expect(panel).toBeHidden();
@@ -44,7 +52,7 @@ test.describe('admin', () => {
     await page.goto('/admin/products');
     await expect(page).toHaveURL(/\/admin\/login/);
     expect((await request.get('/api/admin/export')).status()).toBe(401);
-    const upload = await request.post('/api/admin/media', { headers: { origin: new URL(page.url()).origin }, multipart: { slug: 'nike-control-soccer-ball', slot: '1' } });
+    const upload = await request.post('/api/admin/media', { headers: { origin: new URL(page.url()).origin }, multipart: { slug: SLUG, slot: '1' } });
     expect(upload.status()).toBe(401);
     if (!adminPassword()) return;
     await page.getByLabel('Password').fill('not-the-password');
@@ -52,75 +60,67 @@ test.describe('admin', () => {
     await expect(page.locator('#adm-pw-error')).toContainText('not right');
   });
 
-  test('edit a product: the sale price shows in the store, then put it back', async ({ page }, info) => {
+  test('edit a product: the was-price shows in the store, then put it back', async ({ page }, info) => {
     const pw = adminPassword();
-    test.skip(!pw, 'ADMIN_PASSWORD is not set');
-    // the store file is shared: change it from one project only, and restore it afterwards
+    test.skip(!pw, 'no admin password for the preview');
     test.skip(info.project.name !== 'desktop', 'writes run once, on desktop');
-    const original = fs.readFileSync(STORE, 'utf8');
-    try {
-      await page.goto('/admin/login');
-      await page.getByLabel('Password').fill(pw!);
-      await page.getByRole('button', { name: 'Sign in' }).click();
-      await expect(page).toHaveURL(/\/admin$/);
-      await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })).toBeVisible();
+    await signIn(page, pw!);
+    await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })).toBeVisible();
+    await page.goto(`/admin/products/${SLUG}`);
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue(/Fox 40 Classic whistle/);
+    await page.getByLabel('Compare-at price').fill('1500');
+    await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Product saved')).toBeVisible();
+    await page.goto(`/product/${SLUG}`);
+    await expect(page.getByLabel(`Was 1${NBSP}500${NBSP}DA`).first()).toBeVisible();
 
-      await page.goto('/admin/products?q=control+soccer');
-      await page.getByRole('link', { name: /Control Soccer Ball/ }).first().click();
-      await expect(page.getByLabel('Title', { exact: true })).toHaveValue(/Control Soccer Ball/);
-      await page.getByLabel('Compare-at price').fill('39900');
-      await expect(page.getByRole('region', { name: 'Unsaved changes' })).toBeVisible();
-      await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
-      await expect(page.getByText('Product saved')).toBeVisible();
-
-      await page.goto('/product/nike-control-soccer-ball');
-      await expect(page.getByLabel(`Was 39${NBSP}900${NBSP}DA`).first()).toBeVisible();
-
-      await page.goto('/admin/products/nike-control-soccer-ball');
-      await page.getByLabel('Compare-at price').fill('');
-      await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
-      await expect(page.getByText('Product saved')).toBeVisible();
-      await page.goto('/product/nike-control-soccer-ball');
-      await expect(page.getByLabel(`Was 39${NBSP}900${NBSP}DA`)).toHaveCount(0);
-    } finally {
-      fs.writeFileSync(STORE, original);
-    }
+    await page.goto(`/admin/products/${SLUG}`);
+    await page.getByLabel('Compare-at price').fill('');
+    await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Product saved')).toBeVisible();
+    await page.goto(`/product/${SLUG}`);
+    await expect(page.getByLabel(`Was 1${NBSP}500${NBSP}DA`)).toHaveCount(0);
   });
 
   test('coming soon: switched on in the admin, the store shows it and won’t sell it; then put it back', async ({ page }, info) => {
     const pw = adminPassword();
-    test.skip(!pw, 'ADMIN_PASSWORD is not set');
+    test.skip(!pw, 'no admin password for the preview');
     test.skip(info.project.name !== 'desktop', 'writes run once, on desktop');
-    const original = fs.readFileSync(STORE, 'utf8');
-    const slug = 'speedo-fastskin-cap-pink';
-    try {
-      await page.goto('/admin/login');
-      await page.getByLabel('Password').fill(pw!);
-      await page.getByRole('button', { name: 'Sign in' }).click();
-      await expect(page).toHaveURL(/\/admin$/);
-      await page.goto(`/admin/products/${slug}`);
-      await page.getByRole('switch', { name: 'Coming soon' }).click();
-      await expect(page.getByTestId('store-availability')).toContainText('Coming soon');
-      await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
-      await expect(page.getByText('Product saved')).toBeVisible();
+    await signIn(page, pw!);
+    await page.goto(`/admin/products/${SLUG}`);
+    await page.getByRole('switch', { name: 'Coming soon' }).click();
+    await expect(page.getByTestId('store-availability')).toContainText('Coming soon');
+    await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Product saved')).toBeVisible();
 
-      await page.goto(`/product/${slug}`);
-      await expect(page.getByRole('status').filter({ hasText: 'Coming soon' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Add to bag' })).toHaveCount(0);
-      const quote = await page.request.post('/api/cart/quote', { data: { items: [{ productId: slug, colorId: 'standard', size: 'M', qty: 1 }] } });
-      expect((await quote.json()).rejected[0].reason).toMatch(/Coming soon/);
-      await page.goto('/swimming/caps');
-      await expect(page.locator(`.pcard[data-availability="soon"]:has(a[href="/product/${slug}"])`)).toHaveCount(1);
+    await page.goto(`/product/${SLUG}`);
+    await expect(page.getByRole('status').filter({ hasText: 'Coming soon' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add to bag' })).toHaveCount(0);
+    const quote = await page.request.post('/api/cart/quote', { data: { items: [{ productId: SLUG, colorId: 'standard', size: 'One size', qty: 1 }] } });
+    expect((await quote.json()).rejected[0].reason).toMatch(/Coming soon/);
 
-      // switch it off in the admin (that also refreshes the cached product page), then it sells again
-      await page.goto(`/admin/products/${slug}`);
-      await page.getByRole('switch', { name: 'Coming soon' }).click();
-      await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
-      await expect(page.getByText('Product saved')).toBeVisible();
-      await page.goto(`/product/${slug}`);
-      await expect(page.getByRole('button', { name: 'Add to bag' }).first()).toBeVisible();
-    } finally {
-      fs.writeFileSync(STORE, original);
-    }
+    await page.goto(`/admin/products/${SLUG}`);
+    await page.getByRole('switch', { name: 'Coming soon' }).click();
+    await page.getByRole('region', { name: 'Unsaved changes' }).getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Product saved')).toBeVisible();
+    await page.goto(`/product/${SLUG}`);
+    await expect(page.getByRole('button', { name: 'Add to bag' }).first()).toBeVisible();
+  });
+
+  test('orders: the admin sees a placed order with the customer’s details', async ({ page, request }, info) => {
+    const pw = adminPassword();
+    test.skip(!pw, 'no admin password for the preview');
+    test.skip(info.project.name !== 'desktop', 'writes run once, on desktop');
+    const res = await request.post('/api/orders', {
+      data: { firstName: 'Admin', lastName: 'Check', phone: '0661 22 33 44', wilaya: 31, commune: 'Bir El Djir', address: 'Rue test 2', method: 'desk', confirm: 'sms', note: 'e2e admin check', items: [{ productId: SLUG, colorId: 'standard', size: 'One size', qty: 2 }] },
+    });
+    expect(res.status()).toBe(201);
+    const { number } = (await res.json()) as { number: number };
+    await signIn(page, pw!);
+    await page.goto(`/admin/orders/w${number}`);
+    await expect(page.getByText('0661 22 33 44').first()).toBeVisible();
+    await expect(page.getByTestId('confirm-by')).toContainText(/SMS/i);
+    await page.getByRole('button', { name: 'Confirm order' }).click();
+    await expect(page.getByRole('button', { name: /Mark as shipped|Shipped/ }).first()).toBeVisible();
   });
 });

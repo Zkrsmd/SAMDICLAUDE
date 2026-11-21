@@ -37,6 +37,26 @@ const SIZE_PRESETS: { label: string; sizes: string[] }[] = [
  * description, media, pricing, variants and stock, search listing), the organisation on the right
  * (status, sport and category, vendor, tags, merchandising). Unsaved changes raise a save bar.
  */
+
+/** The photo as a WebP (longest side 1600px), made in the browser — the server only stores WebPs. */
+async function toWebp(file: File): Promise<Blob> {
+  if (!file.type.startsWith('image/')) throw new Error('Choose a photo (PNG, JPG or WebP)');
+  const bmp = await createImageBitmap(file).catch(() => {
+    throw new Error('That file could not be read as an image');
+  });
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  for (const q of [0.88, 0.78, 0.65]) {
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', q));
+    if (!blob || blob.type !== 'image/webp') throw new Error('This browser can’t prepare photos — use Chrome or Edge');
+    if (blob.size <= 1_700_000) return blob;
+  }
+  throw new Error('That photo is too large');
+}
+
 export function ProductEditor({ initial, meta, sports, vendors, writable }: { initial: ProductInput; meta: Meta; sports: SportOpt[]; vendors: { id: string; name: string }[]; writable: boolean }) {
   const router = useRouter();
   const isNew = !meta.slug;
@@ -128,16 +148,16 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
 
   const upload = async (slot: 1 | 2, file: File | undefined) => {
     if (!file || !meta.slug) return;
-    const body = new FormData();
-    body.set('slug', meta.slug);
-    body.set('slot', String(slot));
-    body.set('file', file);
     toast('Uploading…');
     try {
+      const body = new FormData();
+      body.set('slug', meta.slug);
+      body.set('slot', String(slot));
+      body.set('file', await toWebp(file), `${meta.slug}-${slot}.webp`);
       const res = await fetch('/api/admin/media', { method: 'POST', body });
       const json = (await res.json()) as { url?: string; v?: number; error?: string };
       if (!res.ok || !json.url) throw new Error(json.error ?? 'Upload failed');
-      setImages((m) => ({ ...m, [slot]: `${json.url}?v=${json.v}` }));
+      setImages((m) => ({ ...m, [slot]: json.url! }));
       toast('Image saved');
       router.refresh();
     } catch (e) {

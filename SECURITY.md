@@ -13,14 +13,21 @@
 - **Checkout (cash on delivery).** No payment form and no card data: customers pay the courier in cash. `POST
   /api/orders` is same-origin only, size-limited, validated with Zod (Algerian mobile, wilaya 1–58, lengths), prices
   every line and the delivery fee on the server (client prices are never read), checks stock, and is rate limited
-  (6 valid orders / 10 min per address) with a honeypot field for bots. Orders hold personal data (name, phone,
-  address) and are written to `.data/orders.json`, which is git-ignored: keep it out of the repo and back it up.
-- **Admin.** `/admin` is locked by `ADMIN_PASSWORD` (env only, 8+ characters; unset = locked). Sign-in is rate limited
-  (8 tries / 10 min per address) and compared in constant time; the session is an HMAC-signed, http-only,
+  (6 valid orders / 10 min per address, shared across servers in D1) with a honeypot field for bots. Orders hold
+  personal data (name, phone, address) and live only in the Cloudflare D1 database (`orders` table), reachable by
+  the admin session. Coming-soon and out-of-stock products are refused by the quote and order APIs.
+- **Receipts ("each customer sees only their own").** Placing an order returns a private link `/order/<token>`: a
+  256-bit random token; the database stores only its SHA-256, so even a copy of the table can't be turned into
+  links. Order numbers alone open nothing. Receipt pages mask the phone, are `Cache-Control: private, no-store`,
+  `X-Robots-Tag: noindex`, `Referrer-Policy: no-referrer`, and are rate limited.
+- **Admin.** `/admin` is locked by `ADMIN_PASSWORD` (a Cloudflare secret in production, `.env.local`/`.dev.vars`
+  locally; 8+ characters; unset = locked). Sign-in is rate limited in D1 (8 tries / 15 min per address and 60 / hour
+  for the whole site) and compared in constant time; the session is an HMAC-signed, http-only,
   `SameSite=Strict`, `Secure` (production) cookie that lasts 12 hours, keyed from the password (or
   `ADMIN_SESSION_SECRET`), so changing the password signs everyone out. Every admin page, server action and admin API
-  checks the session itself (not only a layout). All writes are validated with Zod and written atomically to
-  `src/data/store/overrides.json`; uploads must be same-origin, ≤ 8 MB, an image type, and are re-encoded by sharp.
+  checks the session itself (not only a layout). All writes are validated with Zod and saved to D1 in one
+  transaction guarded by a version token (no lost updates). Photo uploads are converted to WebP in the browser; the
+  server accepts only same-origin, signed-in uploads of ≤ 1.8 MB whose bytes are a real WebP, stored in D1 `media`.
   Admin pages are `noindex`. Website orders (customer name, phone, address) are visible only behind the admin session.
 
 ## HTTP headers (`next.config.ts`)
@@ -38,16 +45,19 @@ inline bootstrap scripts). Upgrade path: nonce-based CSP via `proxy.ts` (Next 16
   are deliberately held back for tooling compatibility (see `DECISIONS.md`).
 - No remote scripts or hotlinked assets; all assets are local or generated.
 
-## Known limitations (prototype)
-- Rate limiting is in-memory per instance (not shared across servers).
+## Hosting (Cloudflare)
+- Next.js runs on Cloudflare Workers (OpenNext); data in D1 (`migrations/`). Raw IPs are never stored: rate-limit
+  keys and the order `client` column are salted SHA-256 hashes (salt = `ADMIN_SESSION_SECRET`).
+- Secrets: `wrangler secret put ADMIN_PASSWORD` / `ADMIN_SESSION_SECRET`; locally `.dev.vars` (git-ignored).
+- Every SQL statement is parameterised (`prepare().bind()`).
+
+## Known limitations
+- The quote endpoint's limiter is in-memory per server (cheap, read-only endpoint); the others use D1.
 - Cart, wishlist and recently-viewed data live in `localStorage` on the device.
-- No customer accounts or order storage exist yet. The only state-changing endpoints are the admin's (session-checked
-  server actions — Next.js checks their Origin — and the same-origin, session-checked upload route).
-- The admin has one shared password, no per-user accounts or audit log; a real deployment should add proper auth
-  (an identity provider) and a database instead of the store file.
+- The admin has one shared password, no per-user accounts or audit log. Optional extra layer: Cloudflare Access
+  (Zero Trust, free for small teams) in front of `/admin*` with email one-time codes.
 - No remote images or video: product photos, brand logos and campaign media are downloaded once at build time into `public/` and served from `'self'` (CSP `img-src`/`media-src`). The download helpers (`scripts/build-catalog.mjs`, `scripts/cutout-rembg.py`) are local tools, never run in the app.
 
-## Before production
-Move orders from `.data/orders.json` to a real database (see the hosting plan), add a shared rate limiter
-(e.g. Redis at the edge), move to nonce-based CSP, add authentication and CSRF protection for any account or
-order endpoints, server-side order validation with idempotency keys, monitoring and dependency auditing in CI.
+## Next steps
+Nonce-based CSP, Cloudflare Access on the admin, idempotency keys on orders, regular D1 backups
+(`wrangler d1 export smadi --remote`), dependency auditing in CI.

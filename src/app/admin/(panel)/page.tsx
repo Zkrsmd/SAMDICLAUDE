@@ -5,10 +5,12 @@ import { AIcon, Card, PageHead, RangeTabs, SampleNote, StatusBadge, Thumb, day, 
 import { requireAdmin } from '@/lib/admin/auth';
 import { RANGES, getOrders, parseRange, report, showingSamples } from '@/lib/admin/orders';
 import { getAdminProducts } from '@/lib/catalog';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Home' };
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+  await loadAdminData();
   await requireAdmin();
   const range = parseRange((await searchParams).range);
   const r = report(RANGES[range]);

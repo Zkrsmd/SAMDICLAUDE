@@ -4,21 +4,23 @@ import { ProductExperience } from '@/components/product/ProductExperience';
 import { ProductGrid, RecentlyViewed } from '@/components/product/ProductRail';
 import { brandName } from '@/data/brands';
 import { completeKit, getAllProducts, getProduct, getSport, getSub, moreFromCollection, toCard } from '@/lib/catalog';
+import { ensureStore } from '@/lib/catalog';
+import { getT } from '@/i18n/server';
 
 // pages for products/sports added in the admin render on first visit (unknown ones still 404)
-export const dynamicParams = true;
-export function generateStaticParams() {
-  return getAllProducts().map((p) => ({ slug: p.slug }));
-}
-
+export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await ensureStore();
   const p = getProduct((await params).slug);
-  return p ? { title: `${brandName(p.brand)} ${p.name}`, description: p.short } : {};
+  const t = await getT();
+  return p ? { title: `${brandName(p.brand)} ${p.name}`, description: t(p.short) } : {};
 }
 
 export default async function ProductPage({ params }: Props) {
+  const t = await getT();
+  await ensureStore();
   const { slug } = await params;
   const product = getProduct(slug);
   if (!product) notFound();
@@ -27,17 +29,26 @@ export default async function ProductPage({ params }: Props) {
   // what goes with it (three picks from the categories it pairs with), then more of the same kind
   const kit = completeKit(product, 3);
   const same = moreFromCollection(product, 8);
-  const cards = getAllProducts().map(toCard);
+  // the catalogue's generated lines read in the visitor's language (texts written in the admin stay as written)
+  const tail = ' Cash on delivery anywhere in Algeria.';
+  const shown = {
+    ...product,
+    short: t(product.short),
+    description:
+      product.description.endsWith(tail) && product.description.includes(product.short)
+        ? product.description.replace(product.short, t(product.short)).replace(tail, ` ${t('Cash on delivery anywhere in Algeria.')}`)
+        : product.description,
+  };
 
   return (
     <>
-      <ProductExperience key={product.slug} product={product} brandName={brandName(product.brand)} sportName={sport.name} subName={sub.name} />
+      <ProductExperience key={product.slug} product={shown} brandName={brandName(product.brand)} sportName={t(sport.name)} subName={t(sub.name)} />
 
       {kit.length > 0 && (
         <section aria-labelledby="kit-title" className="container-x pt-16 md:pt-24">
-          <p className="eyebrow text-muted">Buy it with</p>
+          <p className="eyebrow text-muted">{t('Buy it with')}</p>
           <h2 id="kit-title" className="display mt-2 text-[clamp(28px,5.6vw,64px)]">
-            Complete <span className="holo-text">the look</span>
+            {t('Complete')} <span className="holo-text">{t('the look')}</span>
           </h2>
           <div className="mt-7">
             <ProductGrid items={kit.map(toCard)} cols={3} />
@@ -47,16 +58,16 @@ export default async function ProductPage({ params }: Props) {
 
       {same.length > 0 && (
         <section aria-labelledby="same-title" className="container-x pb-6 pt-16 md:pt-24">
-          <p className="eyebrow text-muted">{sport.name}</p>
+          <p className="eyebrow text-muted">{t(sport.name)}</p>
           <h2 id="same-title" className="display mt-2 text-[clamp(28px,5.6vw,64px)]">
-            More <span className="holo-text">{sub.name.toLowerCase()}</span>
+            {t('More')} <span className="holo-text">{t(sub.name).toLowerCase()}</span>
           </h2>
           <div className="mt-7">
             <ProductGrid items={same.map(toCard)} />
           </div>
         </section>
       )}
-      <RecentlyViewed cards={cards} exclude={product.slug} />
+      <RecentlyViewed exclude={product.slug} />
     </>
   );
 }

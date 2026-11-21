@@ -8,6 +8,10 @@ import { SplitWords } from '@/components/ui/SplitWords';
 import { brands } from '@/data/brands';
 import { sportIcons } from '@/config/hero';
 import { applyListing, bestSellers, getAllProducts, getSports, productsFor, toCard, type CardData } from '@/lib/catalog';
+import { ensureStore } from '@/lib/catalog';
+import { getT } from '@/i18n/server';
+
+export const dynamic = 'force-dynamic';
 
 /** deterministic shuffle (the page is prerendered: same order on server and client) */
 function shuffle<T>(list: T[], seed: number) {
@@ -41,7 +45,9 @@ function Heading({ id, eyebrow, title, accent, action }: { id: string; eyebrow: 
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  await ensureStore();
+  const t = await getT();
   const all = getAllProducts();
   const sports = getSports();
   // every sport as a small circle that opens in place: its best sellers, what's new, everything
@@ -57,11 +63,15 @@ export default function Home() {
       .map((p) => p.slug);
     return {
       slug: s.slug,
-      name: s.name,
-      tagline: s.tagline,
+      name: t(s.name),
+      tagline: t(s.tagline),
       icon: sportIcons[s.slug] ?? productsFor(s.slug)[0]?.slug,
-      subs: s.subs.map((x) => ({ slug: x.slug, name: x.name, count: productsFor(s.slug, x.slug).length })),
-      cards: list.map((p) => (fresh.includes(p.slug) ? { ...toCard(p), isNew: true } : toCard(p))),
+      subs: s.subs.map((x) => ({ slug: x.slug, name: t(x.name), count: productsFor(s.slug, x.slug).length })),
+      // only what the panel shows first; the full list is fetched when the sport is opened
+      cards: list
+        .filter((p) => best.includes(p.slug) || fresh.includes(p.slug))
+        .map((p) => (fresh.includes(p.slug) ? { ...toCard(p), isNew: true } : toCard(p))),
+      total: list.length,
       best,
       fresh,
     };
@@ -76,21 +86,23 @@ export default function Home() {
   for (let r = 0; newest.length < 12 && queues.some((q) => q.length > r); r++)
     for (const q of queues) if (q[r] && newest.length < 12) newest.push({ ...toCard(q[r]!), isNew: true });
   newest.forEach((p) => taken.add(p.slug));
+  // a mixed sample of the rest (the full range is one tap away in each sport and in search)
   const rest = shuffle(
     all.filter((p) => !taken.has(p.slug)),
     20261118,
-  ).map(toCard);
-  const cards = all.map(toCard);
+  )
+    .slice(0, 60)
+    .map(toCard);
 
   return (
     <>
       <Hero />
       {/* the store slides up over the films as one sheet */}
       <div className="home-sheet">
-      <Brands brands={brands} />
+      <Brands brands={brands.filter((b) => b.logo)} />
 
       <section aria-labelledby="cats-title" className="container-x pt-14 md:pt-20">
-        <Heading id="cats-title" eyebrow="Shop by sport" title="Pick your" accent="sport" />
+        <Heading id="cats-title" eyebrow={t('Shop by sport')} title={t('Pick your')} accent={t('sport')} />
         <div className="mt-7">
           <SportShop items={shop} />
         </div>
@@ -99,12 +111,12 @@ export default function Home() {
       <section aria-labelledby="best-title" className="container-x pt-16 md:pt-24">
         <Heading
           id="best-title"
-          eyebrow="Most wanted"
-          title="Best"
-          accent="sellers"
+          eyebrow={t('Most wanted')}
+          title={t('Best')}
+          accent={t('sellers')}
           action={
             <Link href="/search" className="eyebrow inline-flex shrink-0 items-center gap-2 pb-2 hover:text-cobalt">
-              Shop all <Icon name="arrow-right" size={14} />
+              {t('Shop all')} <Icon name="arrow-right" size={14} />
             </Link>
           }
         />
@@ -114,20 +126,20 @@ export default function Home() {
       </section>
 
       <section aria-labelledby="new-title" className="container-x pt-16 md:pt-24">
-        <Heading id="new-title" eyebrow="Just dropped" title="New" accent="in" />
+        <Heading id="new-title" eyebrow={t('Just dropped')} title={t('New')} accent={t('in')} />
         <div className="mt-7">
           <ProductGrid items={newest} />
         </div>
       </section>
 
       <section aria-labelledby="all-title" className="container-x pb-10 pt-16 md:pt-24">
-        <Heading id="all-title" eyebrow={`${all.length} products`} title="Everything" accent="else" />
+        <Heading id="all-title" eyebrow={t('{n} products', { n: all.length })} title={t('Everything')} accent={t('else')} />
         <div className="mt-7">
           <ProductStream items={rest} />
         </div>
       </section>
 
-      <RecentlyViewed cards={cards} />
+      <RecentlyViewed />
       </div>
     </>
   );

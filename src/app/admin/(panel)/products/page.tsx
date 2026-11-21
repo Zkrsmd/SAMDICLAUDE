@@ -6,10 +6,12 @@ import { brands } from '@/data/brands';
 import { sports } from '@/data/categories';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAdminProducts } from '@/lib/catalog';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Products' };
 
 export default async function ProductsPage() {
+  await loadAdminData();
   await requireAdmin();
   const all = getAdminProducts();
   const rows = all.map((p) => ({

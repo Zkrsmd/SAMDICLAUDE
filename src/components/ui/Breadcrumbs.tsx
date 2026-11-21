@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
-export function Breadcrumbs({ items, light }: { items: { label: string; href?: string }[]; light?: boolean }) {
+export function Breadcrumbs({ items, light, label = 'Breadcrumb' }: { items: { label: string; href?: string }[]; light?: boolean; label?: string }) {
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label={label}>
       <ol className={`eyebrow flex flex-wrap items-center gap-1.5 ${light ? 'text-white' : 'text-muted'}`}>
         {items.map((it, i) => (
           <li key={i} className="flex items-center gap-1.5">

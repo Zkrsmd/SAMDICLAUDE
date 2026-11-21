@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { formatPrice, renderUrl } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 import { useReducedMotion } from '@/hooks/useHydrated';
+import { useT } from '@/i18n/client';
 
 export interface ShowItem {
   slug: string;
@@ -22,6 +23,7 @@ const TITLE: Record<Mount, string> = { wall: 'The boot wall', hooks: 'The glove 
  * Mobile: a snapping horizontal rail. Every item is a real link, so the wall is never the only route.
  */
 export function Showroom({ items, mount, sport }: { items: ShowItem[]; mount: Mount; sport: string }) {
+  const t = useT();
   const router = useRouter();
   const reduced = useReducedMotion();
   const [active, setActive] = useState<number | null>(null);
@@ -62,9 +64,9 @@ export function Showroom({ items, mount, sport }: { items: ShowItem[]; mount: Mo
   };
 
   return (
-    <section aria-label={TITLE[mount]} className="relative">
+    <section aria-label={t(TITLE[mount])} className="relative">
       <a href="#listing" className="sr-only-focusable absolute left-4 top-4 z-20 bg-ink px-3 py-2 text-white">
-        Skip to product list
+        {t('Skip to product list')}
       </a>
       <div
         ref={room}
@@ -84,10 +86,10 @@ export function Showroom({ items, mount, sport }: { items: ShowItem[]; mount: Mo
         <div className="container-x relative pt-10 md:pt-14">
           <div className="flex items-end justify-between">
             <div>
-              <p className="eyebrow text-muted">Showroom</p>
-              <h2 className="display mt-2 text-[clamp(30px,6vw,58px)]">{TITLE[mount]}</h2>
+              <p className="eyebrow text-muted">{t('Showroom')}</p>
+              <h2 className="display mt-2 text-[clamp(30px,6vw,58px)]">{t(TITLE[mount])}</h2>
             </div>
-            <p className="mono hidden text-[11px] uppercase tracking-[0.16em] text-muted md:block">Hover to light · click to step closer</p>
+            <p className="mono hidden text-[11px] uppercase tracking-[0.16em] text-muted md:block">{t('Hover to light · click to step closer')}</p>
           </div>
         </div>
 

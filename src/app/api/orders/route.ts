@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { brandName } from '@/data/brands';
 import { sports } from '@/data/categories';
-import { getProduct, sizeAvailable } from '@/lib/catalog';
+import { ensureStore, getProduct, imageFor, sizeAvailable } from '@/lib/catalog';
 import { deliveryFee } from '@/lib/delivery';
-import { renderUrl } from '@/lib/format';
 import { clientKey, rateLimit } from '@/lib/security/rateLimit';
-import { ReadOnlyStoreError, storeWritable } from '@/lib/store/overrides';
+import { sha256 } from '@/lib/store/db';
+import { ReadOnlyStoreError } from '@/lib/store/overrides';
 import { StockError, placeOrder, type CodLine } from '@/lib/store/orders';
 import { CheckoutSchema } from '@/lib/validation/order';
 import { fieldErrors } from '@/lib/validation/admin';
@@ -16,6 +16,8 @@ export interface OrderResponse {
   ok: boolean;
   /** order number to show the customer (absent when nothing was saved) */
   number?: number;
+  /** the customer's private receipt page (only this browser gets the link) */
+  receipt?: string;
   error?: string;
   fields?: Record<string, string>;
 }
@@ -57,8 +59,10 @@ export async function POST(req: Request) {
   if (f.website) return NextResponse.json<OrderResponse>({ ok: true }, { status: 202 });
   // fake-order protection: a few complete orders per connection per 10 minutes (counted only once the
   // form is valid: mobile networks put many customers behind one address, typos must not lock them out)
-  if (!rateLimit(`order:${clientKey(req.headers)}`, 6, 10 * 60_000).ok) return no(429, 'Too many orders from this connection. Call us to order, or try again in a few minutes.');
-  if (!storeWritable()) return no(503, 'Online ordering isn’t open on this preview yet.');
+  const client = clientKey(req.headers);
+  if (!(await rateLimit(`order:${client}`, 6, 10 * 60_000)).ok) return no(429, 'Too many orders from this connection. Call us to order, or try again in a few minutes.');
+  // prices, stock and "Coming soon" come from the store as it is right now
+  await ensureStore();
 
   // same product + colour + size twice → one line
   const merged = new Map<string, { productId: string; colorId: string; size: string; qty: number }>();
@@ -97,7 +101,7 @@ export async function POST(req: Request) {
       qty: it.qty,
       unit: p.price,
       total: p.price * it.qty,
-      image: renderUrl(p.slug),
+      image: imageFor(p.slug)!,
       stockTaken: !!p.stock,
     });
   }
@@ -109,7 +113,8 @@ export async function POST(req: Request) {
   const subtotal = lines.reduce((n, l) => n + l.total, 0);
 
   try {
-    const o = await placeOrder({
+    const { order: o, token } = await placeOrder(
+      {
       firstName: f.firstName,
       lastName: f.lastName,
       phone: f.phone,
@@ -123,8 +128,10 @@ export async function POST(req: Request) {
       subtotal,
       delivery,
       total: subtotal + delivery,
-    });
-    return NextResponse.json<OrderResponse>({ ok: true, number: o.number }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+      },
+      await sha256(`smadi-client|${process.env.ADMIN_SESSION_SECRET ?? ''}|${client}`),
+    );
+    return NextResponse.json<OrderResponse>({ ok: true, number: o.number, receipt: `/order/${token}` }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     if (e instanceof StockError) return no(409, `${e.message}. Update your bag and try again.`);
     if (e instanceof ReadOnlyStoreError) return no(503, 'Online ordering isn’t open on this preview yet.');

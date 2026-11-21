@@ -116,7 +116,7 @@ export function AdminShell({ children, unfulfilled, index, writable }: { childre
         </button>
         <Link href="/admin" className="adm-brand">
           <span className="adm-brand-mark display text-[15px]">S</span>
-          <span className="hidden sm:inline">SMADI</span>
+          <span className="hidden sm:inline">MODE S</span>
           <span className="mono hidden rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-white/70 sm:inline">Admin</span>
         </Link>
         <button type="button" className="adm-search" onClick={() => setPalette(true)} aria-label="Search the admin">
@@ -132,8 +132,7 @@ export function AdminShell({ children, unfulfilled, index, writable }: { childre
         <div className="adm-banner rounded-none px-4" role="note">
           <AIcon name="alert" size={16} className="mt-0.5 shrink-0" />
           <p>
-            This copy of the store is read-only (hosted). You can look around; to save changes, open the admin from the project on your computer
-            (<span className="mono">npm run dev</span>) and deploy.
+            The store database can’t be reached right now, so changes can’t be saved. Try again in a moment.
           </p>
         </div>
       )}

@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useCart } from '@/stores/cart';
 import { useUi } from '@/stores/ui';
 import { renderUrl } from '@/lib/format';
+import { useT } from '@/i18n/client';
 
 /**
  * The small "+" that puts a product straight into the bag. One size: it adds at once.
@@ -27,6 +28,7 @@ export function QuickAdd({
   /** "soon" (coming soon) and "out" (out of stock) can't be added */
   availability?: 'in' | 'out' | 'soon';
 }) {
+  const t = useT();
   const none = availability !== 'in' || sizes.every((s) => soldOut.includes(s));
   const add = useCart((s) => s.add);
   const set = useUi((s) => s.set);
@@ -91,7 +93,7 @@ export function QuickAdd({
         type="button"
         onClick={() => (many ? setOpen((o) => !o) : commit(sizes[0] ?? 'One size'))}
         disabled={none}
-        aria-label={none ? `${name} is ${availability === 'soon' ? 'coming soon' : 'out of stock'}` : `Add ${name} to bag`}
+        aria-label={none ? (availability === 'soon' ? t('{name} is coming soon', { name }) : t('{name} is out of stock', { name })) : t('Add {name} to bag', { name })}
         aria-expanded={many ? open : undefined}
         aria-controls={many ? sheet : undefined}
         className={`quick-add grid h-11 w-11 place-items-center rounded-full disabled:opacity-35 ${done ? 'is-done' : ''}`}
@@ -99,8 +101,8 @@ export function QuickAdd({
         <Icon name={done ? 'check' : 'plus'} size={18} className={`transition-transform duration-500 ease-[var(--ease-expo)] ${open ? 'rotate-45' : ''}`} />
       </button>
       {many && open && (
-        <div ref={sheetEl} id={sheet} role="group" aria-label={`Choose a size for ${name}`} className="size-sheet absolute bottom-[calc(100%+10px)] right-0 z-20 w-[min(76vw,264px)] p-3">
-          <p className="mono px-1 text-[10px] uppercase tracking-[0.16em] text-muted">Select size</p>
+        <div ref={sheetEl} id={sheet} role="group" aria-label={t('Choose a size for {name}', { name })} className="size-sheet absolute bottom-[calc(100%+10px)] end-0 z-20 w-[min(76vw,264px)] p-3">
+          <p className="mono px-1 text-[10px] uppercase tracking-[0.16em] text-muted">{t('Select size')}</p>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {sizes.map((sz) => (
               <button
@@ -109,7 +111,7 @@ export function QuickAdd({
                 data-size=""
                 onClick={() => commit(sz)}
                 disabled={soldOut.includes(sz)}
-                aria-label={soldOut.includes(sz) ? `${sz}, sold out` : undefined}
+                aria-label={soldOut.includes(sz) ? t('{size}, sold out', { size: sz }) : undefined}
                 className="h-10 rounded-full border border-ink/10 bg-white text-[13px] font-medium transition-colors duration-300 hover:border-ink hover:bg-ink hover:text-white focus-visible:border-ink disabled:pointer-events-none disabled:text-ink/30 disabled:line-through"
               >
                 {sz}
@@ -119,7 +121,7 @@ export function QuickAdd({
         </div>
       )}
       <span aria-live="polite" className="sr-only">
-        {done ? `${name} added to bag` : ''}
+        {done ? t('{name} added to bag', { name }) : ''}
       </span>
     </div>
   );

@@ -9,6 +9,7 @@ import { useWishlist } from '@/stores/lists';
 import { useHydrated } from '@/hooks/useHydrated';
 import { formatPrice, shortName } from '@/lib/format';
 import type { CardData } from '@/lib/catalog';
+import { useT } from '@/i18n/client';
 
 /**
  * Product card: the cut-out floats on a soft studio ground, and everything you need sits inside the
@@ -27,6 +28,7 @@ export function ProductCard({
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const t = useT();
   const hydrated = useHydrated();
   const wished = useWishlist((s) => s.slugs.includes(p.slug));
   const toggle = useWishlist((s) => s.toggle);
@@ -83,20 +85,20 @@ export function ProductCard({
         <span className="pcard-stage">
           <span className="pcard-shadow" aria-hidden />
           <span ref={img} className="pcard-img">
-            <ProductImage slug={p.slug} colorId={colorId} alt="" priority={priority} sizes={size === 'lg' ? '(max-width: 768px) 90vw, 40vw' : '(max-width: 768px) 50vw, 24vw'} />
+            <ProductImage src={p.image} slug={p.slug} colorId={colorId} alt="" priority={priority} sizes={size === 'lg' ? '(max-width: 768px) 90vw, 40vw' : '(max-width: 768px) 50vw, 24vw'} />
           </span>
         </span>
       </Link>
       <div className="pointer-events-none absolute left-2.5 top-2.5 flex gap-1.5">
         {p.availability === 'soon' ? (
-          <span className="pcard-badge pcard-badge-soon">Coming soon</span>
+          <span className="pcard-badge pcard-badge-soon">{t('Coming soon')}</span>
         ) : p.availability === 'out' ? (
-          <span className="pcard-badge">Out of stock</span>
+          <span className="pcard-badge">{t('Out of stock')}</span>
         ) : (
           <>
-            {p.isNew && <span className="pcard-badge pcard-badge-new">New</span>}
-            {p.compareAt ? <span className="pcard-badge pcard-badge-new">Sale</span> : null}
-            {p.bestSeller && <span className="pcard-badge">Best seller</span>}
+            {p.isNew && <span className="pcard-badge pcard-badge-new">{t('New')}</span>}
+            {p.compareAt ? <span className="pcard-badge pcard-badge-new">{t('Sale')}</span> : null}
+            {p.bestSeller && <span className="pcard-badge">{t('Best seller')}</span>}
           </>
         )}
       </div>
@@ -104,7 +106,7 @@ export function ProductCard({
         type="button"
         onClick={() => toggle(p.slug)}
         aria-pressed={hydrated ? wished : false}
-        aria-label={`Save ${p.name} to wishlist`}
+        aria-label={t('Save {name} to wishlist', { name: p.name })}
         className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-full text-ink/60 transition-colors hover:text-cobalt"
       >
         <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={19} className={hydrated && wished ? 'text-cobalt' : ''} />
@@ -120,7 +122,7 @@ export function ProductCard({
           <span className="mono mt-1 flex flex-wrap items-baseline gap-x-1.5 text-[12px] font-semibold text-ink/65">
             {formatPrice(p.price)}
             {p.compareAt ? (
-              <s className="text-[11px] font-normal text-ink/40" aria-label={`Was ${formatPrice(p.compareAt)}`}>
+              <s className="text-[11px] font-normal text-ink/40" aria-label={t('Was {price}', { price: formatPrice(p.compareAt) })}>
                 {formatPrice(p.compareAt)}
               </s>
             ) : null}

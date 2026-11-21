@@ -1,10 +1,18 @@
 export const SPORT_SLUGS = [
   'football',
   'boxing',
+  'martial-arts',
   'swimming',
-  'running',
+  'diving',
+  'pool',
+  'fishing',
   'fitness',
+  'recovery',
+  'running',
   'basketball',
+  'volleyball',
+  'racket',
+  'fan',
   'outdoor',
 ] as const;
 export type SportSlug = (typeof SPORT_SLUGS)[number];
@@ -96,6 +104,10 @@ export interface Product {
   pairsWith?: string[];
   /** Product photos (cut-out WebP, first = hero). */
   images?: string[];
+  /** false when there is no real photo yet (the image file is a placeholder) */
+  photo?: boolean;
+  /** shop reference (Odoo internal reference) */
+  sku?: string;
 }
 
 export interface Subcategory {

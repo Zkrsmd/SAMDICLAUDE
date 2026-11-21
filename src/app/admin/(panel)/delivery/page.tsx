@@ -5,10 +5,12 @@ import { COURIER, WILAYAS } from '@/data/delivery/wilayas';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getWilayas } from '@/lib/delivery';
 import { storeWritable } from '@/lib/store/overrides';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Delivery' };
 
 export default async function DeliveryPage() {
+  await loadAdminData();
   await requireAdmin();
   const rows = getWilayas().map((w) => {
     const s = WILAYAS.find((x) => x.code === w.code)!;

@@ -1,8 +1,8 @@
 import 'server-only';
 import { WILAYAS, wilayaName } from '@/data/delivery/wilayas';
-import { getAdminProducts } from '@/lib/catalog';
+import { ensureStore, getAdminProducts } from '@/lib/catalog';
 import { readOverrides } from '@/lib/store/overrides';
-import { listCodOrders, type CodOrder, type CodStatus } from '@/lib/store/orders';
+import { listCodOrders, loadOrders, type CodOrder, type CodStatus } from '@/lib/store/orders';
 import type { Fulfillment } from '@/lib/validation/admin';
 import type { ConfirmBy, DeliveryMethod } from '@/lib/validation/order';
 
@@ -141,6 +141,12 @@ function fromCod(c: CodOrder): Order {
 }
 
 /** true while the admin shows sample orders (no real order yet) */
+/** Admin pages and actions: bring the store and the orders up to date before reading them. */
+export async function loadAdminData() {
+  await ensureStore();
+  await loadOrders();
+}
+
 export const showingSamples = () => listCodOrders().length === 0;
 
 /** Every order, newest first: the real ones, or (before the first real order) the samples. */

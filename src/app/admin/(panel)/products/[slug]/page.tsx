@@ -7,15 +7,18 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { getAdminProduct, getProduct } from '@/lib/catalog';
 import { storeWritable } from '@/lib/store/overrides';
 import type { ProductInput } from '@/lib/validation/admin';
+import { loadAdminData } from '@/lib/admin/orders';
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await loadAdminData();
   const p = getAdminProduct((await params).slug);
   return { title: p?.name ?? 'Product' };
 }
 
 export default async function EditProductPage({ params }: Props) {
+  await loadAdminData();
   await requireAdmin();
   const { slug } = await params;
   const p = getAdminProduct(slug);

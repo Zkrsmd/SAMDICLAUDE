@@ -9,15 +9,18 @@ import { AIcon, Badge, Card, PageHead, StatusBadge, Thumb, dateTime, longDate, m
 import { requireAdmin } from '@/lib/admin/auth';
 import { getOrder, getOrders } from '@/lib/admin/orders';
 import { storeWritable } from '@/lib/store/overrides';
+import { loadAdminData } from '@/lib/admin/orders';
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await loadAdminData();
   const o = getOrder((await params).id);
   return { title: o ? `Order #${o.number}` : 'Order' };
 }
 
 export default async function OrderPage({ params }: Props) {
+  await loadAdminData();
   await requireAdmin();
   const { id } = await params;
   const o = getOrder(id);

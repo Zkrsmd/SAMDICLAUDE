@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { FAMILY_SWATCH } from '@/lib/color';
 import { useDialog } from '@/hooks/useDialog';
 import type { FacetSet } from '@/lib/catalog';
+import { useT } from '@/i18n/client';
 
 const SORTS = [
   { id: 'featured', label: 'Featured' },
@@ -16,6 +17,7 @@ const SORTS = [
 
 /** URL-synced filters (brand, colour, size, price) and sort. Works with back/forward. */
 export function Filters({ facets, total }: { facets: FacetSet; total: number }) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -61,7 +63,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
     <div className="space-y-7">
       {facets.brands.length > 1 && (
         <fieldset>
-          <legend className="eyebrow text-muted">Brand</legend>
+          <legend className="eyebrow text-muted">{t('Brand')}</legend>
           <div className="mt-3 flex flex-wrap gap-2">
             {facets.brands.map((b) => (
               <button key={b.id} type="button" className="chip" aria-pressed={active.brand.includes(b.id)} onClick={() => toggle('brand', b.id)}>
@@ -72,7 +74,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
         </fieldset>
       )}
       <fieldset>
-        <legend className="eyebrow text-muted">Colour</legend>
+        <legend className="eyebrow text-muted">{t('Colour')}</legend>
         <div className="mt-3 flex flex-wrap gap-2">
           {facets.colors.map((c) => (
             <button key={c.id} type="button" className="chip capitalize" aria-pressed={active.color.includes(c.id)} onClick={() => toggle('color', c.id)}>
@@ -84,7 +86,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
       </fieldset>
       {facets.sizes.length > 1 && (
         <fieldset>
-          <legend className="eyebrow text-muted">Size</legend>
+          <legend className="eyebrow text-muted">{t('Size')}</legend>
           <div className="mt-3 flex flex-wrap gap-2">
             {facets.sizes.slice(0, 18).map((s) => (
               <button key={s.id} type="button" className="chip" aria-pressed={active.size.includes(s.id.toLowerCase())} onClick={() => toggle('size', s.id.toLowerCase())}>
@@ -95,9 +97,9 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
         </fieldset>
       )}
       <fieldset>
-        <legend className="eyebrow text-muted">Price (€)</legend>
+        <legend className="eyebrow text-muted">{t('Price (DA)')}</legend>
         <div className="mt-3 flex items-center gap-2">
-          <label className="sr-only" htmlFor="pmin">Minimum price</label>
+          <label className="sr-only" htmlFor="pmin">{t('Minimum price')}</label>
           <input
             id="pmin"
             key={`min-${active.min}`}
@@ -108,7 +110,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
             className="h-11 w-24 rounded-[2px] border border-line bg-white px-3"
           />
           <span aria-hidden>—</span>
-          <label className="sr-only" htmlFor="pmax">Maximum price</label>
+          <label className="sr-only" htmlFor="pmax">{t('Maximum price')}</label>
           <input
             id="pmax"
             key={`max-${active.max}`}
@@ -127,24 +129,24 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
     <div className="sticky top-14 z-30 -mx-4 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:px-0">
       <div className="flex items-center gap-2">
         <button type="button" className="chip" onClick={() => setOpen(true)} aria-haspopup="dialog">
-          <Icon name="filter" size={16} /> Filter{count ? ` (${count})` : ''}
+          <Icon name="filter" size={16} /> {t('Filter')}{count ? ` (${count})` : ''}
         </button>
-        <label className="sr-only" htmlFor="sort">Sort by</label>
+        <label className="sr-only" htmlFor="sort">{t('Sort by')}</label>
         <select id="sort" value={active.sort} onChange={(e) => setParam('sort', e.target.value === 'featured' ? '' : e.target.value)} className="chip appearance-none pr-8">
           {SORTS.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.label}
+              {t(s.label)}
             </option>
           ))}
         </select>
-        <span className="mono ml-auto text-[12px] text-muted" aria-live="polite">
-          {pending ? 'Updating…' : `${total} results`}
+        <span className="mono ms-auto text-[12px] text-muted" aria-live="polite">
+          {pending ? t('Updating…') : t('{n} results', { n: total })}
         </span>
       </div>
       {count > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {[...active.brand.map((v) => ['brand', v]), ...active.color.map((v) => ['color', v]), ...active.size.map((v) => ['size', v])].map(([k, v]) => (
-            <button key={`${k}-${v}`} type="button" className="chip h-8 capitalize" onClick={() => toggle(k as 'brand', v!)} aria-label={`Remove ${v}`}>
+            <button key={`${k}-${v}`} type="button" className="chip h-8 capitalize" onClick={() => toggle(k as 'brand', v!)} aria-label={t('Remove {v}', { v: v ?? '' })}>
               {v} <Icon name="close" size={14} />
             </button>
           ))}
@@ -154,7 +156,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
             </button>
           )}
           <button type="button" className="eyebrow px-2 underline" onClick={clear}>
-            Clear all
+            {t('Clear all')}
           </button>
         </div>
       )}
@@ -167,25 +169,25 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
           ref={sheet}
           role="dialog"
           aria-modal="true"
-          aria-label="Filters"
+          aria-label={t('Filters')}
           className={`absolute inset-x-0 bottom-0 max-h-[86svh] overflow-y-auto rounded-t-[10px] bg-bg p-5 transition-transform duration-700 ease-[var(--ease-expo)] md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[420px] md:rounded-none ${
             open ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-x-full md:translate-y-0'
           }`}
           style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
         >
           <div className="mb-6 flex items-center">
-            <h2 className="display text-[34px]">Filter</h2>
-            <button type="button" className="-mr-2 ml-auto grid h-11 w-11 place-items-center" aria-label="Close filters" onClick={() => setOpen(false)}>
+            <h2 className="display text-[34px]">{t('Filter')}</h2>
+            <button type="button" className="-me-2 ms-auto grid h-11 w-11 place-items-center" aria-label={t('Close filters')} onClick={() => setOpen(false)}>
               <Icon name="close" />
             </button>
           </div>
           {panel}
           <div className="sticky bottom-0 mt-8 grid grid-cols-2 gap-3 bg-bg pt-3">
             <button type="button" className="btn btn-line" onClick={clear}>
-              Clear
+              {t('Clear')}
             </button>
             <button type="button" className="btn btn-ink" onClick={() => setOpen(false)}>
-              Show {total}
+              {t('Show {n}', { n: total })}
             </button>
           </div>
         </div>

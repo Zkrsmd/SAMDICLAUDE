@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { ProductImage } from '@/components/product/ProductImage';
+import { useT } from '@/i18n/client';
 
 export interface SubTile {
   slug: string;
@@ -12,6 +13,7 @@ export interface SubTile {
 
 /** Sub-category tiles. Tapping one records where the product "burst" should originate. */
 export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]; active?: string }) {
+  const t = useT();
   const remember = (e: React.MouseEvent) => {
     try {
       sessionStorage.setItem('yb-burst', JSON.stringify({ x: e.clientX, y: e.clientY, t: Date.now() }));
@@ -20,7 +22,7 @@ export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]
     }
   };
   return (
-    <nav aria-label="Categories" className="relative">
+    <nav aria-label={t('Categories')} className="relative">
       <ul className="no-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
         <li className="shrink-0 snap-start">
           <Link
@@ -29,7 +31,7 @@ export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]
             aria-current={!active ? 'page' : undefined}
             className="chip h-full min-h-[96px] w-[112px] flex-col items-start justify-between p-3 aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-white"
           >
-            <span className="eyebrow">All</span>
+            <span className="eyebrow">{t('All')}</span>
             <span className="mono text-[11px] opacity-70">{subs.reduce((n, s) => n + s.count, 0)}</span>
           </Link>
         </li>

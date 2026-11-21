@@ -1,21 +1,21 @@
 import 'server-only';
-import fs from 'node:fs';
-import path from 'node:path';
 import { z } from 'zod';
 import { getAdminProduct } from '@/lib/catalog';
 import { CONFIRM_BY, DELIVERY_METHODS } from '@/lib/validation/order';
-import { ReadOnlyStoreError, storeWritable, updateOverrides } from './overrides';
+import { getDb, randomToken, sha256 } from './db';
+import { updateOverrides } from './overrides';
 import { patchProduct } from './product-patch';
 
 /**
- * Real orders from the website's cash-on-delivery checkout.
+ * Real orders from the website's cash-on-delivery checkout, in the database (D1 `orders`).
  *
- * They hold customers' names, phone numbers and addresses, so they are kept OUT of git: in
- * `.data/orders.json` (git-ignored), next to the project. Back that folder up. When the store moves
- * to its own host this file becomes a database table; nothing else needs to change.
+ * They hold customers' names, phone numbers and addresses: only the admin can list them, and a
+ * customer can only open their own order through the private receipt link they get when ordering
+ * (a 256-bit random token; the database keeps only its SHA-256, so the table alone can't be turned
+ * into links). Order numbers are sequential and never enough to open anything.
  *
- * Stock: placing an order takes its units off the shelf (only for products whose stock is tracked,
- * i.e. saved in the admin at least once). Cancelling it or marking it returned puts them back.
+ * Stock: placing an order takes its units off the shelf (only for products whose stock is tracked);
+ * cancelling it or marking it returned puts them back.
  */
 
 export const COD_STATUS = ['new', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled'] as const;
@@ -65,57 +65,46 @@ const CodOrderSchema = z.object({
 });
 export type CodOrder = z.infer<typeof CodOrderSchema>;
 
-const FileSchema = z.object({ version: z.literal(1), next: z.number().int(), orders: z.array(CodOrderSchema) });
-type OrdersFile = z.infer<typeof FileSchema>;
-
-const DIR = path.join(process.cwd(), '.data');
-const FILE = path.join(DIR, 'orders.json');
 /** website order numbers start here, well clear of the sample orders (#1001…) */
 const FIRST_NUMBER = 10001;
-const EMPTY: OrdersFile = { version: 1, next: FIRST_NUMBER, orders: [] };
 
 export class StockError extends Error {}
 
-let cache: { mtime: number; size: number; data: OrdersFile } | null = null;
-
-function readFile(): OrdersFile {
+const parse = (data: string): CodOrder | null => {
   try {
-    const st = fs.statSync(FILE);
-    if (cache && cache.mtime === st.mtimeMs && cache.size === st.size) return cache.data;
-    const parsed = FileSchema.safeParse(JSON.parse(fs.readFileSync(FILE, 'utf8')));
-    if (!parsed.success) {
-      // never lose orders silently: keep serving the last good copy and say so
-      console.error('[orders] .data/orders.json does not validate; fix it by hand. Using the last good copy.');
-      return cache?.data ?? EMPTY;
-    }
-    cache = { mtime: st.mtimeMs, size: st.size, data: parsed.data };
-    return parsed.data;
+    const r = CodOrderSchema.safeParse(JSON.parse(data));
+    if (r.success) return r.data;
   } catch {
-    return cache?.data ?? EMPTY;
+    /* fall through */
   }
+  console.error('[orders] an order row does not validate');
+  return null;
+};
+
+let loaded: CodOrder[] = [];
+
+/** Read every order (admin pages call this before using the sync helpers below). */
+export async function loadOrders(): Promise<CodOrder[]> {
+  const db = await getDb();
+  const { results } = await db.prepare('SELECT data FROM orders ORDER BY number DESC').all<{ data: string }>();
+  loaded = (results ?? []).map((r) => parse(r.data)).filter((o): o is CodOrder => !!o);
+  return loaded;
 }
 
-let queue: Promise<unknown> = Promise.resolve();
-function writeFile<T>(change: (draft: OrdersFile) => T): Promise<T> {
-  const run = queue.then(() => {
-    if (!storeWritable()) throw new ReadOnlyStoreError();
-    const draft = structuredClone(readFile());
-    const out = change(draft);
-    const next = FileSchema.parse(draft);
-    fs.mkdirSync(DIR, { recursive: true });
-    const tmp = `${FILE}.${process.pid}.tmp`;
-    fs.writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
-    fs.renameSync(tmp, FILE);
-    cache = null;
-    return out;
-  });
-  queue = run.catch(() => undefined);
-  return run;
+/** Newest first (as loaded by the last `loadOrders()`). */
+export const listCodOrders = (): CodOrder[] => loaded;
+export const getCodOrder = (id: string) => loaded.find((o) => o.id === id);
+
+async function fetchOrder(id: string): Promise<CodOrder | null> {
+  const db = await getDb();
+  const row = await db.prepare('SELECT data FROM orders WHERE id = ?').bind(id).first<{ data: string }>();
+  return row ? parse(row.data) : null;
 }
 
-/** Newest first. */
-export const listCodOrders = (): CodOrder[] => [...readFile().orders].reverse();
-export const getCodOrder = (id: string) => readFile().orders.find((o) => o.id === id);
+async function saveOrder(o: CodOrder) {
+  const db = await getDb();
+  await db.prepare('UPDATE orders SET status = ?, archived = ?, data = ? WHERE id = ?').bind(o.status, o.archived ? 1 : 0, JSON.stringify(o), o.id).run();
+}
 
 /** Take (-1) or put back (+1) the tracked units of these lines. Throws StockError when a size runs short. */
 async function moveStock(lines: CodLine[], sign: 1 | -1) {
@@ -136,19 +125,33 @@ async function moveStock(lines: CodLine[], sign: 1 | -1) {
 
 export type NewOrder = Omit<CodOrder, 'id' | 'number' | 'createdAt' | 'status' | 'archived' | 'notes' | 'history'>;
 
-/** Save a new order (lines already priced by the server) and take its units off the shelf. */
-export async function placeOrder(order: NewOrder): Promise<CodOrder> {
-  if (!storeWritable()) throw new ReadOnlyStoreError();
+/**
+ * Save a new order (lines already priced by the server) and take its units off the shelf.
+ * Returns the order and the customer's private receipt token (shown once, never stored).
+ */
+export async function placeOrder(order: NewOrder, client: string): Promise<{ order: CodOrder; token: string }> {
+  const db = await getDb();
   await moveStock(order.lines, -1);
+  const token = randomToken();
   try {
-    return await writeFile((d) => {
-      const number = d.next;
-      const at = new Date().toISOString();
+    const receipt = await sha256(token);
+    const at = new Date().toISOString();
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const last = await db.prepare('SELECT MAX(number) AS n FROM orders').first<{ n: number | null }>();
+      const number = Math.max(FIRST_NUMBER, (last?.n ?? FIRST_NUMBER - 1) + 1);
       const saved: CodOrder = { ...order, id: `w${number}`, number, createdAt: at, status: 'new', archived: false, notes: [], history: [{ at, status: 'new' }] };
-      d.orders.push(saved);
-      d.next = number + 1;
-      return saved;
-    });
+      try {
+        await db
+          .prepare('INSERT INTO orders (id, number, created_at, status, archived, receipt, client, data) VALUES (?, ?, ?, ?, 0, ?, ?, ?)')
+          .bind(saved.id, number, at, 'new', receipt, client, JSON.stringify(CodOrderSchema.parse(saved)))
+          .run();
+        return { order: saved, token };
+      } catch (e) {
+        // two orders took the same number at once: take the next one
+        if (!/UNIQUE/i.test(String((e as Error).message))) throw e;
+      }
+    }
+    throw new Error('Could not number the order');
   } catch (e) {
     // the order didn't save: give the units back
     await moveStock(order.lines, 1).catch(() => undefined);
@@ -156,30 +159,41 @@ export async function placeOrder(order: NewOrder): Promise<CodOrder> {
   }
 }
 
+/** The order behind a receipt link, or null. */
+export async function getOrderByReceipt(token: string): Promise<CodOrder | null> {
+  if (!/^[A-Za-z0-9_-]{40,64}$/.test(token)) return null;
+  const db = await getDb();
+  const row = await db.prepare('SELECT data FROM orders WHERE receipt = ?').bind(await sha256(token)).first<{ data: string }>();
+  return row ? parse(row.data) : null;
+}
+
 /** Move an order along (new → confirmed → shipped → delivered, or cancelled / returned). */
 export async function setCodStatus(id: string, status: CodStatus) {
-  const o = getCodOrder(id);
+  const o = await fetchOrder(id);
   if (!o) throw new Error('This order no longer exists.');
   if (o.status === status) return;
   const wasOff = OFF.has(o.status);
   const nowOff = OFF.has(status);
   if (!wasOff && nowOff) await moveStock(o.lines, 1);
   if (wasOff && !nowOff) await moveStock(o.lines, -1);
-  await writeFile((d) => {
-    const x = d.orders.find((y) => y.id === id);
-    if (!x) return;
-    x.status = status;
-    x.history.push({ at: new Date().toISOString(), status });
-  });
+  o.status = status;
+  o.history.push({ at: new Date().toISOString(), status });
+  await saveOrder(o);
 }
 
-export const patchCodOrders = (ids: string[], patch: { archived?: boolean }) =>
-  writeFile((d) => {
-    for (const o of d.orders) if (ids.includes(o.id) && typeof patch.archived === 'boolean') o.archived = patch.archived;
-  });
+export async function patchCodOrders(ids: string[], patch: { archived?: boolean }) {
+  if (typeof patch.archived !== 'boolean') return;
+  for (const id of ids) {
+    const o = await fetchOrder(id);
+    if (!o) continue;
+    o.archived = patch.archived;
+    await saveOrder(o);
+  }
+}
 
-export const addCodNote = (id: string, text: string) =>
-  writeFile((d) => {
-    const o = d.orders.find((y) => y.id === id);
-    if (o) o.notes = [...o.notes, { at: new Date().toISOString(), text }].slice(-100);
-  });
+export async function addCodNote(id: string, text: string) {
+  const o = await fetchOrder(id);
+  if (!o) return;
+  o.notes = [...o.notes, { at: new Date().toISOString(), text }].slice(-100);
+  await saveOrder(o);
+}

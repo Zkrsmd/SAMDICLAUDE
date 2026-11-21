@@ -5,24 +5,26 @@ import { ProductImage } from '@/components/product/ProductImage';
 import { useCart } from '@/stores/cart';
 import { formatPrice } from '@/lib/format';
 import type { QuoteResponse } from '@/app/api/cart/quote/route';
+import { useT } from '@/i18n/client';
 
 export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | null; compact?: boolean; failed?: boolean }) {
+  const t = useT();
   const { setQty, remove, clear } = useCart();
   if (!quote && failed)
     return (
       <div className="py-10 text-center">
-        <p className="text-muted">Your saved bag couldn’t be read.</p>
+        <p className="text-muted">{t('Your saved bag couldn’t be read.')}</p>
         <button type="button" className="btn btn-line mt-4 h-11" onClick={clear}>
-          Reset bag
+          {t('Reset bag')}
         </button>
       </div>
     );
-  if (!quote) return <div className="py-10 text-center text-muted">Loading your bag…</div>;
+  if (!quote) return <div className="py-10 text-center text-muted">{t('Loading your bag…')}</div>;
   if (!quote.lines.length && !quote.rejected.length)
     return (
       <div className="py-16 text-center">
-        <p className="display text-[40px] text-ink/20">Empty</p>
-        <p className="mt-2 text-muted">Your bag is waiting for its first piece of kit.</p>
+        <p className="display text-[40px] text-ink/20">{t('Empty')}</p>
+        <p className="mt-2 text-muted">{t('Your bag is waiting for its first piece of kit.')}</p>
       </div>
     );
   return (
@@ -44,11 +46,11 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
               {l.colorName} · {l.size}
             </span>
             <div className="mt-auto flex items-center justify-between pt-2">
-              <div className="flex items-center border border-line" role="group" aria-label={`Quantity for ${l.name}`}>
+              <div className="flex items-center border border-line" role="group" aria-label={t('Quantity for {name}', { name: l.name })}>
                 <button
                   type="button"
                   className="grid h-9 w-9 place-items-center disabled:opacity-30"
-                  aria-label="Decrease quantity"
+                  aria-label={t('Decrease quantity')}
                   disabled={l.qty <= 1}
                   onClick={() => setQty(l.key, l.qty - 1)}
                 >
@@ -60,7 +62,7 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
                 <button
                   type="button"
                   className="grid h-9 w-9 place-items-center disabled:opacity-30"
-                  aria-label="Increase quantity"
+                  aria-label={t('Increase quantity')}
                   disabled={l.qty >= 20}
                   onClick={() => setQty(l.key, l.qty + 1)}
                 >
@@ -73,7 +75,7 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
           <button
             type="button"
             className="-mr-2 grid h-9 w-9 shrink-0 place-items-center text-muted hover:text-ink"
-            aria-label={`Remove ${l.name}`}
+            aria-label={t('Remove {name}', { name: l.name })}
             onClick={() => remove(l.key)}
           >
             <Icon name="trash" size={18} />
@@ -84,7 +86,7 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
         <li key={r.key} className="flex items-center justify-between py-4 text-[14px] text-muted">
           <span>{r.reason}</span>
           <button type="button" className="underline" onClick={() => remove(r.key)}>
-            Remove
+            {t('Remove')}
           </button>
         </li>
       ))}

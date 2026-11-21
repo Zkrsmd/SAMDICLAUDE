@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo, Geist_Mono, Sora } from 'next/font/google';
+import { Archivo, Cairo, Geist_Mono, Sora } from 'next/font/google';
 import { brand } from '@/config/brand';
+import { dirOf } from '@/i18n/config';
+import { getLocaleInfo } from '@/i18n/server';
 import 'lenis/dist/lenis.css';
 import './globals.css';
 
@@ -8,6 +10,8 @@ import './globals.css';
 const display = Archivo({ subsets: ['latin'], axes: ['wdth'], style: ['italic'], variable: '--font-display-face', display: 'swap' });
 const sans = Sora({ subsets: ['latin'], variable: '--font-sans-face', display: 'swap' });
 const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono-face', display: 'swap' });
+// Arabic text (the store in Arabic): Cairo, for body and display
+const arabic = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '600', '800', '900'], variable: '--font-arabic-face', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
@@ -24,9 +28,16 @@ export const viewport: Viewport = {
 };
 
 /** The document shell shared by the store ((store)/layout.tsx) and the admin (admin/layout.tsx). */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // the visitor's language; no choice yet → the picker opens first (data-lang-gate holds the intro)
+  const { locale, chosen } = await getLocaleInfo();
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html
+      lang={locale}
+      dir={dirOf(locale)}
+      data-lang-gate={chosen ? undefined : ''}
+      className={`${display.variable} ${sans.variable} ${mono.variable} ${arabic.variable}`}
+    >
       <body className="grain">
         <noscript>
           <style>{'[data-reveal]{opacity:1!important;transform:none!important;filter:none!important}'}</style>

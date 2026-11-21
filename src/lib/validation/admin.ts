@@ -4,7 +4,7 @@ import { sports } from '@/data/categories';
 
 /**
  * Admin data: what the admin may change about a product, and the store file it is saved in
- * (src/data/store/overrides.json). Client-safe: the product editor validates with the same rules
+ * (kept in the D1 database, src/lib/store/overrides.ts). Client-safe: the product editor validates with the same rules
  * the server enforces.
  */
 

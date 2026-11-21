@@ -6,7 +6,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** The admin has its own frame (no store header, footer, grain or smooth scroll). */
+/** The admin has its own frame (no store header, footer, grain or smooth scroll), always in English, left to right. */
 export default function AdminRoot({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <div lang="en" dir="ltr">
+      {children}
+    </div>
+  );
 }

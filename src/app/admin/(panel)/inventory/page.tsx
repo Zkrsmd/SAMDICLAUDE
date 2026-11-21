@@ -5,10 +5,12 @@ import { sports } from '@/data/categories';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAdminProducts } from '@/lib/catalog';
 import { storeWritable } from '@/lib/store/overrides';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Inventory' };
 
 export default async function InventoryPage() {
+  await loadAdminData();
   await requireAdmin();
   const products = getAdminProducts().filter((p) => p.status !== 'archived');
   const rows = products.flatMap((p) => p.sizes.map((size) => ({ slug: p.slug, name: p.name, image: p.image, sku: p.sku, size, qty: p.stock[size] ?? 0, sport: p.sport, sample: p.sampleStock })));

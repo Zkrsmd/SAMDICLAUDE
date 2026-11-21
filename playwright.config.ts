@@ -2,13 +2,15 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Uses the Microsoft Edge already installed on Windows (no browser download).
- * Base URL defaults to the production server (`npm run build && npm start`); set E2E_BASE_URL to test dev.
+ * Base URL defaults to the local Cloudflare preview (`npm run preview`, port 8787: the real Workers
+ * runtime with the local D1 database). tests/e2e/seed.ts puts two products on sale there first.
  */
-const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:8787';
 const channel = process.env.E2E_CHANNEL ?? 'msedge';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalSetup: './tests/e2e/seed.ts',
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -19,6 +21,9 @@ export default defineConfig({
   use: {
     baseURL,
     channel,
+    // a language already chosen (English), so the first-visit language picker doesn't cover the pages;
+    // the picker itself is tested in smoke.spec.ts with a fresh context
+    storageState: { cookies: [{ name: 'lang', value: 'en', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

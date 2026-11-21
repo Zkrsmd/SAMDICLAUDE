@@ -2,8 +2,10 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useT } from '@/i18n/client';
 
 export function SearchBox({ initial }: { initial: string }) {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState(initial);
@@ -22,18 +24,18 @@ export function SearchBox({ initial }: { initial: string }) {
     >
       <Icon name="search" />
       <label htmlFor="search-page-input" className="sr-only">
-        Search products
+        {t('Search products')}
       </label>
       <input
         id="search-page-input"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         maxLength={80}
-        placeholder="Search products, brands, sports"
+        placeholder={t('Search products, brands, sports')}
         className="h-14 flex-1 bg-transparent text-[18px] outline-none"
       />
       <button type="submit" className="btn btn-ink h-11 px-4">
-        Search
+        {t('Search')}
       </button>
     </form>
   );

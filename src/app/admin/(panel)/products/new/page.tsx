@@ -4,10 +4,12 @@ import { editorOptions } from '@/components/admin/editor-data';
 import { PageHead } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
 import { storeWritable } from '@/lib/store/overrides';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Add product' };
 
 export default async function NewProductPage() {
+  await loadAdminData();
   await requireAdmin();
   const { sports, vendors } = editorOptions();
   const sport = sports[0]!;

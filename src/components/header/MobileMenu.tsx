@@ -7,6 +7,8 @@ import { Wordmark } from '@/components/ui/Wordmark';
 import { useUi } from '@/stores/ui';
 import { useDialog } from '@/hooks/useDialog';
 import type { NavSport } from './Header';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useT } from '@/i18n/client';
 
 const ACCENT: Record<string, string> = {
   football: '#89C94A',
@@ -19,6 +21,7 @@ const ACCENT: Record<string, string> = {
 };
 
 export function MobileMenu({ nav }: { nav: NavSport[] }) {
+  const t = useT();
   const { menuOpen, set } = useUi();
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
       ref={ref}
       role="dialog"
       aria-modal="true"
-      aria-label="Menu"
+      aria-label={t('Menu')}
       aria-hidden={!menuOpen}
       inert={!menuOpen}
       className={`fixed inset-0 z-[60] flex flex-col bg-bg transition-[clip-path] duration-700 ease-[var(--ease-expo)] lg:hidden ${
@@ -47,11 +50,12 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
         <span className="text-[22px]">
           <Wordmark />
         </span>
-        <button type="button" className="-mr-2 ml-auto grid h-11 w-11 place-items-center" aria-label="Close menu" onClick={close}>
+        <LanguageSwitcher className="ms-auto" />
+        <button type="button" className="-me-2 ms-2 grid h-11 w-11 place-items-center" aria-label={t('Close menu')} onClick={close}>
           <Icon name="close" />
         </button>
       </div>
-      <nav aria-label="Sports" className="container-x flex-1 overflow-y-auto pb-10 pt-4">
+      <nav aria-label={t('Sports')} className="container-x flex-1 overflow-y-auto pb-10 pt-4">
         <ul>
           {nav.map((s, i) => (
             <li key={s.slug} className="border-b border-line">
@@ -68,7 +72,7 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
                   type="button"
                   className="grid h-12 w-12 place-items-center"
                   aria-expanded={expanded === s.slug}
-                  aria-label={`${s.name} categories`}
+                  aria-label={t('{name} categories', { name: s.name })}
                   onClick={() => setExpanded((e) => (e === s.slug ? null : s.slug))}
                 >
                   <Icon name="chevron-down" className={`transition-transform ${expanded === s.slug ? 'rotate-180' : ''}`} />
@@ -90,10 +94,10 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
         </ul>
         <div className="mt-8 grid grid-cols-2 gap-3">
           <Link href="/wishlist" className="btn btn-line">
-            Wishlist
+            {t('Wishlist')}
           </Link>
           <Link href="/cart" className="btn btn-ink">
-            Bag
+            {t('Bag')}
           </Link>
         </div>
       </nav>

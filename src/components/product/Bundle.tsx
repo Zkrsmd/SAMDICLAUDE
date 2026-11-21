@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useCart } from '@/stores/cart';
 import { useUi } from '@/stores/ui';
 import { formatPrice } from '@/lib/format';
+import { useT } from '@/i18n/client';
 
 export interface BundleItem {
   slug: string;
@@ -18,6 +19,7 @@ export interface BundleItem {
 
 /** OFTEN BOUGHT TOGETHER — pick sizes, add the set. Totals shown here are list prices; the bag is priced by the server. */
 export function Bundle({ items }: { items: BundleItem[] }) {
+  const t = useT();
   const add = useCart((s) => s.add);
   const set = useUi((s) => s.set);
   const [picked, setPicked] = useState<Record<string, boolean>>(() => Object.fromEntries(items.map((i) => [i.slug, true])));
@@ -30,7 +32,7 @@ export function Bundle({ items }: { items: BundleItem[] }) {
   const addAll = () => {
     const missing = chosen.filter((i) => !sizes[i.slug]);
     if (missing.length) {
-      setMsg(`Choose a size for: ${missing.map((m) => m.name).join(', ')}`);
+      setMsg(t('Choose a size for: {names}', { names: missing.map((m) => m.name).join(', ') }));
       return;
     }
     chosen.forEach((i) => add({ productId: i.slug, colorId: i.colorId, size: sizes[i.slug]!, qty: 1 }));
@@ -48,7 +50,7 @@ export function Bundle({ items }: { items: BundleItem[] }) {
                 checked={!!picked[i.slug]}
                 onChange={(e) => setPicked((p) => ({ ...p, [i.slug]: e.target.checked }))}
                 className="absolute left-2 top-2 z-10 h-5 w-5 accent-[#171A18]"
-                aria-label={`Include ${i.name}`}
+                aria-label={t('Include {name}', { name: i.name })}
               />
               <ProductImage slug={i.slug} colorId={i.colorId} alt="" sizes="160px" />
               {n > 0 && (
@@ -65,12 +67,12 @@ export function Bundle({ items }: { items: BundleItem[] }) {
               <p className="mono text-[13px]">{formatPrice(i.price)}</p>
               {i.sizes.length > 1 && (
                 <select
-                  aria-label={`Size for ${i.name}`}
+                  aria-label={t('Size for {name}', { name: i.name })}
                   value={sizes[i.slug] ?? ''}
                   onChange={(e) => setSizes((s) => ({ ...s, [i.slug]: e.target.value }))}
                   className="mt-2 h-10 w-full rounded-[2px] border border-line bg-white px-2 text-[13px]"
                 >
-                  <option value="">Size</option>
+                  <option value="">{t('Size')}</option>
                   {i.sizes.map((s) => (
                     <option key={s} value={s}>
                       {s}
@@ -87,7 +89,7 @@ export function Bundle({ items }: { items: BundleItem[] }) {
           {chosen.length} items · <span className="mono font-semibold">{formatPrice(total)}</span>
         </p>
         <button type="button" className="btn btn-ink h-12" onClick={addAll} disabled={!chosen.length}>
-          Add selected to bag
+          {t('Add selected to bag')}
         </button>
       </div>
       {msg && (

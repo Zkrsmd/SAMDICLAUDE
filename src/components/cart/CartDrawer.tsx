@@ -8,8 +8,10 @@ import { useDialog } from '@/hooks/useDialog';
 import { useQuote } from '@/hooks/useQuote';
 import { CartLines } from './CartLines';
 import { formatPrice } from '@/lib/format';
+import { useT } from '@/i18n/client';
 
 export function CartDrawer() {
+  const t = useT();
   const open = useUi((s) => s.cartOpen);
   const set = useUi((s) => s.set);
   const lines = useCart((s) => s.lines);
@@ -28,15 +30,15 @@ export function CartDrawer() {
         ref={ref}
         role="dialog"
         aria-modal="true"
-        aria-label="Your bag"
+        aria-label={t('Your bag')}
         className={`absolute bottom-0 right-0 top-0 flex w-full max-w-[440px] flex-col bg-bg shadow-2xl transition-transform duration-700 ease-[var(--ease-expo)] ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex h-16 items-center border-b border-line px-5">
-          <h2 className="display text-[32px]">Your bag</h2>
-          <button type="button" className="-mr-2 ml-auto grid h-11 w-11 place-items-center" aria-label="Close bag" onClick={close}>
+          <h2 className="display text-[32px]">{t('Your bag')}</h2>
+          <button type="button" className="-me-2 ms-auto grid h-11 w-11 place-items-center" aria-label={t('Close bag')} onClick={close}>
             <Icon name="close" />
           </button>
         </div>
@@ -46,13 +48,13 @@ export function CartDrawer() {
         </div>
         <div className="border-t border-line p-5">
           <div className="flex items-baseline justify-between">
-            <span className="eyebrow text-muted">Subtotal</span>
+            <span className="eyebrow text-muted">{t('Subtotal')}</span>
             <span className="mono text-[18px] font-semibold">{data ? formatPrice(data.subtotal) : '—'}</span>
           </div>
-          <p className="mt-1 text-[12px] text-muted">Delivery priced by wilaya at checkout · cash on delivery.</p>
+          <p className="mt-1 text-[12px] text-muted">{t('Delivery priced by wilaya at checkout · cash on delivery.')}</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Link href="/cart" className="btn btn-line" onClick={close}>
-              View bag
+              {t('View bag')}
             </Link>
             <Link
               href="/checkout"
@@ -60,7 +62,7 @@ export function CartDrawer() {
               aria-disabled={!lines.length}
               onClick={close}
             >
-              Checkout
+              {t('Checkout')}
             </Link>
           </div>
         </div>

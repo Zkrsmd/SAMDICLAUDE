@@ -3,10 +3,12 @@ import { CustomersTable } from '@/components/admin/CustomersTable';
 import { PageHead, SampleNote } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getCustomers, showingSamples } from '@/lib/admin/orders';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Customers' };
 
 export default async function CustomersPage() {
+  await loadAdminData();
   await requireAdmin();
   return (
     <div className="adm-page">

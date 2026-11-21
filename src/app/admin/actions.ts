@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { checkPassword, endSession, isAdmin, startSession } from '@/lib/admin/auth';
 import { getAdminProduct, getAdminProducts, isCatalogSlug } from '@/lib/catalog';
-import { getOrder } from '@/lib/admin/orders';
+import { getOrder, loadAdminData } from '@/lib/admin/orders';
 import { clientKey, rateLimit } from '@/lib/security/rateLimit';
 import { ReadOnlyStoreError, replaceOverrides, toDinars, updateOverrides } from '@/lib/store/overrides';
 import { inputOf, patchProduct } from '@/lib/store/product-patch';
@@ -35,6 +35,7 @@ const fail = (error: string, fields?: Record<string, string>): ActionResult<neve
 
 async function guard() {
   if (!(await isAdmin())) return fail('Your session has ended. Sign in again.');
+  await loadAdminData();
   return null;
 }
 
@@ -55,7 +56,9 @@ async function write(change: (d: Overrides) => void) {
 
 export async function login(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const h = await headers();
-  if (!rateLimit(`admin-login:${clientKey(h)}`, 8, 10 * 60_000).ok) return fail('Too many attempts. Wait ten minutes and try again.');
+  // per connection, and for the whole site (a spread-out guessing attempt hits the second limit)
+  if (!(await rateLimit(`admin-login:${clientKey(h)}`, 8, 15 * 60_000)).ok) return fail('Too many attempts. Wait fifteen minutes and try again.');
+  if (!(await rateLimit('admin-login:all', 60, 60 * 60_000)).ok) return fail('Sign-in is paused for a while after too many attempts. Try again within the hour.');
   const pw = form.get('password');
   if (typeof pw !== 'string' || pw.length > 200 || !checkPassword(pw)) return fail('That password is not right.');
   await startSession();
@@ -279,7 +282,7 @@ export async function importStore(json: string): Promise<ActionResult> {
     return fail('That file is not valid JSON.');
   }
   const parsed = OverridesSchema.safeParse(data);
-  if (!parsed.success) return fail('That file is not a SMADI store export.');
+  if (!parsed.success) return fail('That file is not a MODE S store export.');
   try {
     // an export saved before the switch to dinars is converted on the way in
     await replaceOverrides(toDinars(parsed.data));

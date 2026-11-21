@@ -6,6 +6,7 @@ import { useQuote } from '@/hooks/useQuote';
 import { useHydrated } from '@/hooks/useHydrated';
 import { formatPrice } from '@/lib/format';
 import { CheckoutSchema, formatPhone, normalizePhone, type ConfirmBy, type DeliveryMethod } from '@/lib/validation/order';
+import { useT } from '@/i18n/client';
 import type { OrderResponse } from '@/app/api/orders/route';
 
 export interface CheckoutWilaya {
@@ -25,7 +26,9 @@ const ORDER: Field[] = ['firstName', 'lastName', 'phone', 'wilaya', 'commune', '
  * stop-desk price), how we confirm (a call within the hour, or an SMS). The server prices the order;
  * the totals here are a preview from the same catalogue and delivery list.
  */
-export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: CheckoutWilaya[]; courier: string; confirmCall: string }) {
+export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { wilayas: CheckoutWilaya[]; courier: string; confirmCall: string }) {
+  const t = useT();
+  const confirmCall = t(confirmCallEn);
   const hydrated = useHydrated();
   const lines = useCart((s) => s.lines);
   const clear = useCart((s) => s.clear);
@@ -34,7 +37,7 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
   const [f, setF] = useState({ firstName: '', lastName: '', phone: '', wilaya: 0, commune: '', address: '', method: 'home' as DeliveryMethod, confirm: 'call' as ConfirmBy, note: '' });
   const [errors, setErrors] = useState<Partial<Record<Field | 'form', string>>>({});
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState<{ number?: number; firstName: string; phone: string; confirm: ConfirmBy; total: number } | null>(null);
+  const [done, setDone] = useState<{ number?: number; receipt?: string; firstName: string; phone: string; confirm: ConfirmBy; total: number } | null>(null);
   const honey = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -71,16 +74,16 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
     setErrors({});
     try {
       const res = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      const r = (await res.json().catch(() => ({ ok: false, error: 'Your order could not be sent. Check your connection and try again.' }))) as OrderResponse;
+      const r = (await res.json().catch(() => ({ ok: false, error: t('Your order could not be sent. Check your connection and try again.') }))) as OrderResponse;
       if (!r.ok) {
-        setErrors({ ...(r.fields as Partial<Record<Field, string>>), form: r.error ?? 'Your order could not be sent.' });
+        setErrors({ ...(r.fields as Partial<Record<Field, string>>), form: r.error ?? t('Your order could not be sent.') });
         return;
       }
-      setDone({ number: r.number, firstName: f.firstName.trim(), phone: normalizePhone(f.phone) ?? f.phone, confirm: f.confirm, total });
+      setDone({ number: r.number, receipt: r.receipt, firstName: f.firstName.trim(), phone: normalizePhone(f.phone) ?? f.phone, confirm: f.confirm, total });
       clear();
       window.scrollTo({ top: 0 });
     } catch {
-      setErrors({ form: 'Your order could not be sent. Check your connection and try again.' });
+      setErrors({ form: t('Your order could not be sent. Check your connection and try again.') });
     } finally {
       setSending(false);
     }
@@ -89,7 +92,7 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
   const err = (k: Field) =>
     errors[k] ? (
       <p id={`co-${k}-err`} className="co-err">
-        {errors[k]}
+        {t(errors[k] ?? '')}
       </p>
     ) : null;
   const inv = (k: Field) => ({ 'aria-invalid': errors[k] ? true : undefined, 'aria-describedby': errors[k] ? `co-${k}-err` : undefined });
@@ -101,39 +104,55 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
           <span className="co-done-mark" aria-hidden>
             ✓
           </span>
-          <p className="eyebrow mt-6 text-muted">{done.number ? `Order #${done.number}` : 'Order received'}</p>
-          <h1 className="display mt-3 text-[clamp(30px,6.2vw,56px)]">Thank you, {done.firstName}</h1>
+          <p className="eyebrow mt-6 text-muted">{done.number ? t('Order #{n}', { n: done.number }) : t('Order received')}</p>
+          <h1 className="display mt-3 text-[clamp(30px,6.2vw,56px)]">{t('Thank you, {name}', { name: done.firstName })}</h1>
           <p className="mx-auto mt-5 max-w-md text-[16px] text-ink-2">
             {done.confirm === 'call' ? (
               <>
-                We’ll call you on <b className="whitespace-nowrap">{formatPhone(done.phone)}</b> {confirmCall} to confirm your order.
+                {t('We’ll call you on {phone} {when} to confirm your order.', { phone: formatPhone(done.phone), when: confirmCall })}
               </>
             ) : (
               <>
-                We’ll send an SMS to <b className="whitespace-nowrap">{formatPhone(done.phone)}</b> to confirm your order.
+                {t('We’ll send an SMS to {phone} to confirm your order.', { phone: formatPhone(done.phone) })}
               </>
             )}
           </p>
           <p className="mt-3 text-[15px] text-muted">
-            Then {courier} brings it to you. Pay <b className="mono text-ink">{formatPrice(done.total)}</b> in cash on delivery.
+            {t('Then {courier} brings it to you. Pay {total} in cash on delivery.', { courier, total: formatPrice(done.total) })}
           </p>
-          <Link href="/" className="btn btn-ink mt-8 h-12 px-8">
-            Keep shopping
-          </Link>
+          {done.receipt && (
+            <p className="mt-6 text-[14px] text-muted">
+              {t('Your receipt and order status:')}{' '}
+              <Link href={done.receipt} className="text-ink underline" data-testid="receipt-link">
+                {t('open your receipt')}
+              </Link>{' '}
+              {t('— keep this link, it is private to you.')}
+            </p>
+          )}
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {done.receipt && (
+              <Link href={done.receipt} className="btn h-12 px-8">
+                {t('View receipt')}
+              </Link>
+            )}
+            <Link href="/" className="btn btn-ink h-12 px-8">
+              {t('Keep shopping')}
+            </Link>
+          </div>
         </div>
       </div>
     );
 
   return (
     <div className="container-x pb-20" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 88px)' }}>
-      <p className="eyebrow text-muted">Cash on delivery · Algeria</p>
-      <h1 className="display mt-2 text-[clamp(30px,6.2vw,64px)]">Checkout</h1>
+      <p className="eyebrow text-muted">{t('Cash on delivery · Algeria')}</p>
+      <h1 className="display mt-2 text-[clamp(30px,6.2vw,64px)]">{t('Checkout')}</h1>
 
       {empty ? (
         <p className="mt-8 text-[16px] text-muted">
-          Your bag is empty.{' '}
+          {t('Your bag is empty.')}{' '}
           <Link href="/" className="text-ink underline">
-            Continue shopping
+            {t('Continue shopping')}
           </Link>
         </p>
       ) : (
@@ -141,26 +160,26 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
           <div className="space-y-4">
             <section className="co-card" aria-labelledby="co-you">
               <h2 id="co-you" className="co-h">
-                <span className="mono text-muted">01</span> Your details
+                <span className="mono text-muted">01</span> {t('Your details')}
               </h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="co-first" className="co-label">
-                    First name
+                    {t('First name')}
                   </label>
                   <input id="co-first" name="firstName" className="co-input" autoComplete="given-name" value={f.firstName} onChange={(e) => set('firstName', e.target.value)} {...inv('firstName')} />
                   {err('firstName')}
                 </div>
                 <div>
                   <label htmlFor="co-last" className="co-label">
-                    Last name
+                    {t('Last name')}
                   </label>
                   <input id="co-last" name="lastName" className="co-input" autoComplete="family-name" value={f.lastName} onChange={(e) => set('lastName', e.target.value)} {...inv('lastName')} />
                   {err('lastName')}
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor="co-phone" className="co-label">
-                    Phone number
+                    {t('Phone number')}
                   </label>
                   <input
                     id="co-phone"
@@ -174,23 +193,23 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
                     onChange={(e) => set('phone', e.target.value)}
                     {...inv('phone')}
                   />
-                  {err('phone') ?? <p className="co-help">A mobile we can call or text to confirm your order.</p>}
+                  {err('phone') ?? <p className="co-help">{t('A mobile we can call or text to confirm your order.')}</p>}
                 </div>
               </div>
             </section>
 
             <section className="co-card" aria-labelledby="co-where">
               <h2 id="co-where" className="co-h">
-                <span className="mono text-muted">02</span> Delivery
+                <span className="mono text-muted">02</span> {t('Delivery')}
               </h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="co-wilaya" className="co-label">
-                    Wilaya
+                    {t('Wilaya')}
                   </label>
                   <select id="co-wilaya" name="wilaya" className="co-input co-select" value={f.wilaya || ''} onChange={(e) => set('wilaya', Number(e.target.value))} {...inv('wilaya')}>
                     <option value="" disabled>
-                      Choose your wilaya
+                      {t('Choose your wilaya')}
                     </option>
                     {options.map((x) => (
                       <option key={x.code} value={x.code} disabled={x.off}>
@@ -199,18 +218,18 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
                       </option>
                     ))}
                   </select>
-                  {err('wilaya') ?? <p className="co-help">New 2025 wilaya? Choose the one it was part of.</p>}
+                  {err('wilaya') ?? <p className="co-help">{t('New 2025 wilaya? Choose the one it was part of.')}</p>}
                 </div>
                 <div>
                   <label htmlFor="co-commune" className="co-label">
-                    Commune
+                    {t('Commune')}
                   </label>
                   <input id="co-commune" name="commune" className="co-input" autoComplete="address-level2" value={f.commune} onChange={(e) => set('commune', e.target.value)} {...inv('commune')} />
                   {err('commune')}
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor="co-address" className="co-label">
-                    Address
+                    {t('Address')}
                   </label>
                   <textarea
                     id="co-address"
@@ -218,7 +237,7 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
                     rows={2}
                     className="co-input co-textarea"
                     autoComplete="street-address"
-                    placeholder="Street, building, floor, nearby landmark"
+                    placeholder={t('Street, building, floor, nearby landmark')}
                     value={f.address}
                     onChange={(e) => set('address', e.target.value)}
                     {...inv('address')}
@@ -228,12 +247,12 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
               </div>
 
               <fieldset className="mt-5">
-                <legend className="co-label">Delivered by {courier}</legend>
+                <legend className="co-label">{t('Delivered by {courier}', { courier })}</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {(
                     [
-                      ['home', 'Home delivery', 'To your door'],
-                      ['desk', 'Stop desk', `Pick it up at the ${courier} office`],
+                      ['home', t('Home delivery'), t('To your door')],
+                      ['desk', t('Stop desk'), t('Pick it up at the {courier} office', { courier })],
                     ] as const
                   ).map(([id, label, help]) => {
                     const price = w ? w[id] : undefined;
@@ -243,7 +262,7 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
                         <input type="radio" name="method" value={id} checked={method === id} disabled={off} onChange={() => set('method', id)} className="sr-only" />
                         <span className="min-w-0 flex-1">
                           <span className="block font-semibold">{label}</span>
-                          <span className="block text-[13px] text-muted">{off ? 'Not offered in this wilaya' : help}</span>
+                          <span className="block text-[13px] text-muted">{off ? t('Not offered in this wilaya') : help}</span>
                         </span>
                         <span className="mono text-[14px] font-semibold">{price === undefined ? '—' : off ? '' : formatPrice(price * 100)}</span>
                       </label>
@@ -256,15 +275,15 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
 
             <section className="co-card" aria-labelledby="co-confirm">
               <h2 id="co-confirm" className="co-h">
-                <span className="mono text-muted">03</span> Confirming your order
+                <span className="mono text-muted">03</span> {t('Confirming your order')}
               </h2>
               <fieldset className="mt-4">
-                <legend className="sr-only">How should we confirm your order?</legend>
+                <legend className="sr-only">{t('How should we confirm your order?')}</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {(
                     [
-                      ['call', 'Call me', `We call you ${confirmCall}`],
-                      ['sms', 'Send me an SMS', 'We text you to confirm'],
+                      ['call', t('Call me'), t('We call you {when}', { when: confirmCall })],
+                      ['sms', t('Send me an SMS'), t('We text you to confirm')],
                     ] as const
                   ).map(([id, label, help]) => (
                     <label key={id} className="co-option">
@@ -279,7 +298,7 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
               </fieldset>
               <div className="mt-5">
                 <label htmlFor="co-note" className="co-label">
-                  Note for us <span className="font-normal text-muted">(optional)</span>
+                  {t('Note for us')} <span className="font-normal text-muted">{t('(optional)')}</span>
                 </label>
                 <textarea id="co-note" name="note" rows={2} maxLength={300} className="co-input co-textarea" value={f.note} onChange={(e) => set('note', e.target.value)} {...inv('note')} />
                 {err('note')}
@@ -294,10 +313,10 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
 
           <aside className="co-card h-fit lg:sticky lg:top-24" aria-labelledby="co-sum">
             <h2 id="co-sum" className="co-h">
-              Your order
+              {t('Your order')}
             </h2>
             {!hydrated || !data ? (
-              <p className="mt-4 text-muted">Loading…</p>
+              <p className="mt-4 text-muted">{t('Loading…')}</p>
             ) : (
               <ul className="mt-3 divide-y divide-line text-[14px]">
                 {data.lines.map((l) => (
@@ -312,34 +331,34 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
             )}
             {blocked && (
               <p className="mt-3 rounded-[2px] bg-[#fff4f2] p-3 text-[13px] text-red-700" role="alert">
-                Some items can’t be ordered ({data!.rejected.map((r) => r.reason.toLowerCase()).join(', ')}).{' '}
+                {t('Some items can’t be ordered ({list}).', { list: data!.rejected.map((r) => t(r.reason).toLowerCase()).join(', ') })}{' '}
                 <Link href="/cart" className="underline">
-                  Update your bag
+                  {t('Update your bag')}
                 </Link>
               </p>
             )}
             {quoteError && <p className="mt-3 text-[13px] text-red-700">{quoteError}</p>}
             <dl className="mt-3 space-y-2 border-t border-line pt-3 text-[15px]">
               <div className="flex justify-between">
-                <dt>Subtotal</dt>
+                <dt>{t('Subtotal')}</dt>
                 <dd className="mono">{data ? formatPrice(subtotal) : '—'}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt>
-                  Delivery <span className="text-[13px] text-muted">{w ? `· ${method === 'home' ? 'home' : 'stop desk'}, ${w.name}` : ''}</span>
+                  {t('Delivery')} <span className="text-[13px] text-muted">{w ? `· ${method === 'home' ? t('home') : t('stop desk')}, ${w.name}` : ''}</span>
                 </dt>
-                <dd className="mono whitespace-nowrap">{feeDa !== null && feeDa !== undefined ? formatPrice(feeDa * 100) : <span className="font-sans text-[13px] text-muted">Choose your wilaya</span>}</dd>
+                <dd className="mono whitespace-nowrap">{feeDa !== null && feeDa !== undefined ? formatPrice(feeDa * 100) : <span className="font-sans text-[13px] text-muted">{t('Choose your wilaya')}</span>}</dd>
               </div>
               <div className="flex justify-between border-t border-line pt-3 text-[17px] font-semibold">
-                <dt>Total</dt>
+                <dt>{t('Total')}</dt>
                 <dd className="mono" data-testid="co-total">
                   {data ? formatPrice(total) : '—'}
                 </dd>
               </div>
             </dl>
             <div className="co-cod mt-4">
-              <p className="font-semibold">Cash on delivery</p>
-              <p className="mt-0.5 text-[13px] text-muted">Pay the courier in cash when your order arrives. No card needed.</p>
+              <p className="font-semibold">{t('Cash on delivery')}</p>
+              <p className="mt-0.5 text-[13px] text-muted">{t('Pay the courier in cash when your order arrives. No card needed.')}</p>
             </div>
             {errors.form && (
               <p className="mt-4 text-[14px] text-red-700" role="alert">
@@ -347,10 +366,10 @@ export function CodCheckout({ wilayas, courier, confirmCall }: { wilayas: Checko
               </p>
             )}
             <button type="submit" className="btn btn-ink mt-5 h-12 w-full" disabled={sending || blocked || !data || !lines.length}>
-              {sending ? 'Sending…' : 'Confirm order'}
+              {sending ? t('Sending…') : t('Confirm order')}
             </button>
             <p className="mt-3 text-center text-[12px] text-muted">
-              {f.confirm === 'call' ? `We’ll call you ${confirmCall} to confirm.` : 'We’ll text you to confirm.'}
+              {f.confirm === 'call' ? t('We’ll call you {when} to confirm.', { when: confirmCall }) : t('We’ll text you to confirm.')}
             </p>
           </aside>
         </form>

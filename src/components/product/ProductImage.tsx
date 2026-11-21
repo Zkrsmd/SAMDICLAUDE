@@ -15,7 +15,10 @@ export function ProductImage({
   sizes = '(max-width: 768px) 50vw, 25vw',
   priority,
   className = '',
+  src,
 }: {
+  /** the photo to show (an admin upload, from CardData.image); defaults to the catalogue photo */
+  src?: string;
   slug: string;
   colorId: string;
   angle?: RenderAngle;
@@ -28,12 +31,12 @@ export function ProductImage({
   if (failed)
     return (
       <div className={`grid h-full w-full place-items-center ${className}`} role="img" aria-label={alt}>
-        <span className="eyebrow text-muted">Render pending</span>
+        <span className="eyebrow text-muted">Photo coming soon</span>
       </div>
     );
   return (
     <Image
-      src={renderUrl(slug, colorId, angle)}
+      src={src && angle === 'hero' ? src : renderUrl(slug, colorId, angle)}
       alt={alt}
       fill
       sizes={sizes}

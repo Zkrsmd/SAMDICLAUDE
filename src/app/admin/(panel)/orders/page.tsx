@@ -3,10 +3,12 @@ import { OrdersTable } from '@/components/admin/OrdersTable';
 import { PageHead, SampleNote } from '@/components/admin/ui';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getOrders, showingSamples } from '@/lib/admin/orders';
+import { loadAdminData } from '@/lib/admin/orders';
 
 export const metadata: Metadata = { title: 'Orders' };
 
 export default async function OrdersPage() {
+  await loadAdminData();
   await requireAdmin();
   const rows = getOrders().map((o) => ({
     id: o.id,
@@ -28,8 +30,7 @@ export default async function OrdersPage() {
       <PageHead title="Orders" />
       {showingSamples() ? (
         <SampleNote>
-          Sample orders, shown until the first real order comes in from the checkout (then they disappear). Real orders are kept in{' '}
-          <span className="mono">.data/orders.json</span>, never in git.
+          Sample orders, shown until the first real order comes in from the checkout (then they disappear). Real orders are kept in the store’s private database (Cloudflare D1).
         </SampleNote>
       ) : null}
       <OrdersTable rows={rows} />
