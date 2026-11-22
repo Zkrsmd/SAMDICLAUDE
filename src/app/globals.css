@@ -40,6 +40,10 @@
     -webkit-font-smoothing: antialiased;
     scroll-behavior: auto;
   }
+  /* nothing may make the page wider than the phone (a wider page opens zoomed out) */
+  html {
+    overflow-x: clip;
+  }
   body {
     background: var(--color-bg);
     color: var(--color-ink);
@@ -2167,11 +2171,15 @@ html.vt-product::view-transition-new(root) {
 }
 /* honeypot: off screen, never shown */
 .co-hp {
+  /* hidden in place — never pushed far off to one side: in Arabic (right to left) that made the page 4× wider */
   position: absolute;
-  left: -10000px;
+  inset-inline-start: 0;
   width: 1px;
   height: 1px;
   overflow: hidden;
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
 }
 .co-done {
   border-radius: 24px;
@@ -2762,11 +2770,14 @@ html[dir='rtl'] .rtl-flip {
 .qb-lines ul {
   margin-top: 6px;
   display: grid;
+  /* one column that may shrink: a long name is cut with "…" instead of pushing the price (and the page) wider */
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   font-size: 13px;
 }
 .qb-lines li {
   display: flex;
+  min-width: 0;
   justify-content: space-between;
   gap: 12px;
 }
@@ -2858,4 +2869,14 @@ html[dir='rtl'] .rtl-flip {
   font-weight: 700;
   pointer-events: none;
   opacity: 0;
+}
+
+/* phones zoom in by themselves when a field under 16px is tapped (iPhone): never smaller on touch screens
+   (unlayered, so it wins over text-[13px] utilities) */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }

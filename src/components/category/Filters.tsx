@@ -127,7 +127,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
 
   return (
     <div className="sticky top-14 z-30 -mx-4 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:px-0">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="chip" onClick={() => setOpen(true)} aria-haspopup="dialog">
           <Icon name="filter" size={16} /> {t('Filter')}{count ? ` (${count})` : ''}
         </button>
@@ -139,7 +139,7 @@ export function Filters({ facets, total }: { facets: FacetSet; total: number }) 
             </option>
           ))}
         </select>
-        <span className="mono ms-auto text-[12px] text-muted" aria-live="polite">
+        <span className="mono ms-auto whitespace-nowrap text-[12px] text-muted" aria-live="polite">
           {pending ? t('Updating…') : t('{n} results', { n: total })}
         </span>
       </div>

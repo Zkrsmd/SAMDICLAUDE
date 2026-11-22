@@ -32,9 +32,9 @@ export function SearchBox({ initial }: { initial: string }) {
         onChange={(e) => setQ(e.target.value)}
         maxLength={80}
         placeholder={t('Search products, brands, sports')}
-        className="h-14 flex-1 bg-transparent text-[18px] outline-none"
+        className="h-14 min-w-0 flex-1 bg-transparent text-[18px] outline-none"
       />
-      <button type="submit" className="btn btn-ink h-11 px-4">
+      <button type="submit" className="btn btn-ink h-11 shrink-0 px-4">
         {t('Search')}
       </button>
     </form>

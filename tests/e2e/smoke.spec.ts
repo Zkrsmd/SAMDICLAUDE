@@ -16,6 +16,36 @@ test('key routes render without page errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('on a phone every page is exactly as wide as the screen (French and Arabic), so nothing opens zoomed out', async ({ page, context }, info) => {
+  test.skip(!info.project.name.includes('mobile'), 'phone layout');
+  test.setTimeout(180_000);
+  // a full bag, so the order list under "Order now" is shown with long names
+  await page.goto('/product/fox-40-classic-whistle', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'yb-cart-v1',
+      JSON.stringify({
+        state: {
+          lines: [
+            { productId: 'venum-boxing-gloves-black-gold', colorId: 'standard', size: '12 oz', qty: 3 },
+            { productId: 'fox-40-classic-whistle', colorId: 'standard', size: 'One size', qty: 1 },
+          ],
+        },
+        version: 1,
+      }),
+    ),
+  );
+  for (const lang of ['fr', 'ar']) {
+    await context.addCookies([{ name: 'lang', value: lang, url: page.url() }]);
+    for (const r of ['/', '/football/jerseys', '/search?q=maillot', '/product/fox-40-classic-whistle', '/cart', '/checkout']) {
+      await page.goto(r, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(800);
+      const w = await page.evaluate(() => ({ inner: window.innerWidth, doc: document.documentElement.clientWidth }));
+      expect(w.inner, `${lang} ${r}`).toBe(w.doc);
+    }
+  }
+});
+
 test('hero is usable and the store is reachable without swiping', async ({ page }) => {
   await openHome(page);
   await page.getByRole('group', { name: 'Choose sport' }).getByRole('button', { name: 'Swimming' }).click();

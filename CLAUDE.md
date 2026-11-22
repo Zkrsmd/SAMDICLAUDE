@@ -100,6 +100,9 @@ Cloudflare Workers via OpenNext (`wrangler.jsonc`, `open-next.config.ts`), D1 da
 - Typecheck, lint and Playwright must pass before committing.
 - Inspect real output (screenshots via `scripts/qa-shots.mjs` or the browser pane) — compiling is not enough.
 - Respect `prefers-reduced-motion`; swipe is never the only control; videos always have a still poster.
+- Nothing may make a page wider than the phone (a wider page opens zoomed out): flex/grid children that hold long text
+  get `min-w-0` / `minmax(0,1fr)`, and nothing is parked far off to one side (in Arabic that widens the page) — the
+  smoke test checks every key page in French and Arabic. Form fields are ≥ 16px on touch screens (no iPhone zoom on tap).
 - Animation state lives in refs/CSS variables, never React state per frame.
 
 ## Security restrictions

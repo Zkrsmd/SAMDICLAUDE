@@ -30,10 +30,10 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
   return (
     <ul className="divide-y divide-line">
       {quote.lines.map((l) => (
-        <li key={l.key} className="flex gap-4 py-4">
+        <li key={l.key} className="flex gap-3 py-4 sm:gap-4">
           <Link
             href={`/product/${l.slug}`}
-            className={`relative shrink-0 overflow-hidden rounded-[2px] bg-stone ${compact ? 'h-24 w-24' : 'h-32 w-32'}`}
+            className={`relative shrink-0 overflow-hidden rounded-[2px] bg-stone ${compact ? 'h-24 w-24' : 'h-24 w-24 sm:h-32 sm:w-32'}`}
           >
             <ProductImage slug={l.slug} colorId={l.colorId} alt={l.name} sizes="128px" />
           </Link>
@@ -45,7 +45,7 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
             <span className="mt-1 text-[13px] text-muted">
               {l.colorName} · {l.size}
             </span>
-            <div className="mt-auto flex items-center justify-between pt-2">
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 pt-2">
               <div className="flex items-center border border-line" role="group" aria-label={t('Quantity for {name}', { name: l.name })}>
                 <button
                   type="button"
@@ -69,12 +69,12 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
                   <Icon name="plus" size={16} />
                 </button>
               </div>
-              <span className="mono text-[14px] font-semibold">{formatPrice(l.total)}</span>
+              <span className="mono whitespace-nowrap text-[14px] font-semibold">{formatPrice(l.total)}</span>
             </div>
           </div>
           <button
             type="button"
-            className="-mr-2 grid h-9 w-9 shrink-0 place-items-center text-muted hover:text-ink"
+            className="-me-2 grid h-9 w-9 shrink-0 place-items-center text-muted hover:text-ink"
             aria-label={t('Remove {name}', { name: l.name })}
             onClick={() => remove(l.key)}
           >

@@ -308,7 +308,7 @@ export function QuickBuy({
           <ul>
             {quote.lines.map((l) => (
               <li key={l.key}>
-                <span className="min-w-0 flex-1 truncate">
+                <span className="line-clamp-2 min-w-0 flex-1 break-words">
                   <span className="mono text-muted">{l.qty}×</span> {l.name} <span className="text-muted">· {l.size}</span>
                 </span>
                 <span className="mono whitespace-nowrap">{formatPrice(l.total)}</span>
