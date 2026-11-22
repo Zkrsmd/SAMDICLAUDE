@@ -8,7 +8,7 @@ export function Wordmark({ className = '' }: { className?: string; glow?: boolea
   return (
     <span className={`inline-flex items-center leading-none ${className}`} aria-label={brand.name} dir="ltr">
       <span aria-hidden className="display whitespace-nowrap text-[1.15em] tracking-[0.04em]">
-        REV<span className="text-cobalt">O</span>
+        REV<span className="wm-o text-cobalt">O</span>
       </span>
     </span>
   );

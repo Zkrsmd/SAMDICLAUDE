@@ -9,7 +9,8 @@ campaign and a real store at once. Real product photos (background removed) and 
 - Palette "glacier": frost `#F3F4F6`, white, mist/stone `#E8EBEF`, steel `#8E99A8`, ink `#0F1216` (text), ONE accent
   cobalt `#2B59FF` — plus one signal red (`.btn-order`) reserved for the order buttons (owner-requested). **No rainbow/holographic colours** (owner rejected them). The hero is a cool, atmospheric grey world
   (igloo.inc-inspired); the rest of the site is frost-white. Never a dark/neon site.
-- Effects language (class names kept from the old holo era, now chrome): the header bar is liquid chrome (`.glass-pill` + two drifting SVG-noise sheets in `Header.tsx`, see-through);
+- Effects language (class names kept from the old holo era, now chrome): the header bar is midnight cobalt (`.hdr`: night-blue, drifting cobalt lights, a glint
+  travelling round the rim — all transforms; the owner chose one dark blue for it);
   `.holo-border`/`.holo-ring` = travelling
   chrome edge with a cobalt glint, `.btn-holo` white pill, `.holo-text` dark steel text with a cobalt glint, `.glass`,
   film grain, `[data-reveal]`. Liquid elements are chrome (mercury). Use these, don't invent new gradients.
@@ -40,8 +41,8 @@ campaign and a real store at once. Real product photos (background removed) and 
   (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked). Availability (`availability()` in `catalog.ts`):
   "Coming soon" (admin switch `comingSoon`, with or without stock: shown, not sold) wins over "Out of stock" (every size
   at 0); both badge the card, disable the `+` and replace the buy box; the quote and order APIs refuse them.
-- Product page: pinned viewer (desktop) / scroll drop into the buy box (phones: the photo breaks into jagged shards
-  with chrome sparks and re-forms as it lands; one rAF per frame, transforms only, geometry measured on resize); the buy box has a small white
+- Product page: one still photo with the brand name behind it (pinned beside the details on desktop) — no scroll
+  animation (owner: it felt like an ad) — then straight to the buy box (colour, size); it has a small white
   "Add to bag" and the short cash-on-delivery order form itself (`QuickBuy.tsx`, the red "Order now" orders straight away) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).

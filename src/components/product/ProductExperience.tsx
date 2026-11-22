@@ -12,48 +12,11 @@ import { useTransitionStore, useUi } from '@/stores/ui';
 import { useHydrated, useReducedMotion } from '@/hooks/useHydrated';
 import { useDialog } from '@/hooks/useDialog';
 import { formatPrice, renderUrl } from '@/lib/format';
-import { useScrollAssist } from '@/hooks/useScrollAssist';
 import type { Product } from '@/types/catalog';
 import { useT } from '@/i18n/client';
 
-/** Per-chapter pose of the floating cut-out (rotation in deg, scale). */
-const POSES = [
-  { r: -8, s: 1 },
-  { r: 6, s: 1.12 },
-  { r: -14, s: 0.96 },
-  { r: 2, s: 1.2 },
-];
-
-/**
- * The drop on phones: the product breaks into shards that drift apart as it falls (with chrome
- * sparks flying from the cracks) and snap back together as it lands in the tray. Each shard is the
- * same picture clipped to a jagged band, so assembled they are the photo again, seamlessly.
- */
-const SHARDS = 6;
-const SHARDS_LITE = 4;
-const SPARKS = 14;
-/** jagged crack lines across the photo: [left, middle, right] heights in % (0 and 100 at the ends) */
-function cracks(n: number) {
-  const lines: number[][] = [[0, 0, 0]];
-  for (let i = 1; i < n; i++) {
-    const y = (100 * i) / n;
-    const j = (i % 2 ? 1 : -1) * 4;
-    lines.push([y + j, y - j * 0.6, y + j * 0.8]);
-  }
-  lines.push([100, 100, 100]);
-  return lines;
-}
-function shardClip(lines: number[][], i: number) {
-  const a = lines[i]!;
-  const b = lines[i + 1]!;
-  return `polygon(0% ${a[0]}%, 50% ${a[1]}%, 100% ${a[2]}%, 100% ${b[2]}%, 50% ${b[1]}%, 0% ${b[0]}%)`;
-}
-const CLIPS = { full: cracks(SHARDS), lite: cracks(SHARDS_LITE) };
-/** fixed pseudo-random flight per spark (angle, reach, size) so every drop looks the same */
-const SPARK = Array.from({ length: SPARKS }, (_, i) => {
-  const a = (i / SPARKS) * Math.PI * 2 + (i % 3) * 0.4;
-  return { x: Math.cos(a), y: Math.sin(a) * 0.8, reach: 0.55 + ((i * 37) % 10) / 22, size: 4 + ((i * 53) % 5) };
-});
+/** the cut-out's resting pose: a slight tilt, like it's placed on display */
+const POSE = 'rotate(-6deg)';
 
 export function ProductExperience({
   product,
@@ -80,7 +43,6 @@ export function ProductExperience({
   const [added, setAdded] = useState(false);
   const [view, setView] = useState(0);
   const [inspect, setInspect] = useState(false);
-  const [chapter, setChapter] = useState(0);
   const [barOn, setBarOn] = useState(false);
   const add = useCart((s) => s.add);
   const pushRecent = useRecent((s) => s.push);
@@ -96,25 +58,13 @@ export function ProductExperience({
       ? 'out'
       : 'in';
   const images = product.images?.length ? product.images : [renderUrl(product.slug)];
-  const exhibit = useRef<HTMLDivElement>(null);
   const purchase = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const shown = useRef<HTMLButtonElement>(null);
-  const flyer = useRef<HTMLDivElement>(null);
-  const slotImg = useRef<HTMLDivElement>(null);
-  /** resting points for the scroll assist: each chapter, then the product landed in the tray */
-  const rest = useRef<number[] | null>(null);
   const tilt = useRef<HTMLDivElement>(null);
-  const imgSlot = useRef<HTMLDivElement>(null);
   const inspectRef = useRef<HTMLDivElement>(null);
   const zoomImg = useRef<HTMLImageElement>(null);
   useDialog(inspectRef, inspect, () => setInspect(false));
-
-  const chapters = [
-    { title: t('The silhouette'), text: product.short },
-    ...product.features.slice(0, 3).map((f, i) => ({ title: t(['Built in', 'Made to', 'Finished with'][i] ?? 'Detail'), text: f })),
-  ].slice(0, 4);
-  const pose = POSES[chapter % POSES.length]!;
 
   useEffect(() => {
     pushRecent(product.slug);
@@ -125,197 +75,14 @@ export function ProductExperience({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.slug]);
 
-  // scroll choreography: chapters re-pose the product; on phones the end of the exhibit drops the
-  // product out of the viewer and into the purchase tray, breaking apart mid-air and re-forming as it
-  // lands — scrubbed by scroll. Built to stay at the screen's full frame rate on modest phones:
-  // positions are measured once (and on resize), each frame is one rAF that only reads scrollY and
-  // writes transforms/opacity (no layout, no filters, no React renders unless the chapter changes).
+  // the slim purchase bar (phones) shows once the purchase box has scrolled away above
   useEffect(() => {
-    const clamp = (v: number) => Math.min(1, Math.max(0, v));
-    const sm = (a: number, b: number, t: number) => {
-      const x = clamp((t - a) / (b - a));
-      return x * x * (3 - 2 * x);
-    };
-    const fall = (q: number) => (q < 0.8 ? (q / 0.8) ** 2 : 1 - 0.06 * Math.sin((Math.PI * (q - 0.8)) / 0.2));
-    const lite = (navigator.hardwareConcurrency || 8) <= 4 || ((navigator as { deviceMemory?: number }).deviceMemory ?? 8) <= 3;
-    const f = flyer.current;
-    f?.classList.toggle('is-lite', lite);
-    const shards = f ? Array.from(f.querySelectorAll<HTMLElement>(lite ? '[data-shard="lite"]' : '[data-shard="full"]')) : [];
-    const sparks = f && !lite ? Array.from(f.querySelectorAll<HTMLElement>('.pdp-spark')) : [];
-    const shadow = imgSlot.current?.querySelector<HTMLElement>('.pdp-tray-shadow') ?? null;
-    // decode the flying photo ahead of time, so the first frame of the drop doesn't stall on it
-    f?.querySelectorAll('img').forEach((im) => void im.decode?.().catch(() => {}));
-
-    // geometry in document coordinates, refreshed on resize / layout changes only
-    let g: {
-      mobile: boolean;
-      vh: number;
-      top: number;
-      span: number;
-      sx: number;
-      sy: number;
-      sw: number;
-      sh: number;
-      dx: number;
-      dy: number;
-      dw: number;
-      dh: number;
-      buyBottom: number;
-    } | null = null;
-    const measure = () => {
-      const el = exhibit.current;
-      const st = stage.current;
-      const src = shown.current;
-      const dst = imgSlot.current;
-      if (!el || !st || !src || !dst) return;
-      const y = window.scrollY;
-      const vh = window.innerHeight;
-      const r = el.getBoundingClientRect();
-      const sr = st.getBoundingClientRect();
-      const s = src.getBoundingClientRect();
-      const d = dst.getBoundingClientRect();
-      const pr = purchase.current?.getBoundingClientRect();
-      const span = Math.max(1, r.height - vh);
-      g = {
-        mobile: window.innerWidth < 1024 && !reduced && d.height > 0,
-        vh,
-        top: r.top + y,
-        span,
-        // the photo's place inside the (sticky) stage
-        sx: s.left - sr.left,
-        sy: s.top - sr.top,
-        sw: s.width,
-        sh: s.height,
-        dx: d.left,
-        dy: d.top + y,
-        dw: d.width,
-        dh: d.height,
-        buyBottom: pr ? pr.bottom + y : Infinity,
-      };
-      const n = chapters.length;
-      const pts = Array.from({ length: n }, (_, i) => g!.top + (span * i) / (n * 1.05));
-      pts.push(g.mobile ? g.dy + g.dh / 2 - vh * 0.58 : g.top + span);
-      rest.current = pts;
-      if (f) {
-        f.style.width = `${g.sw}px`;
-        f.style.height = `${g.sh}px`;
-      }
-    };
-
-    let lastChapter = -1;
-    let lastBar: boolean | null = null;
-    let state: 'before' | 'flying' | 'landed' | null = null;
-    const frame = () => {
-      raf = 0;
-      if (!g) measure();
-      if (!g) return;
-      const y = window.scrollY;
-      const p = clamp((y - g.top) / g.span);
-      const ch = Math.min(chapters.length - 1, Math.floor(p * chapters.length * 1.05));
-      if (ch !== lastChapter) setChapter((lastChapter = ch));
-      const bar = g.buyBottom - y < 0;
-      if (bar !== lastBar) setBarOn((lastBar = bar));
-
-      const src = shown.current;
-      const si = slotImg.current;
-      if (!src || !si || !f) return;
-      if (!g.mobile) {
-        if (state !== null) {
-          f.style.visibility = 'hidden';
-          src.style.opacity = '';
-          si.style.opacity = '1';
-          state = null;
-        }
-        return;
-      }
-      const start = g.top + g.span * 0.8;
-      const end = g.dy + g.dh / 2 - g.vh * 0.58;
-      const q = clamp((y - start) / Math.max(1, end - start));
-      const near = sm(0.45, 0.95, q);
-      if (shadow) {
-        shadow.style.transform = `translateX(-50%) scale(${(0.35 + near * 0.65).toFixed(3)})`;
-        shadow.style.opacity = (0.15 + near * 0.85).toFixed(3);
-      }
-      if (q <= 0 || q >= 1) {
-        const next = q >= 1 ? 'landed' : 'before';
-        if (state !== next) {
-          f.style.visibility = 'hidden';
-          src.style.opacity = next === 'landed' ? '0' : '';
-          si.style.opacity = next === 'landed' ? '1' : '0';
-          si.classList.toggle('is-landed', next === 'landed');
-          state = next;
-        }
-        return;
-      }
-      if (state !== 'flying') {
-        src.style.opacity = '0';
-        si.style.opacity = '0';
-        si.classList.remove('is-landed');
-        f.style.visibility = 'visible';
-        state = 'flying';
-      }
-      // where the photo is now (the stage is sticky, then scrolls away) and where the tray is
-      const stageTop = g.top - y + Math.min(Math.max(y - g.top, 0), g.span);
-      const scx = g.sx + g.sw / 2;
-      const scy = stageTop + g.sy + g.sh / 2;
-      const dcx = g.dx + g.dw / 2;
-      const dcy = g.dy - y + g.dh / 2;
-      const e = sm(0, 1, q);
-      const k = fall(q);
-      const scale = 1 + (Math.min(g.dw / g.sw, g.dh / g.sh) - 1) * e;
-      // anticipation: it lifts a touch before it lets go
-      const lift = sm(0, 0.14, q) * (1 - sm(0.14, 0.34, q));
-      const cx = scx + (dcx - scx) * e;
-      const cy = scy + (dcy - scy) * k - lift * 28;
-      // stretch with speed on the way down, squash on impact
-      const stretch = 0.07 * sm(0.3, 0.62, q) * (1 - sm(0.7, 0.8, q));
-      const squash = q > 0.8 ? 0.1 * Math.sin(clamp((q - 0.8) / 0.14) * Math.PI) : 0;
-      const sx = scale * (1 + lift * 0.04) * (1 - stretch * 0.6 + squash);
-      const sy = scale * (1 + lift * 0.04) * (1 + stretch - squash);
-      const rot = -18 * Math.sin(clamp(q / 0.82) * Math.PI) + lift * 4;
-      f.style.transform = `translate3d(${cx.toFixed(1)}px, ${cy.toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg) scale(${sx.toFixed(4)}, ${sy.toFixed(4)}) translate(-50%, -50%)`;
-
-      // the break: shards part on the way down and lock back together before the landing
-      const apart = sm(0.06, 0.4, q) * (1 - sm(0.58, 0.86, q));
-      const mid = (shards.length - 1) / 2;
-      for (let i = 0; i < shards.length; i++) {
-        const side = i % 2 ? 1 : -1;
-        const tx = apart * side * (10 + Math.abs(i - mid) * 7) * (g.sw / 100);
-        const ty = apart * (i - mid) * 9 * (g.sh / 160);
-        const tr = apart * side * (4 + i * 1.3);
-        shards[i]!.style.transform = `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) rotate(${tr.toFixed(2)}deg)`;
-      }
-      // chrome sparks fly out of the cracks, then are pulled back in
-      for (let i = 0; i < sparks.length; i++) {
-        const o = SPARK[i]!;
-        const out = apart * o.reach;
-        const sc = apart > 0.02 ? Math.min(1, apart * 1.6) : 0;
-        sparks[i]!.style.transform = `translate3d(${(o.x * out * g.sw * 0.7).toFixed(1)}px, ${(o.y * out * g.sh * 0.6).toFixed(1)}px, 0) scale(${sc.toFixed(3)})`;
-      }
-    };
-    let raf = 0;
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(frame);
-    };
-    const onResize = () => {
-      g = null;
-      onScroll();
-    };
-    measure();
-    frame();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
-    // the info column grows as images and fonts load: re-measure when it changes size
-    const ro = new ResizeObserver(onResize);
-    if (purchase.current) ro.observe(purchase.current);
-    if (exhibit.current) ro.observe(exhibit.current);
-    return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [chapters.length, reduced]);
+    const box = purchase.current;
+    if (!box) return;
+    const io = new IntersectionObserver(([e]) => setBarOn(!!e && !e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(box);
+    return () => io.disconnect();
+  }, []);
 
   // mouse tilt (desktop) and horizontal swipe between photos (touch); vertical scroll stays native
   useEffect(() => {
@@ -367,9 +134,6 @@ export function ProductExperience({
     };
   }, [images.length, reduced]);
 
-  // a small scroll moves to the next chapter / finishes the drop instead of stopping half-way
-  useScrollAssist(() => rest.current);
-
   /** the order form asks for this before ordering */
   const ensureSize = () => {
     if (size) return true;
@@ -386,7 +150,7 @@ export function ProductExperience({
     }
     setError(null);
     add({ productId: product.slug, colorId, size, qty });
-    const rect = imgSlot.current?.getBoundingClientRect();
+    const rect = shown.current?.getBoundingClientRect();
     setUi({ flyFrom: { x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2, y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2, src: images[0]! } });
     setAdded(true);
     if (buyNow) router.push('/checkout');
@@ -396,10 +160,10 @@ export function ProductExperience({
   return (
     <div className="lg:grid lg:grid-cols-[1.15fr_1fr]">
       {/* ------------------------------ exhibit ------------------------------ */}
-      <div ref={exhibit} className="pdp-exhibit relative lg:order-1" style={{ ['--exh' as string]: `calc(100svh + ${chapters.length * 55}svh)` }}>
+      <div className="relative lg:order-1">
         <div
           ref={stage}
-          className="sticky top-0 h-[100svh] overflow-hidden"
+          className="pdp-stage relative overflow-hidden lg:sticky lg:top-0"
           style={{
             touchAction: 'pan-y',
             background:
@@ -419,12 +183,12 @@ export function ProductExperience({
             type="button"
             onClick={() => setInspect(true)}
             aria-label={t('Zoom into the product photo')}
-            className="absolute inset-x-[6%] top-[13%] bottom-[24svh] cursor-zoom-in lg:inset-x-[8%] lg:bottom-[12%] lg:top-[14%]"
+            className="absolute inset-x-[8%] top-[16%] bottom-[11%] cursor-zoom-in lg:inset-x-[8%] lg:bottom-[12%] lg:top-[14%]"
           >
             <div ref={tilt} className="h-full w-full transition-transform duration-300 ease-out [transform-style:preserve-3d]">
               <div
-                className="h-full w-full transition-transform duration-[900ms] ease-[var(--ease-expo)]"
-                style={{ transform: reduced ? undefined : `rotate(${pose.r}deg) scale(${pose.s})` }}
+                className="h-full w-full"
+                style={{ transform: reduced ? undefined : POSE }}
               >
                 {images.map((src, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -439,17 +203,7 @@ export function ProductExperience({
               </div>
             </div>
           </button>
-          <span aria-hidden className="absolute bottom-[22svh] left-1/2 h-6 w-[40%] -translate-x-1/2 rounded-[50%] bg-ink/15 blur-xl lg:bottom-[9%]" />
-
-          {/* chapter caption (mobile) */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[18svh] px-4 lg:hidden">
-            <div key={chapter} className="pdp-caption rounded-2xl p-3" style={{ animation: 'rise-in .6s var(--ease-expo) both' }}>
-              <p className="eyebrow text-muted">
-                {String(chapter + 1).padStart(2, '0')} / {String(chapters.length).padStart(2, '0')} · {chapters[chapter]?.title}
-              </p>
-              <p className="mt-1 line-clamp-2 text-[15px] font-medium leading-snug">{chapters[chapter]?.text}</p>
-            </div>
-          </div>
+          <span aria-hidden className="absolute bottom-[8%] left-1/2 h-6 w-[40%] -translate-x-1/2 rounded-[50%] bg-ink/15 blur-xl lg:bottom-[9%]" />
 
           {/* photo switcher */}
           {images.length > 1 && (
@@ -469,25 +223,10 @@ export function ProductExperience({
               ))}
             </div>
           )}
-          <p className="eyebrow pointer-events-none absolute bottom-[19svh] left-1/2 -translate-x-1/2 whitespace-nowrap text-ink/60 lg:bottom-6">
+          <p className="eyebrow pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-ink/60 lg:bottom-6">
             {images.length > 1 ? t('Swipe for more · tap to zoom') : t('Tap to zoom')}
           </p>
         </div>
-      </div>
-
-      {/* the product in flight between the viewer and the tray (phones) */}
-      <div ref={flyer} aria-hidden className="pdp-flyer" style={{ visibility: 'hidden' }}>
-        {(['full', 'lite'] as const).map((set) =>
-          CLIPS[set].slice(0, -1).map((_, i) => (
-            <div key={`${set}${i}`} data-shard={set} className="pdp-shard" style={{ clipPath: shardClip(CLIPS[set], i) }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={images[view] ?? images[0]} alt="" draggable={false} />
-            </div>
-          )),
-        )}
-        {SPARK.map((o, i) => (
-          <span key={i} className="pdp-spark" style={{ width: o.size, height: o.size }} />
-        ))}
       </div>
 
       {/* ------------------------------ info + purchase ------------------------------ */}
@@ -510,25 +249,16 @@ export function ProductExperience({
                   {formatPrice(product.compareAt)}
                 </s>
               ) : null}
-              {product.verified ? (
+              {avail !== 'in' ? (
+                <span className="eyebrow rounded-[2px] border border-line px-2 py-1 text-[10px] text-muted">{avail === 'soon' ? t('Coming soon') : t('Out of stock')}</span>
+              ) : product.verified ? (
                 <span className="eyebrow rounded-[2px] bg-ink px-2 py-1 text-[10px] text-white">{t('Model verified')}</span>
-              ) : (
-                <span className="eyebrow rounded-[2px] border border-line px-2 py-1 text-[10px] text-muted">{t('Coming soon')}</span>
-              )}
+              ) : null}
             </div>
-            <p className="mt-4 max-w-prose text-[16px] text-ink-2">{product.description}</p>
           </div>
 
-          {/* the product drops into this tray as you scroll */}
-          <div ref={purchase} className="pdp-buy mt-7">
-            <div ref={imgSlot} className="pdp-tray relative mx-auto -mt-1 mb-3 h-44 w-full overflow-visible lg:hidden" aria-hidden>
-              <span className="pdp-tray-floor" />
-              <span className="pdp-tray-shadow" />
-              <div ref={slotImg} className="pdp-slot absolute inset-0" style={{ opacity: 0 }}>
-                <ProductImage slug={product.slug} colorId={colorId} alt="" sizes="60vw" />
-              </div>
-            </div>
-
+          {/* straight to choosing: colour, size, then add to bag or order */}
+          <div ref={purchase} className="pdp-buy mt-6">
             <fieldset>
               <legend className="eyebrow text-muted">
                 {t('Colour')} — <span className="text-ink">{t(color.name)}</span>
@@ -655,17 +385,8 @@ export function ProductExperience({
             )}
           </div>
 
-          {/* chapters on desktop scroll alongside the sticky viewer */}
-          <ol className="mt-10 hidden space-y-3 lg:block">
-            {chapters.map((c, i) => (
-              <li key={i} className={`border-s-2 py-1 ps-4 transition-colors ${i === chapter ? 'border-ink' : 'border-line text-muted'}`}>
-                <p className="eyebrow">{String(i + 1).padStart(2, '0')} · {c.title}</p>
-                <p className="mt-1 text-[15px]">{c.text}</p>
-              </li>
-            ))}
-          </ol>
-
           <section className="mt-10 pb-6">
+            <p className="max-w-prose text-[16px] text-ink-2">{product.description}</p>
             {product.features.length > 0 && (
               <ul className="mt-6 space-y-2 text-[15px]">
                 {product.features.map((f) => (
