@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { logout } from '@/app/admin/actions';
 import { AIcon, type IconName } from './ui';
 import { Toaster } from './client';
+import { OrderAlerts } from './OrderAlerts';
 
 export interface ShellIndex {
   products: { slug: string; name: string; brandName: string; image: string; status: string }[];
@@ -116,7 +117,7 @@ export function AdminShell({ children, unfulfilled, index, writable }: { childre
         </button>
         <Link href="/admin" className="adm-brand">
           <span className="adm-brand-mark display text-[15px]">S</span>
-          <span className="hidden sm:inline">REVO</span>
+          <span className="hidden sm:inline">STRYKE</span>
           <span className="mono hidden rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-white/70 sm:inline">Admin</span>
         </Link>
         <button type="button" className="adm-search" onClick={() => setPalette(true)} aria-label="Search the admin">
@@ -124,6 +125,7 @@ export function AdminShell({ children, unfulfilled, index, writable }: { childre
           <span className="truncate">Search</span>
           <span className="adm-kbd hidden sm:inline">Ctrl K</span>
         </button>
+        <OrderAlerts />
         <Link href="/" target="_blank" rel="noopener" className="adm-icon-btn text-white hover:!bg-white/10" aria-label="View store">
           <AIcon name="store" />
         </Link>

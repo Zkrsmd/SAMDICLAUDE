@@ -108,6 +108,12 @@ export interface Product {
   photo?: boolean;
   /** shop reference (Odoo internal reference) */
   sku?: string;
+  /** true when the admin set real colours: the product page then shows the colour choice (otherwise nothing) */
+  colorChoice?: boolean;
+  /** the word behind the photo on the product page (empty: the brand name) */
+  backdrop?: string;
+  /** products the admin picked to show with this one ("Complete the look"), in order */
+  picks?: string[];
 }
 
 export interface Subcategory {

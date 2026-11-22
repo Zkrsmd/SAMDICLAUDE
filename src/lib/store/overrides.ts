@@ -1,7 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
 import { usdToDzd } from '@/lib/format';
-import { CreatedProductSchema, DeliverySchema, EMPTY_OVERRIDES, OrderPatchSchema, OverridesSchema, ProductInputSchema, type Overrides } from '@/lib/validation/admin';
+import { CreatedProductSchema, CustomerProfileSchema, DeliverySchema, SiteSchema, EMPTY_OVERRIDES, OrderPatchSchema, OverridesSchema, ProductInputSchema, type Overrides } from '@/lib/validation/admin';
 import { getDb, randomToken } from './db';
 
 /**
@@ -73,6 +73,8 @@ async function readAll(db: D1Database, version: string): Promise<Cached> {
       if (r.key === 'deleted') data.deleted = MetaDeleted.parse(v);
       else if (r.key === 'orders') data.orders = MetaOrders.parse(v);
       else if (r.key === 'delivery' && v) data.delivery = DeliverySchema.parse(v);
+      else if (r.key === 'site' && v) data.site = SiteSchema.parse(v);
+      else if (r.key === 'customers' && v) data.customers = z.record(z.string(), CustomerProfileSchema).parse(v);
       else if (r.key === 'updatedAt') data.updatedAt = typeof v === 'string' ? v : null;
     } catch {
       console.error(`[store] unreadable setting ${r.key}`);
@@ -153,9 +155,18 @@ export async function updateOverrides(change: (draft: Overrides) => void): Promi
       ['deleted', next.deleted],
       ['orders', next.orders],
       ['delivery', next.delivery ?? null],
+      ['site', next.site ?? null],
+      ['customers', next.customers ?? null],
       ['updatedAt', next.updatedAt],
     ];
-    const old: Record<string, unknown> = { deleted: before.deleted, orders: before.orders, delivery: before.delivery ?? null, updatedAt: before.updatedAt };
+    const old: Record<string, unknown> = {
+      deleted: before.deleted,
+      orders: before.orders,
+      delivery: before.delivery ?? null,
+      site: before.site ?? null,
+      customers: before.customers ?? null,
+      updatedAt: before.updatedAt,
+    };
     for (const [key, value] of meta)
       if (json(old[key]) !== json(value))
         stmts.push(db.prepare(`INSERT INTO store_meta (key, value) SELECT ?, ? WHERE ${guard} ON CONFLICT(key) DO UPDATE SET value = excluded.value`).bind(key, json(value), newVersion));
@@ -177,6 +188,8 @@ export function replaceOverrides(next: Overrides) {
     d.deleted = next.deleted;
     d.orders = next.orders;
     d.delivery = next.delivery;
+    d.site = next.site;
+    d.customers = next.customers;
   });
 }
 

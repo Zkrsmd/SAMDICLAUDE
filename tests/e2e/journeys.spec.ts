@@ -9,7 +9,7 @@ const GLOVES = ON_SALE.gloves.slug;
 test.describe('core shopping journeys', () => {
   test('1–5: homepage, switch sports, scroll down', async ({ page }) => {
     await openHome(page);
-    await expect(page.getByRole('heading', { level: 1, name: /REVO/ })).toBeAttached();
+    await expect(page.getByRole('heading', { level: 1, name: /STRYKE/ })).toBeAttached();
     const current = page.getByRole('group', { name: 'Choose sport' }).locator('[aria-current="true"]');
     await page.getByTestId('hero-stage').hover({ position: { x: 40, y: 300 } });
     const order = ['Football', 'Boxing', 'Swimming', 'Fitness', 'Martial arts', 'Basketball', 'Fishing'];
@@ -87,6 +87,11 @@ test.describe('core shopping journeys', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('venum');
     await expect(page.locator('#listing article').first()).toBeVisible();
     expect(await page.locator('#listing article').count()).toBeGreaterThan(3);
+    // one word, any language, plurals and typos: boxing gloves come up for all of these
+    for (const q of ['gloves', 'gants', 'قفازات', 'glvoes']) {
+      await page.goto(`/search?q=${encodeURIComponent(q)}`);
+      await expect(page.locator('#listing article').filter({ hasText: /boxing gloves/i }).first(), q).toBeVisible();
+    }
   });
 
   test('16: category filter narrows the listing via the URL; long lists page with "Show more"', async ({ page }) => {
@@ -216,6 +221,31 @@ test.describe('orders and receipts', () => {
 });
 
 test.describe('buy from the product page', () => {
+  test('ordering without a size brings the sizes back on screen in red; picking one clears it', async ({ page }) => {
+    await page.goto(`/product/${ON_SALE.gloves.slug}`);
+    const form = page.getByTestId('quickbuy');
+    // no street address any more: name, phone, wilaya, commune, delivery
+    await expect(form.getByLabel('Address')).toHaveCount(0);
+    await form.getByRole('button', { name: 'Order now' }).click();
+    const sizeError = page.locator('#size-error');
+    await expect(sizeError).toHaveText('Please choose a size.');
+    await expect(page.locator('#size-field')).toBeInViewport();
+    // the details are checked at the same time
+    await expect(form.getByText('Enter your first and last name')).toBeVisible();
+    await page.locator('label').filter({ hasText: /^12 oz$/ }).click();
+    await expect(sizeError).toHaveCount(0);
+    // typing fixes a field's red at once
+    await form.getByLabel('Full name').fill('Quick Buyer');
+    await expect(form.getByText('Enter your first and last name')).toHaveCount(0);
+    // a wrong phone number: back to the phone field
+    await form.getByLabel('Phone number').fill('12');
+    await form.getByLabel('Wilaya').selectOption('16');
+    await form.getByLabel('Commune').fill('Hydra');
+    await form.getByRole('button', { name: 'Order now' }).click();
+    await expect(form.getByText(/Enter a mobile number/)).toBeVisible();
+    await expect(form.getByLabel('Phone number')).toBeInViewport();
+  });
+
   test('two sizes added one after the other are ordered together, then the bag empties', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'places a real order: once, on desktop');
     // earlier tests placed orders from this same connection: start from a clean order limit
@@ -234,7 +264,6 @@ test.describe('buy from the product page', () => {
     await form.getByLabel('Phone number').fill('0770 11 22 33');
     await form.getByLabel('Wilaya').selectOption('16');
     await form.getByLabel('Commune').fill('Hydra');
-    await form.getByLabel('Address').fill('Rue test 3');
     const lines = form.getByTestId('qb-lines');
     await expect(lines).toContainText('12 oz');
     await expect(lines).toContainText('14 oz');

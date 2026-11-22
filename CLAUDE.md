@@ -1,7 +1,7 @@
 # CLAUDE.md — project guide
 
 ## Purpose
-Premium, mobile-first sports e-commerce store **REVO** (the name is the logo — `Wordmark.tsx`; the favicon `app/icon.svg` is the R) that feels like an award-site
+Premium, mobile-first sports e-commerce store **STRYKE** (formerly REVO; social handles "Stryke Algeria") (the name is the logo — `Wordmark.tsx`; the favicon `app/icon.svg` is the S) that feels like an award-site
 campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
 (the owner rejected the procedural/"comic" look).
 
@@ -41,10 +41,15 @@ campaign and a real store at once. Real product photos (background removed) and 
   (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked). Availability (`availability()` in `catalog.ts`):
   "Coming soon" (admin switch `comingSoon`, with or without stock: shown, not sold) wins over "Out of stock" (every size
   at 0); both badge the card, disable the `+` and replace the buy box; the quote and order APIs refuse them.
-- Product page: one still photo with the brand name behind it (pinned beside the details on desktop) — no scroll
-  animation (owner: it felt like an ad) — then straight to the buy box (colour, size); it has a small white
-  "Add to bag" and the short cash-on-delivery order form itself (`QuickBuy.tsx`: the red "Order now" orders the whole bag plus the current pick, then empties the bag; quantities max 5) → "Complete the look" (3) → more from
-  the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
+- Product page: one still photo with a big word behind it (the admin's "Word behind the photo", else the brand; any
+  length fits one line via `--n`) (pinned beside the details on desktop) — no scroll animation (owner: it felt like an
+  ad) — then straight to the buy box: colour ONLY when the admin set colours (`colorChoice`), size, then quantity +
+  "Add" filling one row, and the short cash-on-delivery order form itself (`QuickBuy.tsx`: the red "Order now" orders
+  the whole bag plus the current pick, then empties the bag; quantities max 5). Anything missing (no size, a wrong
+  field) scrolls back to it with the reason in red (`goToField()`, `src/lib/scroll-to.ts`); the red clears as soon as it's
+  fixed → "Complete the look" (3: `boughtWith()` in `catalog.ts` = the shop's picks — the admin's, else one per paired
+  category — blended with what customers buy together, D1 `copurchase`, weight orders/(orders+150), pairs need ≥3
+  orders) → more from the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA".
 - Catalogue = the shop's Odoo export + the jersey collection: `scripts/odoo-xlsx.py` (xlsx → JSON) →
@@ -53,7 +58,7 @@ campaign and a real store at once. Real product photos (background removed) and 
   → `scripts/odoo-catalog.mjs` writes `src/data/products/generated.json`. Every product starts "Coming soon";
   stock starts from Odoo for one-size items, 0 for sized ones. Luxury-brand copies are never listed.
 - Checkout = cash on delivery, Algeria only (`/checkout`, `CodCheckout.tsx`): first/last name, Algerian mobile, wilaya
-  (58), commune, ZR Express home or stop desk (street address only for home), note. One "full name" field (split into
+  (58), commune, ZR Express home or stop desk, note — NO street address (owner: not needed in Algeria). One "full name" field (split into
   first/last by `splitName()`). We always confirm by a call (≈ within the hour); the SMS option was removed.
   `POST /api/orders` re-validates (`src/lib/validation/order.ts`), prices from the catalogue + `deliveryFee()`
   (`src/lib/delivery.ts`; starting prices in `src/data/delivery/wilayas.ts`, edited in Admin → Delivery), checks stock,
@@ -67,8 +72,14 @@ campaign and a real store at once. Real product photos (background removed) and 
   `store_meta`; a version token makes a page view one tiny read), which `src/lib/catalog.ts` merges over the catalogue —
   so the store shows admin changes at once. EVERY page/route/action calls `ensureStore()` (admin: `loadAdminData()`)
   before using the catalogue. Photo uploads: browser → WebP → `/api/admin/media` → D1 `media`, served at `/media/…`.
-  Orders: real website orders with statuses new (to confirm) → confirmed → shipped → delivered, or cancelled /
-  returned (`setOrderStatus`). Until the first real order exists the admin shows SAMPLE orders instead
+  Orders: real website orders with statuses (`src/lib/order-status.ts`) new (to confirm) → [no answer] → confirmed →
+  preparing → shipped → delivered, or cancelled / returned (`setOrderStatus`; any status can be picked from a list). The
+  admin can correct an order's customer details (delivery price follows), edit a customer (name/phone on all their
+  orders, private note, tags; `/admin/customers/[tel:…]`), print a receipt (`/admin/print/[id]`, A4 or 80 mm ticket, in
+  French), and hear a "ka-ching" for new orders while the admin is open (`OrderAlerts.tsx`: polls
+  `/api/admin/orders/latest` every 15 s, Web-Audio sound, system notification; the bell turns it on). Footer social
+  links + e-mail are edited in Settings (`siteLinks()`); there is no phone number on the site. Product editor: colours
+  list (empty = none shown), word behind the photo, "Complete the look" picks. Until the first real order exists the admin shows SAMPLE orders instead
   (`src/lib/admin/orders.ts`, seeded per day, labelled), so fake sales never mix with real ones.
 - `scripts/build-catalog.mjs` builds the catalogue + cut-outs from `media-src/raw/*.json`; `scripts/cutout-rembg.py` re-cuts hard backgrounds.
 
@@ -78,6 +89,12 @@ English, French, Arabic (right to left). Write text in English in the code as `t
 `node scripts/i18n-keys.mjs` (must say 100% for both). The `lang` cookie holds the choice; without it a picker opens
 first (`LanguageGate`, the hero waits). Without a cookie (and for search engines) pages render in French (`DEFAULT_LOCALE`). Use logical classes (`ms-/me-/ps-/start-/end-/text-end`), not left/right.
 Product names stay as written; the admin stays English.
+
+## Product search
+`src/lib/search.ts` (shared by the search page and the instant overlay): accents/Arabic letter forms normalised,
+plurals folded, an EN/FR/AR/Darija synonym table ("gants" = "gloves" = "قفازات"), prefix-while-typing, typo tolerance
+(swapped letters count once), ranked by name > category > brand > sport; on-sale first; if nothing matches every word,
+the closest products. Category and sport names are indexed in all three languages.
 
 ## Search (SEO, Algerian market)
 `src/lib/seo.ts` + `src/config/site.ts` (`SITE_URL`, server env `SITE_URL`, defaults to the live address): localized titles

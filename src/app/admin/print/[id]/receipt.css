@@ -1,0 +1,269 @@
+/* the printable receipt (Admin → order → Print receipt) */
+body.grain:has(.rc-page)::after {
+  display: none;
+}
+.rc-page {
+  min-height: 100vh;
+  background: #e9ecf0;
+  padding: 24px 12px 48px;
+  color: #0f1216;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+.rc-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 16px;
+}
+.rc-btn,
+.rc-seg a {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgb(15 18 22 / 0.14);
+}
+.rc-btn-main {
+  background: #0f1216;
+  color: #fff;
+  box-shadow: none;
+}
+.rc-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 11px;
+  background: rgb(15 18 22 / 0.06);
+}
+.rc-seg a {
+  box-shadow: none;
+  background: transparent;
+}
+.rc-seg a[aria-current] {
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 18 22 / 0.15);
+}
+.rc {
+  margin: 0 auto;
+  max-width: 760px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 40px 44px;
+  box-shadow: 0 20px 50px -30px rgb(15 18 22 / 0.4);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.rc-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #0f1216;
+}
+.rc-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rc-mark {
+  width: 46px;
+  height: 46px;
+}
+.rc-name {
+  font-family: var(--font-display), var(--font-display-face), sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-stretch: 75%;
+  font-size: 34px;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+}
+.rc-name span {
+  color: #2b59ff;
+}
+.rc-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #66707c;
+}
+.rc-meta {
+  text-align: end;
+}
+.rc-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #66707c;
+}
+.rc-meta strong {
+  font-size: 18px;
+}
+.rc-parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 20px 0;
+}
+.rc-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #66707c;
+}
+.rc-label.mt {
+  margin-top: 10px;
+}
+.rc-strong {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+.rc-mono {
+  font-family: var(--font-mono), var(--font-mono-face), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.rc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rc-table th {
+  padding: 8px 6px;
+  border-bottom: 1px solid #d9dde3;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #66707c;
+  text-align: start;
+}
+.rc-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid #eceef1;
+  vertical-align: top;
+}
+.rc-table .c {
+  text-align: center;
+}
+.rc-table .r {
+  text-align: end;
+  white-space: nowrap;
+}
+.rc-item {
+  display: block;
+  font-weight: 600;
+}
+.rc-brandname {
+  display: block;
+  font-size: 11.5px;
+  color: #66707c;
+}
+.rc-sum {
+  display: grid;
+  gap: 4px;
+  margin-inline-start: auto;
+  margin-top: 14px;
+  max-width: 320px;
+}
+.rc-sum > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rc-sum dt {
+  color: #4a525c;
+}
+.rc-total {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #0f1216;
+  color: #fff;
+}
+.rc-total dt {
+  color: #fff;
+  font-weight: 700;
+}
+.rc-total dd {
+  font-size: 18px;
+  font-weight: 800;
+}
+.rc-note {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f3f4f6;
+}
+.rc-foot {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px dashed #c9ced6;
+  text-align: center;
+  color: #4a525c;
+  font-size: 12px;
+}
+.rc-thanks {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f1216;
+}
+
+/* 80 mm thermal ticket */
+.rc-page[data-format='ticket'] .rc {
+  max-width: 302px;
+  padding: 18px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.rc-page[data-format='ticket'] .rc-head {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.rc-page[data-format='ticket'] .rc-meta {
+  text-align: center;
+}
+.rc-page[data-format='ticket'] .rc-parties {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.rc-page[data-format='ticket'] .rc-table th:nth-child(4),
+.rc-page[data-format='ticket'] .rc-table td:nth-child(4) {
+  display: none;
+}
+.rc-page[data-format='ticket'] .rc-sum {
+  max-width: none;
+}
+
+@media print {
+  .rc-page {
+    padding: 0;
+    background: #fff;
+  }
+  .rc-bar {
+    display: none;
+  }
+  .rc {
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .rc-total {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .rc-page[data-format='ticket'] .rc {
+    max-width: 72mm;
+  }
+}
+@page {
+  margin: 12mm;
+}

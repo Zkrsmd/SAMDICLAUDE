@@ -120,7 +120,7 @@ function fromCod(c: CodOrder): Order {
     tax: 0,
     total: c.total,
     payment: c.status === 'delivered' ? 'paid' : c.status === 'returned' || c.status === 'cancelled' ? 'void' : 'cod',
-    fulfillment: c.status === 'new' || c.status === 'confirmed' ? 'unfulfilled' : 'fulfilled',
+    fulfillment: ['new', 'no_answer', 'confirmed', 'preparing'].includes(c.status) ? 'unfulfilled' : 'fulfilled',
     archived: c.archived,
     notes: c.notes,
     cod: {

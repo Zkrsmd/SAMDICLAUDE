@@ -8,9 +8,10 @@ import { useUi } from '@/stores/ui';
 import { useDialog } from '@/hooks/useDialog';
 import { formatPrice } from '@/lib/format';
 import type { SearchIndexEntry } from '@/lib/catalog';
+import { rankSearch } from '@/lib/search';
 import { useT } from '@/i18n/client';
 
-const SUGGESTIONS = ['Algeria jersey', 'PSG', 'Venum gloves', 'swim goggles', 'Intex', 'burkini'];
+const SUGGESTIONS = ['Algeria jersey', 'PSG', 'gloves', 'swim goggles', 'Intex', 'burkini'];
 
 /** Instant search. The index (every product, light) loads the first time the overlay opens. */
 export function SearchOverlay() {
@@ -35,11 +36,8 @@ export function SearchOverlay() {
   const close = useCallback(() => set({ searchOpen: false }), [set]);
   useDialog(ref, open, close);
 
-  const results = useMemo(() => {
-    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    if (!terms.length) return [];
-    return index.filter((e) => terms.every((t) => e.terms.includes(t))).slice(0, 8);
-  }, [q, index]);
+  // the same search as the search page (src/lib/search.ts): any language, plurals, typos, best first
+  const results = useMemo(() => rankSearch(index, q, 8), [q, index]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

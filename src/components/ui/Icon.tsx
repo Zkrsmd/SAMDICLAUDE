@@ -15,7 +15,15 @@ type Name =
   | 'expand'
   | 'reset'
   | 'filter'
-  | 'trash';
+  | 'trash'
+  | 'user'
+  | 'phone'
+  | 'pin'
+  | 'home'
+  | 'store'
+  | 'facebook'
+  | 'instagram'
+  | 'tiktok';
 
 const paths: Record<Name, React.ReactNode> = {
   search: (
@@ -99,6 +107,42 @@ const paths: Record<Name, React.ReactNode> = {
       <path d="M7 7l1 13h8l1-13" />
     </>
   ),
+  user: (
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </>
+  ),
+  phone: <path d="M7.5 3.5h2.2l1.3 4-1.8 1.3a11 11 0 0 0 6 6l1.3-1.8 4 1.3v2.2a2 2 0 0 1-2.2 2A16 16 0 0 1 5.5 5.7a2 2 0 0 1 2-2.2z" />,
+  pin: (
+    <>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M4 11 12 4l8 7" />
+      <path d="M6 9.5V20h12V9.5" />
+      <path d="M10 20v-5h4v5" />
+    </>
+  ),
+  store: (
+    <>
+      <path d="M4 9h16l-1.2-4H5.2z" />
+      <path d="M5 9v11h14V9" />
+      <path d="M9.5 20v-6h5v6" />
+    </>
+  ),
+  facebook: <path d="M14.5 8H16V4.8a19 19 0 0 0-2.3-.1c-2.3 0-3.9 1.4-3.9 4V11H7.2v3.5h2.6V21h3.3v-6.5h2.6l.4-3.5h-3V9c0-.9.3-1 1.4-1z" />,
+  instagram: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="5" />
+      <circle cx="12" cy="12" r="3.6" />
+      <circle cx="16.9" cy="7.1" r=".6" />
+    </>
+  ),
+  tiktok: <path d="M14 4v10.5a3.5 3.5 0 1 1-3.5-3.5M14 4c.4 2.6 2.2 4.3 5 4.5" />,
 };
 
 export function Icon({ name, size = 22, className = '' }: { name: Name; size?: number; className?: string }) {

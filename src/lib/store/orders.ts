@@ -5,6 +5,7 @@ import { CONFIRM_BY, DELIVERY_METHODS } from '@/lib/validation/order';
 import { getDb, randomToken, sha256 } from './db';
 import { updateOverrides } from './overrides';
 import { patchProduct } from './product-patch';
+import { recordOrder } from './copurchase';
 
 /**
  * Real orders from the website's cash-on-delivery checkout, in the database (D1 `orders`).
@@ -18,10 +19,8 @@ import { patchProduct } from './product-patch';
  * cancelling it or marking it returned puts them back.
  */
 
-export const COD_STATUS = ['new', 'confirmed', 'shipped', 'delivered', 'returned', 'cancelled'] as const;
-export type CodStatus = (typeof COD_STATUS)[number];
-/** statuses where the goods are back on the shelf */
-const OFF = new Set<CodStatus>(['returned', 'cancelled']);
+import { COD_STATUS, OFF_SHELF as OFF, type CodStatus } from '@/lib/order-status';
+export { COD_STATUS, type CodStatus };
 
 const money = z.number().int().min(0).max(10_000_000_000);
 const LineSchema = z.object({
@@ -145,6 +144,8 @@ export async function placeOrder(order: NewOrder, client: string): Promise<{ ord
           .prepare('INSERT INTO orders (id, number, created_at, status, archived, receipt, client, data) VALUES (?, ?, ?, ?, 0, ?, ?, ?)')
           .bind(saved.id, number, at, 'new', receipt, client, JSON.stringify(CodOrderSchema.parse(saved)))
           .run();
+        // what was bought together feeds "Complete the look" (never fails the order)
+        await recordOrder(saved.lines.map((l) => l.slug));
         return { order: saved, token };
       } catch (e) {
         // two orders took the same number at once: take the next one
@@ -167,7 +168,7 @@ export async function getOrderByReceipt(token: string): Promise<CodOrder | null>
   return row ? parse(row.data) : null;
 }
 
-/** Move an order along (new → confirmed → shipped → delivered, or cancelled / returned). */
+/** Move an order along (new → [no answer →] confirmed → preparing → shipped → delivered, or cancelled / returned). */
 export async function setCodStatus(id: string, status: CodStatus) {
   const o = await fetchOrder(id);
   if (!o) throw new Error('This order no longer exists.');
@@ -189,6 +190,59 @@ export async function patchCodOrders(ids: string[], patch: { archived?: boolean 
     o.archived = patch.archived;
     await saveOrder(o);
   }
+}
+
+/** What the admin can correct on an order: the customer's details and how it's delivered. */
+export interface CustomerPatch {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  wilaya: number;
+  commune: string;
+  method: CodOrder['method'];
+  note: string;
+}
+
+/**
+ * Correct an order's customer details. The delivery price follows the wilaya and the delivery
+ * kind (today's price list), and the total with it. The change is written in the order's notes.
+ */
+export async function updateCodCustomer(id: string, patch: CustomerPatch, deliveryFee: (wilaya: number, method: CodOrder['method']) => number | null) {
+  const o = await fetchOrder(id);
+  if (!o) throw new Error('This order no longer exists.');
+  const changed: string[] = [];
+  const name = `${patch.firstName} ${patch.lastName}`.trim();
+  if (name !== `${o.firstName} ${o.lastName}`.trim()) changed.push(`name → ${name}`);
+  if (patch.phone !== o.phone) changed.push(`phone → ${patch.phone}`);
+  if (patch.wilaya !== o.wilaya || patch.commune !== o.commune) changed.push(`place → ${patch.commune}, wilaya ${patch.wilaya}`);
+  if (patch.method !== o.method) changed.push(`delivery → ${patch.method === 'home' ? 'home' : 'stop desk'}`);
+  if (patch.note !== o.note) changed.push('customer note edited');
+  if (!changed.length) return o;
+  if (patch.wilaya !== o.wilaya || patch.method !== o.method) {
+    const fee = deliveryFee(patch.wilaya, patch.method);
+    if (fee === null) throw new Error('That delivery is not offered in this wilaya.');
+    o.delivery = fee;
+    o.total = o.subtotal + fee;
+  }
+  Object.assign(o, patch);
+  o.notes = [...o.notes, { at: new Date().toISOString(), text: `Details corrected: ${changed.join(' · ')}` }].slice(-100);
+  await saveOrder(o);
+  return o;
+}
+
+/** A customer's name and phone, changed on every order they placed (customers are known by their phone). */
+export async function renameCustomer(phone: string, next: { firstName: string; lastName: string; phone: string }) {
+  const all = await loadOrders();
+  const mine = all.filter((o) => o.phone === phone);
+  for (const o of mine) {
+    const fresh = await fetchOrder(o.id);
+    if (!fresh) continue;
+    fresh.firstName = next.firstName;
+    fresh.lastName = next.lastName;
+    fresh.phone = next.phone;
+    await saveOrder(fresh);
+  }
+  return mine.length;
 }
 
 export async function addCodNote(id: string, text: string) {

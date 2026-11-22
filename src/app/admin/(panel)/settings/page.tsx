@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { SettingsView } from '@/components/admin/SettingsView';
+import { SettingsView, SiteLinksForm } from '@/components/admin/SettingsView';
+import { siteLinks } from '@/lib/site-links';
 import { Card, PageHead, dateTime } from '@/components/admin/ui';
 import { brand } from '@/config/brand';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -16,7 +17,6 @@ export default async function SettingsPage() {
     ['Store name', brand.name],
     ['Tagline', brand.tagline],
     ['Currency', `${brand.commerce.currency} · Algerian dinar`],
-    ['Contact email', brand.contact.email],
     ['Checkout', 'Cash on delivery · Algeria only (58 wilayas)'],
   ];
   return (
@@ -32,6 +32,9 @@ export default async function SettingsPage() {
               </div>
             ))}
           </dl>
+        </Card>
+        <Card title="Social links & contact" action={<span className="text-[12px] text-[#66707c]">Shown in the site’s footer · no phone number</span>}>
+          <SiteLinksForm initial={siteLinks()} />
         </Card>
         <Card title="Store data">
           <p className="text-[#4a525c]">

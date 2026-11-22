@@ -222,7 +222,7 @@ export function Hero() {
         }
       }}
     >
-      <h1 className="sr-only">{t('REVO — sports equipment for football, boxing, swimming, fitness, martial arts and more')}</h1>
+      <h1 className="sr-only">{t('STRYKE — sports equipment for football, boxing, swimming, fitness, martial arts and more')}</h1>
 
       <div className="hero-slides" aria-hidden>
         {heroSlides.map((s, i) => {
@@ -286,7 +286,7 @@ export function Hero() {
       <div className="hero-ui pointer-events-none absolute inset-x-0 top-0 z-[4]" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 92px)' }}>
         <div className="container-x flex items-start justify-between gap-6">
           <div className="mono text-[10.5px] uppercase leading-[1.55] tracking-[0.14em] [@media(max-height:560px)]:hidden">
-            <p dir="ltr">{'// REVO © 2026'}</p>
+            <p dir="ltr">{'// STRYKE © 2026'}</p>
             <p className="mt-2 text-white/75">{t('Season 01')}</p>
           </div>
           <nav aria-label={t('Sports index')} className="pointer-events-auto ml-auto text-right">

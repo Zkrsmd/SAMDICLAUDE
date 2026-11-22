@@ -56,7 +56,7 @@ export const CheckoutSchema = z.object({
     }),
   wilaya: z.number({ message: 'Choose your wilaya' }).int().min(1, 'Choose your wilaya').max(58, 'Choose your wilaya'),
   commune: z.string().trim().min(2, 'Enter your commune').max(60, 'Too long'),
-  /** only needed for home delivery: a stop-desk parcel waits at the courier's office */
+  /** not asked any more (wilaya + commune are enough; the courier calls the customer). Kept for older orders. */
   address: z.string().trim().max(200, 'Too long').default(''),
   method: z.enum(DELIVERY_METHODS),
   confirm: z.enum(CONFIRM_BY).default('call'),
@@ -74,9 +74,6 @@ export const CheckoutSchema = z.object({
     .max(30),
   /** honeypot: a field people never see. Bots fill it in; the order is then dropped. */
   website: z.string().max(200).optional(),
-}).superRefine((v, ctx) => {
-  if (v.method === 'home' && v.address.length < 6)
-    ctx.addIssue({ code: 'custom', path: ['address'], message: 'Enter your address (street, building, number)' });
 });
 export type CheckoutInput = z.input<typeof CheckoutSchema>;
 export type CheckoutData = z.output<typeof CheckoutSchema>;

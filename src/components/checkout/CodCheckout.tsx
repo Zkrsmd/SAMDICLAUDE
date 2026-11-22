@@ -6,6 +6,7 @@ import { useQuote } from '@/hooks/useQuote';
 import { useHydrated } from '@/hooks/useHydrated';
 import { formatPrice } from '@/lib/format';
 import { CheckoutSchema, formatPhone, normalizePhone, splitName, type DeliveryMethod } from '@/lib/validation/order';
+import { goToField } from '@/lib/scroll-to';
 import { useT } from '@/i18n/client';
 import type { OrderResponse } from '@/app/api/orders/route';
 
@@ -18,14 +19,14 @@ export interface CheckoutWilaya {
   desk: number | null;
 }
 
-type Field = 'name' | 'phone' | 'wilaya' | 'commune' | 'address' | 'method' | 'note';
-const ORDER: Field[] = ['name', 'phone', 'wilaya', 'commune', 'method', 'address', 'note'];
+type Field = 'name' | 'phone' | 'wilaya' | 'commune' | 'method' | 'note';
+const ORDER: Field[] = ['name', 'phone', 'wilaya', 'commune', 'method', 'note'];
 /** schema fields → the field on this form */
-const FIELD: Record<string, Field> = { firstName: 'name', lastName: 'name', phone: 'phone', wilaya: 'wilaya', commune: 'commune', address: 'address', method: 'method', note: 'note' };
+const FIELD: Record<string, Field> = { firstName: 'name', lastName: 'name', phone: 'phone', wilaya: 'wilaya', commune: 'commune', method: 'method', note: 'note' };
 
 /**
  * Cash-on-delivery checkout for Algeria: who you are, where it goes (wilaya → ZR Express home or
- * stop-desk price; the address only for home delivery). We confirm every order by calling. The server prices the order;
+ * stop-desk price; no street address — the courier calls). We confirm every order by calling. The server prices the order;
  * the totals here are a preview from the same catalogue and delivery list.
  */
 export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { wilayas: CheckoutWilaya[]; courier: string; confirmCall: string }) {
@@ -36,7 +37,7 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
   const clear = useCart((s) => s.clear);
   const { data, error: quoteError } = useQuote(lines, hydrated);
 
-  const [f, setF] = useState({ name: '', phone: '', wilaya: 0, commune: '', address: '', method: 'home' as DeliveryMethod, note: '' });
+  const [f, setF] = useState({ name: '', phone: '', wilaya: 0, commune: '', method: 'home' as DeliveryMethod, note: '' });
   const [errors, setErrors] = useState<Partial<Record<Field | 'form', string>>>({});
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ number?: number; receipt?: string; firstName: string; phone: string; total: number } | null>(null);
@@ -59,6 +60,13 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
 
   const options = useMemo(() => wilayas.map((x) => ({ ...x, off: x.home === null && x.desk === null })), [wilayas]);
 
+  /** bring the first field to fix back on screen, with its reason in red */
+  const showFirst = (out: Partial<Record<Field | 'form', string>>) => {
+    const first = ORDER.find((k) => out[k]);
+    const el = first ? formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`) : null;
+    if (el) goToField(el.closest<HTMLElement>('[data-field]') ?? el, el);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (sending || blocked || !lines.length) return;
@@ -69,7 +77,7 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
       phone: f.phone,
       wilaya: f.wilaya,
       commune: f.commune,
-      address: method === 'home' ? f.address : '',
+      address: '',
       method,
       confirm: 'call',
       note: f.note,
@@ -84,8 +92,7 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
         if (k) out[k] ??= k === 'name' ? 'Enter your first and last name' : i.message;
       }
       setErrors(out);
-      const first = ORDER.find((k) => out[k]);
-      if (first) formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
+      showFirst(out);
       return;
     }
     setSending(true);
@@ -97,6 +104,7 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
         const out: Partial<Record<Field | 'form', string>> = { form: r.error ?? t('Your order could not be sent.') };
         for (const [k, v] of Object.entries(r.fields ?? {})) if (FIELD[k]) out[FIELD[k]] = FIELD[k] === 'name' ? 'Enter your first and last name' : v;
         setErrors(out);
+        showFirst(out);
         return;
       }
       setDone({ number: r.number, receipt: r.receipt, firstName, phone: normalizePhone(f.phone) ?? f.phone, total });
@@ -259,25 +267,6 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
                 </div>
                 {err('method')}
               </fieldset>
-              {method === 'home' && (
-                <div className="mt-5">
-                  <label htmlFor="co-address" className="co-label">
-                    {t('Address')}
-                  </label>
-                  <textarea
-                    id="co-address"
-                    name="address"
-                    rows={2}
-                    className="co-input co-textarea"
-                    autoComplete="street-address"
-                    placeholder={t('Street, building, floor, nearby landmark')}
-                    value={f.address}
-                    onChange={(e) => set('address', e.target.value)}
-                    {...inv('address')}
-                  />
-                  {err('address')}
-                </div>
-              )}
             </section>
 
             <section className="co-card" aria-labelledby="co-confirm">

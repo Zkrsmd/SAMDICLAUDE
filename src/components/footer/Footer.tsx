@@ -4,9 +4,19 @@ import { Wordmark } from '@/components/ui/Wordmark';
 import type { NavSport } from '@/components/header/Header';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { getT } from '@/i18n/server';
+import { Icon } from '@/components/ui/Icon';
+import { siteLinks } from '@/lib/site-links';
+
+const SOCIAL = [
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'tiktok', label: 'TikTok' },
+] as const;
 
 export async function Footer({ nav }: { nav: NavSport[] }) {
   const t = await getT();
+  // set in Admin → Settings (defaults: src/config/brand.ts); no phone number on the site
+  const links = siteLinks();
   return (
     <footer className="relative mt-24 overflow-hidden border-t border-line bg-stone">
       <div className="container-x grid gap-12 py-16 md:grid-cols-[1.4fr_repeat(3,1fr)]">
@@ -34,16 +44,27 @@ export async function Footer({ nav }: { nav: NavSport[] }) {
           <li><span className="text-muted">{t('Delivery to all 58 wilayas with ZR Express')}</span></li>
           <li><span className="text-muted">{t('Pay in cash when it arrives')}</span></li>
         </FooterCol>
-        <FooterCol title={t('Contact')}>
-          <li className="text-muted">{brand.contact.email}</li>
-          <li className="text-muted mono">{brand.contact.phone}</li>
-          {brand.social.map((s) => (
-            <li key={s.label}>
-              <a href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-cobalt">
-                {s.label}
+        <FooterCol title={t('Follow us')}>
+          {SOCIAL.filter((x) => links[x.id]).map((x) => (
+            <li key={x.id}>
+              <a href={links[x.id]} target="_blank" rel="noopener noreferrer" className="foot-social group">
+                <span className="foot-social-ico" aria-hidden>
+                  <Icon name={x.id} size={18} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold leading-tight">{brand.socialName}</span>
+                  <span className="block text-[12.5px] text-muted">{x.label}</span>
+                </span>
               </a>
             </li>
           ))}
+          {links.email ? (
+            <li>
+              <a href={`mailto:${links.email}`} className="text-muted hover:text-cobalt">
+                {links.email}
+              </a>
+            </li>
+          ) : null}
         </FooterCol>
       </div>
       <div className="container-x pb-6">

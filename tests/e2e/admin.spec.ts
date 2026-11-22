@@ -120,7 +120,20 @@ test.describe('admin', () => {
     await page.goto(`/admin/orders/w${number}`);
     await expect(page.getByText('0661 22 33 44').first()).toBeVisible();
     await expect(page.getByTestId('confirm-by')).toContainText(/SMS/i);
-    await page.getByRole('button', { name: 'Confirm order' }).click();
-    await expect(page.getByRole('button', { name: /Mark as shipped|Shipped/ }).first()).toBeVisible();
+    await expect(page.getByTestId('print-receipt')).toHaveAttribute('href', `/admin/print/w${number}`);
+    // the order's road: confirm → prepare → ship
+    await page.getByRole('button', { name: 'Confirmed on the phone' }).click();
+    await expect(page.getByRole('button', { name: 'Start preparing' })).toBeVisible();
+    await page.getByRole('button', { name: 'Start preparing' }).click();
+    await expect(page.getByRole('button', { name: 'Hand to the courier' })).toBeVisible();
+    await expect(page.getByLabel('Change the order status')).toHaveValue('preparing');
+    // any status from the list
+    await page.getByLabel('Change the order status').selectOption('no_answer');
+    await expect(page.getByTestId('status-hint')).toContainText('No answer');
+    // the printable receipt
+    await page.goto(`/admin/print/w${number}`);
+    await expect(page.getByText('Bon de commande')).toBeVisible();
+    await expect(page.getByText(`${number}`, { exact: true })).toBeVisible();
+    await expect(page.getByText('Total à payer')).toBeVisible();
   });
 });

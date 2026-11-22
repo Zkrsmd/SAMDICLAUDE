@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { createProduct, deleteProduct, duplicateProduct, saveProduct } from '@/app/admin/actions';
-import { ProductInputSchema, PRODUCT_STATUS, fieldErrors, type ProductInput } from '@/lib/validation/admin';
+import { ProductInputSchema, PRODUCT_STATUS, colorsOf, fieldErrors, type ProductInput } from '@/lib/validation/admin';
+import { rankSearch } from '@/lib/search';
+import type { SearchIndexEntry } from '@/lib/catalog';
 import { AIcon, Badge, Card, money } from './ui';
 import { ConfirmDialog, Stepper, Switch, toast, useLeaveGuard } from './client';
 
@@ -57,9 +59,11 @@ async function toWebp(file: File): Promise<Blob> {
   throw new Error('That photo is too large');
 }
 
-export function ProductEditor({ initial, meta, sports, vendors, writable }: { initial: ProductInput; meta: Meta; sports: SportOpt[]; vendors: { id: string; name: string }[]; writable: boolean }) {
+export function ProductEditor({ initial: given, meta, sports, vendors, writable }: { initial: ProductInput; meta: Meta; sports: SportOpt[]; vendors: { id: string; name: string }[]; writable: boolean }) {
   const router = useRouter();
   const isNew = !meta.slug;
+  // older records keep one colour in colorName/swatch: the editor works with the list
+  const [initial] = useState<ProductInput>(() => ({ ...given, colors: colorsOf(given), backdrop: given.backdrop ?? '', picks: given.picks ?? [] }));
   const [form, setForm] = useState<ProductInput>(initial);
   const [prices, setPrices] = useState({ price: fromCents(initial.price), compareAt: fromCents(initial.compareAt), cost: fromCents(initial.cost) });
   const [base, setBase] = useState(() => JSON.stringify({ form: initial, prices: { price: fromCents(initial.price), compareAt: fromCents(initial.compareAt), cost: fromCents(initial.cost) } }));
@@ -227,6 +231,33 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
                 ))}
               </div>
             )}
+            <div className="adm-sep mt-4 pt-4">
+              <label htmlFor="p-backdrop" className="adm-label">
+                Word behind the photo
+              </label>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px] sm:items-start">
+                <div>
+                  <input
+                    id="p-backdrop"
+                    className="adm-input"
+                    maxLength={24}
+                    value={form.backdrop ?? ''}
+                    placeholder={vendors.find((v) => v.id === form.brand)?.name ?? 'Brand name'}
+                    onChange={(e) => set('backdrop', e.target.value)}
+                    {...inv('backdrop')}
+                  />
+                  <p className="mt-1 text-[12px] text-[#66707c]">The big word on the product page, behind the product. Leave empty to show the brand. Any length fits on one line.</p>
+                  {err('backdrop')}
+                </div>
+                <div className="adm-backdrop" aria-hidden>
+                  <span style={{ ['--n' as string]: Math.max(4, (form.backdrop || vendors.find((v) => v.id === form.brand)?.name || '').length) }}>
+                    {form.backdrop || vendors.find((v) => v.id === form.brand)?.name}
+                  </span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {images[1] ? <img src={images[1]} alt="" /> : null}
+                </div>
+              </div>
+            </div>
           </Card>
 
           <Card title="Pricing">
@@ -507,13 +538,47 @@ export function ProductEditor({ initial, meta, sports, vendors, writable }: { in
             ))}
           </Card>
 
-          <Card title="Colour">
-            <div className="flex gap-2">
-              <input type="color" value={form.swatch} onChange={(e) => set('swatch', e.target.value.toUpperCase())} className="h-9 w-11 cursor-pointer rounded-lg border-0 bg-transparent p-0" aria-label="Swatch colour" />
-              <input className="adm-input" value={form.colorName} onChange={(e) => set('colorName', e.target.value)} aria-label="Colour name" {...inv('colorName')} />
-            </div>
-            {err('colorName') ?? err('swatch')}
+          <Card title="Colours" action={<span className="text-[12px] text-[#66707c]">{(form.colors ?? []).length ? `${(form.colors ?? []).length} shown` : 'None shown'}</span>}>
+            <p className="text-[12.5px] text-[#66707c]">
+              The colours a customer can choose. With none, nothing about colour shows on the website.
+            </p>
+            <ul className="mt-3 grid gap-2">
+              {(form.colors ?? []).map((c, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={c.swatch}
+                    onChange={(e) => set('colors', (form.colors ?? []).map((x, k) => (k === i ? { ...x, swatch: e.target.value.toUpperCase() } : x)))}
+                    className="h-9 w-11 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+                    aria-label={`Colour ${i + 1}: swatch`}
+                  />
+                  <input
+                    className="adm-input"
+                    value={c.name}
+                    maxLength={40}
+                    placeholder="e.g. Black / gold"
+                    onChange={(e) => set('colors', (form.colors ?? []).map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))}
+                    aria-label={`Colour ${i + 1}: name`}
+                    aria-invalid={errors[`colors.${i}.name`] ? true : undefined}
+                  />
+                  <button type="button" className="adm-icon-btn shrink-0" aria-label={`Remove colour ${c.name || i + 1}`} onClick={() => set('colors', (form.colors ?? []).filter((_, k) => k !== i))}>
+                    <AIcon name="trash" size={15} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {err('colors') ?? (Object.keys(errors).some((k) => k.startsWith('colors.')) ? <p className="adm-error">Name every colour</p> : null)}
+            <button
+              type="button"
+              className="adm-btn mt-2"
+              disabled={(form.colors ?? []).length >= 12}
+              onClick={() => set('colors', [...(form.colors ?? []), { name: '', swatch: '#0F1216' }])}
+            >
+              <AIcon name="plus" size={15} /> Add a colour
+            </button>
           </Card>
+
+          <PicksCard slug={meta.slug} picks={form.picks ?? []} onChange={(v) => set('picks', v)} />
 
           {!isNew && (
             <Card title="More">
@@ -628,5 +693,70 @@ function MediaSlot({ label, src, onFile, disabled }: { label: string; src: strin
         }}
       />
     </div>
+  );
+}
+
+type PickEntry = Pick<SearchIndexEntry, 'slug' | 'name' | 'brandName' | 'image'> & SearchIndexEntry;
+
+/** "Complete the look": up to 3 products the shop shows with this one (empty: chosen automatically). */
+function PicksCard({ slug, picks, onChange }: { slug?: string; picks: string[]; onChange: (v: string[]) => void }) {
+  const [index, setIndex] = useState<PickEntry[] | null>(null);
+  const [q, setQ] = useState('');
+  const load = () => {
+    if (index) return;
+    fetch('/api/search-index')
+      .then((r) => (r.ok ? (r.json() as Promise<PickEntry[]>) : []))
+      .then(setIndex)
+      .catch(() => setIndex([]));
+  };
+  const bySlug = useMemo(() => new Map((index ?? []).map((e) => [e.slug, e])), [index]);
+  const results = useMemo(() => (index && q.trim() ? rankSearch(index, q, 6).filter((e) => e.slug !== slug && !picks.includes(e.slug)) : []), [index, q, slug, picks]);
+  return (
+    <Card title="Complete the look">
+      <p className="text-[12.5px] text-[#66707c]">
+        Shown under this product. Leave empty and the store picks matching products itself; as orders come in, what customers really buy together slowly
+        takes over.
+      </p>
+      {picks.length > 0 && (
+        <ul className="mt-3 grid gap-2">
+          {picks.map((p, i) => (
+            <li key={p} className="flex items-center gap-2 text-[13px]">
+              <span className="num w-4 text-[#8a939e]">{i + 1}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {bySlug.get(p) ? <img src={bySlug.get(p)!.image} alt="" className="h-8 w-8 shrink-0 rounded bg-[#f3f4f6] object-contain" /> : null}
+              <span className="min-w-0 flex-1 truncate">{bySlug.get(p)?.name ?? p}</span>
+              <button type="button" className="adm-icon-btn shrink-0" aria-label="Remove" onClick={() => onChange(picks.filter((x) => x !== p))}>
+                <AIcon name="close" size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {picks.length < 3 && (
+        <div className="relative mt-3">
+          <input className="adm-input" value={q} placeholder="Search a product to add" onFocus={load} onChange={(e) => setQ(e.target.value)} aria-label="Search a product to show with this one" />
+          {results.length > 0 && (
+            <ul className="adm-pick-list">
+              {results.map((e) => (
+                <li key={e.slug}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange([...picks, e.slug]);
+                      setQ('');
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={e.image} alt="" />
+                    <span className="min-w-0 flex-1 truncate">{e.name}</span>
+                    <span className="text-[11px] text-[#8a939e]">{e.brandName}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

@@ -3,8 +3,9 @@ import { notFound } from 'next/navigation';
 import { ProductExperience } from '@/components/product/ProductExperience';
 import { ProductGrid, RecentlyViewed } from '@/components/product/ProductRail';
 import { brandName } from '@/data/brands';
-import { completeKit, getAllProducts, getProduct, getSport, getSub, moreFromCollection, toCard } from '@/lib/catalog';
+import { boughtWith, getAllProducts, getProduct, getSport, getSub, moreFromCollection, toCard } from '@/lib/catalog';
 import { ensureStore } from '@/lib/catalog';
+import { boughtTogether } from '@/lib/store/copurchase';
 import { getT } from '@/i18n/server';
 import { brand } from '@/config/brand';
 import { COURIER } from '@/data/delivery/wilayas';
@@ -44,7 +45,8 @@ export default async function ProductPage({ params }: Props) {
   const sport = getSport(product.sport)!;
   const sub = getSub(product.sport, product.sub)!;
   // what goes with it (three picks from the categories it pairs with), then more of the same kind
-  const kit = completeKit(product, 3);
+  // the shop's picks, nudged over time by what customers buy together (src/lib/store/copurchase.ts)
+  const kit = boughtWith(product, await boughtTogether(product.slug), 3);
   const same = moreFromCollection(product, 8);
   // the catalogue's generated lines read in the visitor's language (texts written in the admin stay as written)
   const tail = ' Cash on delivery anywhere in Algeria.';
@@ -62,7 +64,7 @@ export default async function ProductPage({ params }: Props) {
       <JsonLd data={productLd(product, brandName(product.brand), shown.description, `${t(sport.name)} > ${t(sub.name)}`)} />
       <JsonLd
         data={breadcrumbLd([
-          { name: 'REVO', path: '/' },
+          { name: 'STRYKE', path: '/' },
           { name: t(sport.name), path: `/${sport.slug}` },
           { name: t(sub.name), path: `/${sport.slug}/${sub.slug}` },
           { name: productTitle(brandName(product.brand), product.name), path: `/product/${product.slug}` },

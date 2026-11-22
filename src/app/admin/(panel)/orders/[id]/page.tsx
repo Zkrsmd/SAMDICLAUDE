@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CodActions, OrderActions, OrderNotes } from '@/components/admin/OrderView';
+import { CodActions, EditCustomer, OrderActions, OrderNotes } from '@/components/admin/OrderView';
+import { getWilayas } from '@/lib/delivery';
 import { brand } from '@/config/brand';
 import { COURIER } from '@/data/delivery/wilayas';
 import { formatPhone } from '@/lib/validation/order';
@@ -33,7 +34,9 @@ export default async function OrderPage({ params }: Props) {
   const cod = o.cod;
   const STEP: Record<string, string> = {
     new: 'Order placed on the website · cash on delivery',
+    no_answer: 'Called — no answer',
     confirmed: 'Confirmed with the customer',
+    preparing: 'Being prepared',
     shipped: `Handed to ${COURIER}`,
     delivered: `Delivered · ${money(o.total)} collected in cash`,
     returned: 'Returned · stock put back',
@@ -63,6 +66,9 @@ export default async function OrderPage({ params }: Props) {
         }
       >
         <span className="flex items-center gap-1">
+          <a href={`/admin/print/${o.id}`} target="_blank" rel="noopener" className="adm-btn me-1" data-testid="print-receipt">
+            <AIcon name="printer" size={15} /> Print receipt
+          </a>
           {newer ? (
             <Link href={`/admin/orders/${newer.id}`} className="adm-icon-btn" aria-label={`Newer order #${newer.number}`}>
               <AIcon name="chevron-left" />
@@ -167,11 +173,25 @@ export default async function OrderPage({ params }: Props) {
           </Card>
         </div>
         <div className="space-y-3">
-          <Card title="Customer">
-            <p className="font-semibold">{o.customer.name}</p>
-            <Link href={`/admin/orders?q=${encodeURIComponent(o.customer.name)}`} className="adm-link text-[12.5px]">
-              {history.length} order{history.length === 1 ? '' : 's'}
+          <Card
+            title="Customer"
+            action={
+              cod ? (
+                <EditCustomer
+                  id={o.id}
+                  writable={storeWritable()}
+                  wilayas={getWilayas().map(({ code, name, home, desk }) => ({ code, name, home, desk }))}
+                  initial={{ name: o.customer.name, phone: cod.phone, wilaya: cod.wilaya, commune: cod.commune, method: cod.method, note: cod.note }}
+                />
+              ) : undefined
+            }
+          >
+            <Link href={cod ? `/admin/customers/${encodeURIComponent(o.customer.id)}` : `/admin/orders?q=${encodeURIComponent(o.customer.name)}`} className="font-semibold hover:underline">
+              {o.customer.name}
             </Link>
+            <p className="text-[12.5px] text-[#66707c]">
+              {history.length} order{history.length === 1 ? '' : 's'}
+            </p>
             {cod ? (
               <>
                 <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Phone</p>
@@ -183,16 +203,23 @@ export default async function OrderPage({ params }: Props) {
                   <a href={`sms:${cod.phone}`} className="adm-link">
                     SMS
                   </a>
+                  <a href={`https://wa.me/213${cod.phone.slice(1)}`} target="_blank" rel="noopener noreferrer" className="adm-link">
+                    WhatsApp
+                  </a>
                 </p>
                 <p className="mt-3 rounded-lg bg-[#f6f7f9] px-3 py-2 text-[12.5px]" data-testid="confirm-by">
                   {cod.confirm === 'call' ? `Wants a call to confirm (${brand.commerce.confirmCall})` : 'Wants an SMS to confirm'}
                 </p>
-                <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Delivery address</p>
+                <p className="mt-4 text-[12px] font-semibold text-[#66707c]">Deliver to</p>
                 <p className="whitespace-pre-wrap">
                   {o.customer.name}
                   <br />
-                  {cod.address}
-                  <br />
+                  {cod.address ? (
+                    <>
+                      {cod.address}
+                      <br />
+                    </>
+                  ) : null}
                   {cod.commune}
                   <br />
                   {String(cod.wilaya).padStart(2, '0')} · {cod.wilayaName}

@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <span className="display text-[20px]">S</span>
           </span>
           <div>
-            <p className="text-[16px] font-bold">REVO admin</p>
+            <p className="text-[16px] font-bold">STRYKE admin</p>
             <p className="text-[#66707c]">Sign in to manage the store</p>
           </div>
         </div>

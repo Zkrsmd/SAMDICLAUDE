@@ -47,7 +47,10 @@ type IconName =
   | 'alert'
   | 'truck'
   | 'tag'
-  | 'note';
+  | 'note'
+  | 'printer'
+  | 'bell'
+  | 'bell-off';
 
 const P: Record<IconName, React.ReactNode> = {
   home: <path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" />,
@@ -148,6 +151,25 @@ const P: Record<IconName, React.ReactNode> = {
       <path d="M12 10v4.5M12 17.2v.3" />
     </>
   ),
+  printer: (
+    <>
+      <path d="M7 9V4h10v5" />
+      <path d="M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2" />
+      <path d="M7 14h10v6H7z" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 20.5a2 2 0 0 0 4 0" />
+    </>
+  ),
+  'bell-off': (
+    <>
+      <path d="M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l1.5 2H8" />
+      <path d="M10 20.5a2 2 0 0 0 4 0M4 4l16 16" />
+    </>
+  ),
   truck: (
     <>
       <path d="M3 6h11v10H3zM14 10h4l3 3v3h-7" />
@@ -231,7 +253,9 @@ const TONES: Record<string, Tone> = {
   cod: 'warn',
   void: undefined,
   new: 'bad',
+  no_answer: 'warn',
   confirmed: 'info',
+  preparing: 'info',
   shipped: 'info',
   delivered: 'good',
   returned: 'bad',
@@ -239,7 +263,7 @@ const TONES: Record<string, Tone> = {
 };
 export const statusTone = (s: string): Tone => TONES[s];
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const LABEL: Record<string, string> = { paid: 'Paid', pending: 'Payment pending', cod: 'Cash on delivery', void: 'Not collected', new: 'To confirm' };
+const LABEL: Record<string, string> = { paid: 'Paid', pending: 'Payment pending', cod: 'Cash on delivery', void: 'Not collected', new: 'To confirm', no_answer: 'No answer' };
 
 export function StatusBadge({ status }: { status: string }) {
   return <Badge tone={statusTone(status)}>{LABEL[status] ?? cap(status)}</Badge>;

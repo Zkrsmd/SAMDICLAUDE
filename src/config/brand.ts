@@ -3,21 +3,18 @@
  * The logo lock-up itself is src/components/ui/Wordmark.tsx.
  */
 export const brand = {
-  name: 'REVO',
+  name: 'STRYKE',
   /** Short form used in tight spaces (mobile header, favicon text). */
-  shortName: 'RV',
+  shortName: 'ST',
   tagline: 'Gear for every decisive moment.',
   description:
-    'REVO is an online sports store in Algeria: football jerseys, boxing gloves, swimming, fitness, martial arts, basketball and fishing gear. Prices in DA, cash on delivery to all 58 wilayas.',
-  contact: {
-    email: 'hello@example.com',
-    phone: '+00 000 000 000',
-    address: 'Street address placeholder, City, Country',
-  },
+    'STRYKE is an online sports store in Algeria: football jerseys, boxing gloves, swimming, fitness, martial arts, basketball and fishing gear. Prices in DA, cash on delivery to all 58 wilayas.',
+  /** Shown in the footer. The links (and an e-mail) can be changed in Admin → Settings. No phone number on the site. */
+  socialName: 'Stryke Algeria',
   social: [
-    { label: 'Instagram', href: 'https://instagram.com/' },
-    { label: 'TikTok', href: 'https://tiktok.com/' },
-    { label: 'YouTube', href: 'https://youtube.com/' },
+    { id: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/strykealgeria' },
+    { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/strykealgeria' },
+    { id: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@strykealgeria' },
   ],
   colors: {
     bg: '#F3F4F6',

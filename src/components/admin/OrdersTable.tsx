@@ -17,7 +17,7 @@ export interface OrderRow {
   payment: string;
   fulfillment: string;
   archived: boolean;
-  /** website orders: new / confirmed / shipped / delivered / returned / cancelled */
+  /** website orders: new / no_answer / confirmed / preparing / shipped / delivered / returned / cancelled */
   status?: string;
   phone?: string;
   wilaya?: string;
@@ -25,6 +25,8 @@ export interface OrderRow {
 const TABS = [
   { id: 'all', label: 'All' },
   { id: 'confirm', label: 'To confirm' },
+  { id: 'prepare', label: 'To prepare' },
+  { id: 'shipped', label: 'Shipped' },
   { id: 'unfulfilled', label: 'Unfulfilled' },
   { id: 'unpaid', label: 'Unpaid' },
   { id: 'archived', label: 'Archived' },
@@ -34,7 +36,9 @@ const PAGE = 50;
 const inTab = (o: OrderRow, tab: string) => {
   if (tab === 'archived') return o.archived;
   if (o.archived) return false;
-  if (tab === 'confirm') return o.status === 'new';
+  if (tab === 'confirm') return o.status === 'new' || o.status === 'no_answer';
+  if (tab === 'prepare') return o.status === 'confirmed' || o.status === 'preparing';
+  if (tab === 'shipped') return o.status === 'shipped';
   if (tab === 'unfulfilled') return o.fulfillment === 'unfulfilled' && o.payment !== 'refunded' && o.payment !== 'void';
   if (tab === 'unpaid') return o.payment === 'pending' || o.payment === 'cod';
   return true;

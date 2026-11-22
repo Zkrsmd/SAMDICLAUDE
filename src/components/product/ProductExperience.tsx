@@ -11,6 +11,7 @@ import { useTransitionStore, useUi } from '@/stores/ui';
 import { useHydrated, useReducedMotion } from '@/hooks/useHydrated';
 import { useDialog } from '@/hooks/useDialog';
 import { formatPrice, renderUrl } from '@/lib/format';
+import { goToField } from '@/lib/scroll-to';
 import type { Product } from '@/types/catalog';
 import { useT } from '@/i18n/client';
 
@@ -51,6 +52,8 @@ export function ProductExperience({
   const setUi = useUi((s) => s.set);
   const setPending = useTransitionStore((s) => s.setPending);
   const color = product.colors.find((c) => c.id === colorId)!;
+  /** the word behind the photo: set per product in the admin, else the brand */
+  const word = product.backdrop || brandName;
   // coming soon (admin switch) wins over stock; out of stock = every size at 0
   const avail: 'in' | 'out' | 'soon' = product.comingSoon
     ? 'soon'
@@ -134,19 +137,23 @@ export function ProductExperience({
     };
   }, [images.length, reduced]);
 
+  /** no size yet: say so in red under the sizes and bring them back on screen */
+  const askForSize = () => {
+    setError(t('Please choose a size.'));
+    const first = document.querySelector<HTMLInputElement>('input[name="pdp-size"]:not(:disabled)');
+    goToField(document.getElementById('size-field'), first);
+  };
   /** the order form asks for this before ordering */
   const ensureSize = () => {
     if (size) return true;
-    setError(t('Please choose a size.'));
-    document.querySelector<HTMLInputElement>('input[name="pdp-size"]')?.focus();
+    askForSize();
     return false;
   };
 
   /** `from`: the button that was tapped (the flight to the bag starts there) */
   const addToCart = (buyNow = false, from?: HTMLElement | null) => {
     if (!size) {
-      setError(t('Please choose a size.'));
-      document.querySelector<HTMLInputElement>('input[name="pdp-size"]')?.focus();
+      askForSize();
       return false;
     }
     setError(null);
@@ -175,8 +182,12 @@ export function ProductExperience({
           }}
         >
           {/* brand word as architecture behind the product */}
-          <div aria-hidden className="pdp-word display pointer-events-none absolute inset-x-0 top-[22%] select-none text-center text-[30vw] leading-none text-ink/[0.05] lg:text-[17vw]">
-            {brandName}
+          <div
+            aria-hidden
+            className="pdp-word display pointer-events-none absolute inset-x-0 top-[22%] select-none overflow-hidden whitespace-nowrap text-center leading-none text-ink/[0.05]"
+            style={{ ['--n' as string]: Math.max(4, word.length) }}
+          >
+            {word}
           </div>
           <div aria-hidden className="pdp-glow pointer-events-none absolute left-1/2 top-[48%] h-[60vmin] w-[60vmin] -translate-x-1/2 -translate-y-1/2 rounded-full" />
 
@@ -268,7 +279,8 @@ export function ProductExperience({
 
           {/* straight to choosing: colour, size, then add to bag or order */}
           <div ref={purchase} className="pdp-buy mt-6">
-            <fieldset>
+            {product.colorChoice && (
+            <fieldset className="mb-5">
               <legend className="eyebrow text-muted">
                 {t('Colour')} — <span className="text-ink">{t(color.name)}</span>
               </legend>
@@ -289,8 +301,9 @@ export function ProductExperience({
                 ))}
               </div>
             </fieldset>
+            )}
 
-            <fieldset className="mt-5">
+            <fieldset id="size-field" className="pdp-size-field" data-invalid={error ? '' : undefined}>
               <legend className="eyebrow text-muted">{t('Size')} {size ? <span className="text-ink">— {size}</span> : null}</legend>
               <div id="size-group" tabIndex={-1} className="pdp-sizes mt-2.5" aria-invalid={!!error} aria-describedby={error ? 'size-error' : undefined}>
                 {product.sizes.map((s) => (
@@ -300,7 +313,10 @@ export function ProductExperience({
                       name="pdp-size"
                       value={s}
                       checked={size === s}
-                      onChange={() => setSize(s)}
+                      onChange={() => {
+                        setSize(s);
+                        setError(null);
+                      }}
                       disabled={!!product.stock && (product.stock[s] ?? 0) <= 0}
                       className="peer sr-only"
                     />
@@ -315,7 +331,7 @@ export function ProductExperience({
                 ))}
               </div>
               {error && (
-                <p id="size-error" role="alert" className="mt-2 text-[14px] text-red-700">
+                <p id="size-error" role="alert" className="co-err mt-2 text-[14px]">
                   {error}
                 </p>
               )}
@@ -336,7 +352,7 @@ export function ProductExperience({
               </div>
             ) : (
             <>
-            <div className="mt-5 flex items-center gap-2.5">
+            <div className="pdp-buyrow mt-5">
               <div className="pdp-qty" role="group" aria-label={t('Quantity')}>
                 <button type="button" aria-label={t('Decrease quantity')} disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
                   <Icon name="minus" size={15} />
@@ -348,7 +364,7 @@ export function ProductExperience({
                   <Icon name="plus" size={15} />
                 </button>
               </div>
-              <button type="button" className="pdp-add h-11 px-5" data-state={addState} onClick={(e) => addToCart(false, e.currentTarget)} aria-label={t('Add to bag')}>
+              <button type="button" className="pdp-add" data-state={addState} onClick={(e) => addToCart(false, e.currentTarget)} aria-label={t('Add to bag')}>
                 <span className="pdp-add-icon" aria-hidden>
                   <Icon name={addState === 'done' ? 'check' : 'bag'} size={16} />
                 </span>

@@ -8,10 +8,14 @@ import { getOrder, loadAdminData } from '@/lib/admin/orders';
 import { clientKey, rateLimit } from '@/lib/security/rateLimit';
 import { ReadOnlyStoreError, replaceOverrides, toDinars, updateOverrides } from '@/lib/store/overrides';
 import { inputOf, patchProduct } from '@/lib/store/product-patch';
-import { COD_STATUS, StockError, addCodNote, getCodOrder, patchCodOrders, setCodStatus, type CodStatus } from '@/lib/store/orders';
+import { COD_STATUS, StockError, addCodNote, getCodOrder, patchCodOrders, renameCustomer, setCodStatus, updateCodCustomer, type CodStatus } from '@/lib/store/orders';
+import { CheckoutSchema } from '@/lib/validation/order';
+import { deliveryFee } from '@/lib/delivery';
 import { WILAYAS } from '@/data/delivery/wilayas';
 import {
   BulkSchema,
+  CustomerProfileSchema,
+  SiteSchema,
   DeliverySchema,
   EMPTY_OVERRIDES,
   FULFILLMENT,
@@ -250,6 +254,64 @@ export async function setOrderStatus(id: string, status: CodStatus): Promise<Act
   return { ok: true };
 }
 
+/** The details the admin can correct on a website order (same rules as the checkout). */
+const OrderCustomerSchema = CheckoutSchema.pick({ firstName: true, lastName: true, phone: true, wilaya: true, commune: true, method: true, note: true });
+
+/** Correct a website order's customer details (name, phone, wilaya, commune, delivery kind, note). */
+export async function updateOrderCustomer(id: string, input: unknown): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (typeof id !== 'string' || !/^w\d{5,7}$/.test(id) || !getCodOrder(id)) return fail('This order no longer exists.');
+  const parsed = OrderCustomerSchema.safeParse(input);
+  if (!parsed.success) return fail('Some fields need attention.', fieldErrors(parsed.error));
+  try {
+    await updateCodCustomer(id, parsed.data, deliveryFee);
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : 'Could not save.');
+  }
+  revalidatePath('/admin', 'layout');
+  return { ok: true };
+}
+
+const RenameSchema = CheckoutSchema.pick({ firstName: true, lastName: true, phone: true });
+
+/** Change a customer's name and phone on all their orders. Returns their new id (it follows the phone). */
+export async function updateCustomer(phone: string, input: unknown, profile: unknown): Promise<ActionResult<{ id: string }>> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (typeof phone !== 'string' || !/^0[5-7]\d{8}$/.test(phone)) return fail('Unknown customer.');
+  const parsed = RenameSchema.safeParse(input);
+  if (!parsed.success) return fail('Some fields need attention.', fieldErrors(parsed.error));
+  const prof = CustomerProfileSchema.safeParse(profile);
+  if (!prof.success) return fail('Notes up to 2000 characters; up to 10 tags.');
+  try {
+    await renameCustomer(phone, parsed.data);
+  } catch {
+    return fail('Could not save.');
+  }
+  const err = await write((d) => {
+    const all = { ...(d.customers ?? {}) };
+    delete all[phone];
+    if (prof.data.note || prof.data.tags.length) all[parsed.data.phone] = prof.data;
+    d.customers = all;
+  });
+  if (err) return err;
+  revalidatePath('/admin', 'layout');
+  return { ok: true, data: { id: `tel:${parsed.data.phone}` } };
+}
+
+/** The footer's social links and e-mail (empty = not shown). */
+export async function saveSiteSettings(input: unknown): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  const parsed = SiteSchema.safeParse(input);
+  if (!parsed.success) return fail('Some fields need attention.', fieldErrors(parsed.error));
+  const err = await write((d) => {
+    d.site = parsed.data;
+  });
+  return err ?? { ok: true };
+}
+
 /* -------------------------------- delivery -------------------------------- */
 
 /** Save delivery prices per wilaya (DA; null = not offered). Prices equal to the starting list are not stored. */
@@ -282,7 +344,7 @@ export async function importStore(json: string): Promise<ActionResult> {
     return fail('That file is not valid JSON.');
   }
   const parsed = OverridesSchema.safeParse(data);
-  if (!parsed.success) return fail('That file is not a REVO store export.');
+  if (!parsed.success) return fail('That file is not a STRYKE store export.');
   try {
     // an export saved before the switch to dinars is converted on the way in
     await replaceOverrides(toDinars(parsed.data));

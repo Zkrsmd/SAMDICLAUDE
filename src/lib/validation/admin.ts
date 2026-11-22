@@ -36,8 +36,15 @@ const ProductFields = z.object({
   sizes: z.array(z.string().trim().min(1).max(32)).min(1, 'Add at least one size').max(40),
   stock: z.record(z.string(), z.number().int().min(0).max(100_000)),
   sku: z.string().trim().max(48),
-  colorName: z.string().trim().min(1, 'Name the colour').max(40),
-  swatch: hex,
+  /** legacy single colour (kept for older records; `colors` is what the editor uses) */
+  colorName: z.string().trim().max(40).default('As shown'),
+  swatch: hex.default('#8E99A8'),
+  /** the colours a buyer can choose; empty = no colour choice, nothing about colour on the website */
+  colors: z.array(z.object({ name: z.string().trim().min(1, 'Name the colour').max(40), swatch: hex })).max(12).optional(),
+  /** the big word behind the product photo (empty: the brand name) */
+  backdrop: z.string().trim().max(24).optional(),
+  /** products to show with this one ("Complete the look"), by slug, in order */
+  picks: z.array(z.string().max(96)).max(6).optional(),
   tags: z.array(z.string().trim().min(1).max(32)).max(30),
   bestSeller: z.boolean(),
   isNew: z.boolean(),
@@ -55,6 +62,13 @@ function checkProduct(p: z.infer<typeof ProductFields>, ctx: z.RefinementCtx) {
   if (p.compareAt !== null && p.compareAt <= p.price)
     ctx.addIssue({ code: 'custom', path: ['compareAt'], message: 'Compare-at price must be higher than the price' });
   if (new Set(p.sizes.map((s) => s.toLowerCase())).size !== p.sizes.length) ctx.addIssue({ code: 'custom', path: ['sizes'], message: 'Sizes must be unique' });
+  if (p.colors && new Set(p.colors.map((c) => c.name.toLowerCase())).size !== p.colors.length) ctx.addIssue({ code: 'custom', path: ['colors'], message: 'Colour names must be unique' });
+}
+
+/** The colours a product offers (older records kept one colour in colorName/swatch; "As shown" means none). */
+export function colorsOf(i: Pick<ProductInput, 'colors' | 'colorName' | 'swatch'>): { name: string; swatch: string }[] {
+  if (i.colors) return i.colors;
+  return i.colorName && i.colorName !== 'As shown' ? [{ name: i.colorName, swatch: i.swatch }] : [];
 }
 
 export const ProductInputSchema = ProductFields.superRefine(checkProduct);
@@ -81,6 +95,23 @@ export const DeliverySchema = z.object({
   tariffs: z.record(z.string().regex(/^\d{1,2}$/), TariffSchema),
 });
 
+const httpsOrEmpty = z.union([z.literal(''), z.string().trim().max(200).regex(/^https:\/\/[^\s]+$/, 'Use a full https:// link')]);
+/** The shop's links and e-mail in the footer (Admin → Settings). */
+export const SiteSchema = z.object({
+  email: z.union([z.literal(''), z.string().trim().max(120).email('Enter a valid e-mail')]),
+  facebook: httpsOrEmpty,
+  instagram: httpsOrEmpty,
+  tiktok: httpsOrEmpty,
+});
+export type SiteSettings = z.infer<typeof SiteSchema>;
+
+/** What the admin keeps about a customer (by phone number): a note and a few tags. */
+export const CustomerProfileSchema = z.object({
+  note: z.string().trim().max(2000).default(''),
+  tags: z.array(z.string().trim().min(1).max(24)).max(10).default([]),
+});
+export type CustomerProfile = z.infer<typeof CustomerProfileSchema>;
+
 export const OverridesSchema = z.object({
   version: z.literal(1),
   /** prices are in dinars (files saved before the switch held US cents and are converted on read) */
@@ -94,6 +125,10 @@ export const OverridesSchema = z.object({
   orders: z.record(z.string(), OrderPatchSchema),
   /** delivery prices per wilaya, edited in Admin → Delivery */
   delivery: DeliverySchema.optional(),
+  /** footer links and e-mail, edited in Admin → Settings */
+  site: SiteSchema.optional(),
+  /** admin notes and tags per customer (key: the phone number) */
+  customers: z.record(z.string().max(40), CustomerProfileSchema).optional(),
   updatedAt: z.string().nullable(),
 });
 export type Overrides = z.infer<typeof OverridesSchema>;

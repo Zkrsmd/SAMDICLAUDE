@@ -1,7 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
-import { importStore, resetStore } from '@/app/admin/actions';
+import { importStore, resetStore, saveSiteSettings } from '@/app/admin/actions';
+import type { SiteSettings } from '@/lib/validation/admin';
 import { AIcon } from './ui';
 import { ConfirmDialog, toast } from './client';
 
@@ -60,5 +61,61 @@ export function SettingsView({ writable }: { writable: boolean }) {
         }
       />
     </div>
+  );
+}
+
+const LINKS: { id: keyof SiteSettings; label: string; placeholder: string }[] = [
+  { id: 'facebook', label: 'Facebook', placeholder: 'https://www.facebook.com/strykealgeria' },
+  { id: 'instagram', label: 'Instagram', placeholder: 'https://www.instagram.com/strykealgeria' },
+  { id: 'tiktok', label: 'TikTok', placeholder: 'https://www.tiktok.com/@strykealgeria' },
+  { id: 'email', label: 'E-mail (optional)', placeholder: 'contact@…' },
+];
+
+/** The footer's social links and e-mail. An empty field hides that link. */
+export function SiteLinksForm({ initial }: { initial: SiteSettings }) {
+  const router = useRouter();
+  const [v, setV] = useState(initial);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pending, start] = useTransition();
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        start(async () => {
+          const res = await saveSiteSettings(v);
+          if (res.ok) {
+            setErrors({});
+            toast('Links saved — they show in the footer now');
+            router.refresh();
+          } else {
+            setErrors(res.fields ?? {});
+            toast(res.error, 'bad');
+          }
+        });
+      }}
+    >
+      {LINKS.map((l) => (
+        <label key={l.id} className="grid gap-1 sm:grid-cols-[140px_1fr] sm:items-center sm:gap-3">
+          <span className="text-[13px] font-semibold text-[#4a525c]">{l.label}</span>
+          <span>
+            <input
+              className="adm-input"
+              type={l.id === 'email' ? 'email' : 'url'}
+              value={v[l.id]}
+              placeholder={l.placeholder}
+              onChange={(e) => setV((x) => ({ ...x, [l.id]: e.target.value.trim() }))}
+              aria-invalid={errors[l.id] ? true : undefined}
+            />
+            {errors[l.id] && <span className="mt-1 block text-[12px] text-[#c4321f]">{errors[l.id]}</span>}
+          </span>
+        </label>
+      ))}
+      <div className="flex justify-end">
+        <button type="submit" className="adm-btn adm-btn-primary" disabled={pending}>
+          {pending ? 'Saving…' : 'Save links'}
+        </button>
+      </div>
+    </form>
   );
 }

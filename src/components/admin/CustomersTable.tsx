@@ -73,7 +73,9 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
                             .join('')}
                         </span>
                         <span className="min-w-0">
-                          <span className="block font-semibold">{c.name}</span>
+                          <Link href={`/admin/customers/${encodeURIComponent(c.id)}`} className="block font-semibold hover:underline">
+                            {c.name}
+                          </Link>
                           <span className="block truncate text-[12px] text-[#66707c]">{c.email || c.phone}</span>
                         </span>
                       </div>

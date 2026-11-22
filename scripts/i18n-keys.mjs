@@ -26,7 +26,7 @@ const prod = fs.readFileSync('src/data/products/index.ts', 'utf8');
 const a = prod.indexOf('const SHORT');
 for (const m of prod.slice(a, prod.indexOf('};', a)).matchAll(/: '((?:[^'\\]|\\.)+)'/g)) keys.add(m[1]);
 for (const k of [
-  'Coming soon to REVO.', 'Cash on delivery anywhere in Algeria.', 'Colour', 'As shown', 'within about an hour', 'Featured',
+  'Coming soon to STRYKE.', 'Cash on delivery anywhere in Algeria.', 'Colour', 'As shown', 'within about an hour', 'Featured',
   'Price: low to high', 'Price: high to low', 'Name A–Z', 'The boot wall', 'The glove room', 'The lens bar', 'Built in', 'Made to',
   'Finished with', 'Detail', 'Enter your first name', 'Enter your last name',
 ])

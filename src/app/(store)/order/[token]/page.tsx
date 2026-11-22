@@ -25,7 +25,9 @@ const STEPS: { status: CodStatus; label: string }[] = [
 ];
 const LABEL: Record<CodStatus, string> = {
   new: 'Received — we’ll contact you to confirm',
+  no_answer: 'Received — we’ll contact you to confirm',
   confirmed: 'Confirmed — being prepared',
+  preparing: 'Confirmed — being prepared',
   shipped: `With ${COURIER}`,
   delivered: 'Delivered',
   cancelled: 'Cancelled',
@@ -44,7 +46,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   if (!softRateLimit(`receipt:${clientKey(await headers())}`, 30).ok) notFound();
   const order = await getOrderByReceipt((await params).token);
   if (!order) notFound();
-  const at = STEPS.findIndex((s) => s.status === order.status);
+  // "no answer" still shows as received, "preparing" as confirmed
+  const at = STEPS.findIndex((s) => s.status === ({ no_answer: 'new', preparing: 'confirmed' } as Partial<Record<CodStatus, CodStatus>>)[order.status] || s.status === order.status);
   const stopped = order.status === 'cancelled' || order.status === 'returned';
 
   return (
