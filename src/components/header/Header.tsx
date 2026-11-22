@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Wordmark } from '@/components/ui/Wordmark';
-import { HoloEdge } from '@/components/ui/HoloEdge';
 import { Icon } from '@/components/ui/Icon';
 import { useCartCount } from '@/stores/cart';
 import { useWishlist } from '@/stores/lists';
@@ -61,14 +60,12 @@ export function Header({ nav }: { nav: NavSport[] }) {
     <>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
         <div
-          className={`holo-border glass-strong pointer-events-auto flex w-full items-center gap-2 rounded-full pl-4 pr-1.5 transition-all duration-700 ease-[var(--ease-expo)] ${
+          className={`glass-pill pointer-events-auto flex w-full items-center gap-2 rounded-full ps-5 pe-1.5 transition-all duration-700 ease-[var(--ease-expo)] ${
             scrolled ? 'h-14 max-w-[1040px]' : 'h-16 max-w-[1240px]'
           }`}
           style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}
-          data-edge=""
         >
-          <HoloEdge />
-          <Link href="/" className="text-[19px] md:text-[21px]" aria-label={t('MODE S home')}>
+          <Link href="/" className="text-[19px] md:text-[21px]" aria-label={t('REVO home')}>
             <Wordmark />
           </Link>
 
@@ -105,18 +102,16 @@ export function Header({ nav }: { nav: NavSport[] }) {
             <button
               type="button"
               id="cart-button"
-              className={`holo-border relative grid h-11 w-11 place-items-center rounded-full bg-white text-ink shadow-[0_8px_20px_-10px_rgba(23,26,24,0.45)] transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
+              className={`glass-bubble relative grid h-11 w-11 place-items-center rounded-full text-ink transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
               aria-label={hydrated ? t('Open bag, {n} items', { n: cartCount }) : t('Open bag')}
               onClick={() => set({ cartOpen: true })}
-              data-edge=""
             >
-              <HoloEdge />
               <Icon name="bag" size={19} />
               {hydrated && cartCount > 0 && <Badge n={cartCount} accent />}
             </button>
             <button
               type="button"
-              className="ml-0.5 grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06] lg:hidden"
+              className="ms-0.5 grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-ink/[0.06] lg:hidden"
               aria-label={t('Open menu')}
               aria-expanded={menuOpen}
               onClick={() => set({ menuOpen: true })}
@@ -134,8 +129,10 @@ export function Header({ nav }: { nav: NavSport[] }) {
 function Badge({ n, accent }: { n: number; accent?: boolean }) {
   return (
     <span
-      className={`mono absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold ${
-        accent ? 'bg-cobalt text-ink' : 'bg-ink text-white'
+      aria-hidden
+      // sits on the top corner of the icon button, above everything in it
+      className={`pointer-events-none absolute -end-1 -top-1 z-10 grid h-[19px] min-w-[19px] place-items-center rounded-full px-1 font-mono text-[10px] font-bold leading-none tabular-nums ring-2 ring-white ${
+        accent ? 'bg-cobalt text-white' : 'bg-ink text-white'
       }`}
     >
       {n > 99 ? '99' : n}

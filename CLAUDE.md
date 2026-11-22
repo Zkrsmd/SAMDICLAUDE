@@ -1,7 +1,7 @@
 # CLAUDE.md — project guide
 
 ## Purpose
-Premium, mobile-first sports e-commerce store **MODE S** (slanted chrome badge with an italic S — `Wordmark.tsx`, `app/icon.svg`) that feels like an award-site
+Premium, mobile-first sports e-commerce store **REVO** (the name is the logo — `Wordmark.tsx`; the favicon `app/icon.svg` is the R) that feels like an award-site
 campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
 (the owner rejected the procedural/"comic" look).
 
@@ -39,7 +39,8 @@ campaign and a real store at once. Real product photos (background removed) and 
   (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked). Availability (`availability()` in `catalog.ts`):
   "Coming soon" (admin switch `comingSoon`, with or without stock: shown, not sold) wins over "Out of stock" (every size
   at 0); both badge the card, disable the `+` and replace the buy box; the quote and order APIs refuse them.
-- Product page: pinned viewer (desktop) / scroll drop into the buy box (phones) → "Complete the look" (3) → more from
+- Product page: pinned viewer (desktop) / scroll drop into the buy box (phones); the buy box has a small white
+  "Add to bag" and the cash-on-delivery order form itself (`QuickBuy.tsx`, "Buy now" orders straight away) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA".

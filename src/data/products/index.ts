@@ -127,7 +127,7 @@ const BEST = new Set([...FEATURED, ...rows.filter((r) => r.sold >= 3 && r.photo)
 
 export const rawProducts: (Product & { images: string[] })[] = rows.map((r) => {
   const key = `${r.sport}/${r.sub}`;
-  const short = SHORT[key] ?? 'Coming soon to MODE S.';
+  const short = SHORT[key] ?? 'Coming soon to REVO.';
   const brand = STORE_BRANDS[r.brand] ? r.brand : 'other';
   const brandLine = brand === 'other' ? '' : `${STORE_BRANDS[brand]}. `;
   return {

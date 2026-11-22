@@ -2,9 +2,10 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { HoloEdge } from '@/components/ui/HoloEdge';
 import { ProductImage } from './ProductImage';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { QuickBuy } from '@/components/checkout/QuickBuy';
+import type { CheckoutWilaya } from '@/components/checkout/CodCheckout';
 import { useCart } from '@/stores/cart';
 import { useRecent, useWishlist } from '@/stores/lists';
 import { useTransitionStore, useUi } from '@/stores/ui';
@@ -28,11 +29,14 @@ export function ProductExperience({
   brandName,
   sportName,
   subName,
+  checkout,
 }: {
   product: Product;
   brandName: string;
   sportName: string;
   subName: string;
+  /** the order form on the page: delivery prices per wilaya, the courier, when we call */
+  checkout: { wilayas: CheckoutWilaya[]; courier: string; confirmCall: string };
 }) {
   const t = useT();
   const router = useRouter();
@@ -231,6 +235,14 @@ export function ProductExperience({
 
   // a small scroll moves to the next chapter / finishes the drop instead of stopping half-way
   useScrollAssist(() => rest.current);
+
+  /** the order form asks for this before ordering */
+  const ensureSize = () => {
+    if (size) return true;
+    setError(t('Please choose a size.'));
+    document.querySelector<HTMLInputElement>('input[name="pdp-size"]')?.focus();
+    return false;
+  };
 
   const addToCart = (buyNow = false) => {
     if (!size) {
@@ -463,8 +475,8 @@ export function ProductExperience({
                   <Icon name="plus" size={16} />
                 </button>
               </div>
-              <button type="button" className="btn-holo h-12 flex-1" onClick={() => addToCart()} data-edge="">
-                <HoloEdge halo={false} variant="btn" />
+              <button type="button" className="pdp-add h-12 flex-1" onClick={() => addToCart()}>
+                <Icon name="bag" size={16} />
                 {t('Add to bag')}
               </button>
               <button
@@ -477,9 +489,17 @@ export function ProductExperience({
                 <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
               </button>
             </div>
-            <button type="button" className="btn btn-line mt-3 h-12 w-full rounded-full" onClick={() => addToCart(true)}>
-              {t('Buy now')}
-            </button>
+            <QuickBuy
+              productId={product.slug}
+              colorId={colorId}
+              size={size}
+              qty={qty}
+              unitPrice={product.price}
+              wilayas={checkout.wilayas}
+              courier={checkout.courier}
+              confirmCall={checkout.confirmCall}
+              ensureSize={ensureSize}
+            />
             </>
             )}
             {added && (
@@ -490,24 +510,6 @@ export function ProductExperience({
                 </button>
               </p>
             )}
-            <dl className="mt-6 space-y-2 border-t border-line pt-4 text-[13px] text-muted">
-              <div className="flex justify-between gap-4">
-                <dt>{t('Availability')}</dt>
-                <dd className={`text-end ${avail === 'in' ? 'text-ink' : ''}`}>{avail === 'soon' ? t('Coming soon') : avail === 'out' ? t('Out of stock') : t('In stock')}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>{t('Delivery')}</dt>
-                <dd className="text-end">{t('ZR Express to all 58 wilayas · home or stop desk')}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>{t('Payment')}</dt>
-                <dd className="text-end">{t('Cash on delivery')}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>{t('Returns')}</dt>
-                <dd className="text-end">{t('Exchange within 7 days if unused — call us')}</dd>
-              </div>
-            </dl>
           </div>
 
           {/* chapters on desktop scroll alongside the sticky viewer */}
@@ -520,18 +522,7 @@ export function ProductExperience({
             ))}
           </ol>
 
-          <section aria-labelledby="specs-title" className="mt-10 pb-6">
-            <h2 id="specs-title" className="eyebrow text-muted">
-              {t('Specifications')}
-            </h2>
-            <dl className="mt-3 divide-y divide-line border-y border-line">
-              {[...product.specs.map((x) => ({ label: t(x.label), value: t(x.value) })), { label: t('Brand'), value: brandName }, { label: t('Category'), value: `${sportName} · ${subName}` }].map((s) => (
-                <div key={s.label} className="flex justify-between gap-6 py-3 text-[14px]">
-                  <dt className="text-muted">{s.label}</dt>
-                  <dd className="text-right">{s.value}</dd>
-                </div>
-              ))}
-            </dl>
+          <section className="mt-10 pb-6">
             {product.features.length > 0 && (
               <ul className="mt-6 space-y-2 text-[15px]">
                 {product.features.map((f) => (

@@ -3,9 +3,9 @@
  * The logo lock-up itself is src/components/ui/Wordmark.tsx.
  */
 export const brand = {
-  name: 'MODE S',
+  name: 'REVO',
   /** Short form used in tight spaces (mobile header, favicon text). */
-  shortName: 'MS',
+  shortName: 'RV',
   tagline: 'Gear for every decisive moment.',
   description:
     'A curated sports equipment store for football, boxing, swimming and more — presented like a showroom, shopped like a store.',

@@ -73,6 +73,11 @@ const slugs = Object.values(ON_SALE)
   .join(', ');
 const CLEAN = ['DELETE FROM rate', `DELETE FROM orders WHERE data LIKE '%"note":"e2e%'`];
 
+/** Forget the local rate-limit counters (several tests place orders from the same connection). */
+export function resetRateLimits() {
+  local(`${CLEAN[0]};`);
+}
+
 export default function setup() {
   const rows = Object.values(ON_SALE)
     .map((x) => `(${q(x.slug)}, 'edit', 0, ${q(JSON.stringify(input(x.slug)))})`)

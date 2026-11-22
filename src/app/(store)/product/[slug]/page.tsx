@@ -6,6 +6,9 @@ import { brandName } from '@/data/brands';
 import { completeKit, getAllProducts, getProduct, getSport, getSub, moreFromCollection, toCard } from '@/lib/catalog';
 import { ensureStore } from '@/lib/catalog';
 import { getT } from '@/i18n/server';
+import { brand } from '@/config/brand';
+import { COURIER } from '@/data/delivery/wilayas';
+import { getWilayas } from '@/lib/delivery';
 
 // pages for products/sports added in the admin render on first visit (unknown ones still 404)
 export const dynamic = 'force-dynamic';
@@ -42,7 +45,9 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      <ProductExperience key={product.slug} product={shown} brandName={brandName(product.brand)} sportName={t(sport.name)} subName={t(sub.name)} />
+      <ProductExperience key={product.slug} product={shown} brandName={brandName(product.brand)} sportName={t(sport.name)} subName={t(sub.name)}
+        checkout={{ wilayas: getWilayas().map(({ code, name, ar, home, desk }) => ({ code, name, ar, home, desk })), courier: COURIER, confirmCall: brand.commerce.confirmCall }}
+      />
 
       {kit.length > 0 && (
         <section aria-labelledby="kit-title" className="container-x pt-16 md:pt-24">

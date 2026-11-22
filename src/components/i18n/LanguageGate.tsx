@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { BrandMark } from '@/components/ui/Wordmark';
 import { chooseLanguage } from '@/i18n/client';
 import { LANGUAGE_NAMES, LOCALES } from '@/i18n/config';
 
@@ -22,9 +21,8 @@ export function LanguageGate() {
   return (
     <div className="lang-gate" role="dialog" aria-modal="true" aria-labelledby="lang-gate-title">
       <div className="lang-gate-card">
-        <BrandMark className="mx-auto h-14 w-14" />
-        <p className="display mt-4 text-[28px] tracking-[0.06em]" dir="ltr">
-          MODE<span className="text-cobalt"> S</span>
+        <p className="display text-[44px] tracking-[0.04em]" dir="ltr">
+          REV<span className="text-cobalt">O</span>
         </p>
         <h2 id="lang-gate-title" className="mt-5 text-[15px] text-muted">
           <span lang="en">Choose your language</span>

@@ -99,7 +99,6 @@ export default async function Home() {
       <Hero />
       {/* the store slides up over the films as one sheet */}
       <div className="home-sheet">
-      <Brands brands={brands.filter((b) => b.logo)} />
 
       <section aria-labelledby="cats-title" className="container-x pt-14 md:pt-20">
         <Heading id="cats-title" eyebrow={t('Shop by sport')} title={t('Pick your')} accent={t('sport')} />
@@ -140,6 +139,8 @@ export default async function Home() {
       </section>
 
       <RecentlyViewed />
+      {/* the brands close the page (customers reach the sports and products first) */}
+      <Brands brands={brands.filter((b) => b.logo)} />
       </div>
     </>
   );

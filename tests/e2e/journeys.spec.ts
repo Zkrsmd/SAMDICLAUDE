@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { cartCount, isMobile, openHome } from './helpers';
-import { ON_SALE } from './seed';
+import { ON_SALE, resetRateLimits } from './seed';
 
 /** Two products are put on sale in the local database before the run (seed.ts); everything else is "Coming soon". */
 const WHISTLE = ON_SALE.whistle.slug;
@@ -9,7 +9,7 @@ const GLOVES = ON_SALE.gloves.slug;
 test.describe('core shopping journeys', () => {
   test('1–5: homepage, switch sports, scroll down', async ({ page }) => {
     await openHome(page);
-    await expect(page.getByRole('heading', { level: 1, name: /MODE S/ })).toBeAttached();
+    await expect(page.getByRole('heading', { level: 1, name: /REVO/ })).toBeAttached();
     const current = page.getByRole('group', { name: 'Choose sport' }).locator('[aria-current="true"]');
     await page.getByTestId('hero-stage').hover({ position: { x: 40, y: 300 } });
     const order = ['Football', 'Boxing', 'Swimming', 'Fitness', 'Martial arts', 'Basketball', 'Fishing'];
@@ -21,7 +21,7 @@ test.describe('core shopping journeys', () => {
       await expect(page.getByRole('link', { name: new RegExp(`Explore ${want}`, 'i') })).toBeVisible();
     }
     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 1.1));
-    await expect(page.getByRole('heading', { name: /brands behind the performance/i })).toBeInViewport({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: /Pick your/i })).toBeInViewport({ timeout: 15_000 });
   });
 
   test('quick add: one size goes straight in, sized products ask for a size', async ({ page }) => {
@@ -211,5 +211,28 @@ test.describe('orders and receipts', () => {
     const head = await request.get(json.receipt);
     expect(head.headers()['cache-control']).toContain('no-store');
     expect(head.headers()['x-robots-tag']).toContain('noindex');
+  });
+});
+
+test.describe('buy from the product page', () => {
+  test('the order form on the product page places the order directly', async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'places a real order: once, on desktop');
+    // earlier tests placed orders from this same connection: start from a clean order limit
+    resetRateLimits();
+    await page.goto(`/product/${ON_SALE.whistle.slug}`);
+    const form = page.getByTestId('quickbuy');
+    await expect(form).toBeVisible();
+    await form.getByLabel('First name').fill('Quick');
+    await form.getByLabel('Last name').fill('Buyer');
+    await form.getByLabel('Phone number').fill('0770 11 22 33');
+    await form.getByLabel('Wilaya').selectOption('16');
+    await form.getByLabel('Commune').fill('Hydra');
+    await form.getByLabel('Address').fill('Rue test 3');
+    // Alger home delivery: 980 + 650 DA
+    await expect(form.getByTestId('qb-total')).toHaveText(/1\s630\sDA/);
+    await form.getByRole('button', { name: 'Buy now' }).click();
+    const done = page.getByTestId('quickbuy-done');
+    await expect(done).toBeVisible();
+    await expect(done).toContainText(/Order #\d+/);
   });
 });

@@ -282,7 +282,7 @@ export async function importStore(json: string): Promise<ActionResult> {
     return fail('That file is not valid JSON.');
   }
   const parsed = OverridesSchema.safeParse(data);
-  if (!parsed.success) return fail('That file is not a MODE S store export.');
+  if (!parsed.success) return fail('That file is not a REVO store export.');
   try {
     // an export saved before the switch to dinars is converted on the way in
     await replaceOverrides(toDinars(parsed.data));
