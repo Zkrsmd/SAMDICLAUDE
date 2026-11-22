@@ -65,6 +65,7 @@ export function Header({ nav }: { nav: NavSport[] }) {
           }`}
           style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}
         >
+          <LiquidChrome />
           <Link href="/" className="text-[19px] md:text-[21px]" aria-label={t('REVO home')}>
             <Wordmark />
           </Link>
@@ -136,6 +137,34 @@ function Badge({ n, accent }: { n: number; accent?: boolean }) {
       }`}
     >
       {n > 99 ? '99' : n}
+    </span>
+  );
+}
+
+/**
+ * The header's liquid metal: fractal noise folded into bright/dark reflection bands (the way
+ * polished mercury mirrors its own waves), tinted steel. It is drawn once and only slides (CSS).
+ */
+function LiquidChrome() {
+  return (
+    <span aria-hidden className="chrome-liquid">
+      <svg className="chrome-liquid-sheet" preserveAspectRatio="none" focusable="false">
+        <filter id="revo-liquid-chrome" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0032 0.022" numOctaves="2" seed="11" result="noise" />
+          <feColorMatrix
+            in="noise"
+            type="matrix"
+            values="0.55 0.45 0 0 0  0.55 0.45 0 0 0  0.55 0.45 0 0 0  0 0 0 0 1"
+            result="grey"
+          />
+          <feComponentTransfer in="grey">
+            <feFuncR type="table" tableValues="0.5 0.97 0.3 1 0.26 0.88 0.4 1 0.48" />
+            <feFuncG type="table" tableValues="0.54 0.98 0.34 1 0.3 0.91 0.44 1 0.52" />
+            <feFuncB type="table" tableValues="0.62 1 0.43 1 0.4 0.97 0.54 1 0.6" />
+          </feComponentTransfer>
+        </filter>
+        <rect width="100%" height="100%" filter="url(#revo-liquid-chrome)" />
+      </svg>
     </span>
   );
 }
