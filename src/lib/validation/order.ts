@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 export const DELIVERY_METHODS = ['home', 'desk'] as const;
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number];
+/** how the shop confirms: always a call now ('sms' is kept so older orders still read) */
 export const CONFIRM_BY = ['call', 'sms'] as const;
 export type ConfirmBy = (typeof CONFIRM_BY)[number];
 
@@ -21,6 +22,15 @@ export function normalizePhone(raw: string): string | null {
 }
 /** "0555123456" → "0555 12 34 56" */
 export const formatPhone = (p: string) => p.replace(/^(\d{4})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4');
+
+/**
+ * The forms ask for one "full name" (simpler on a phone): the first word is the first name, the
+ * rest the last name. "Karim Ben Ali" → { firstName: "Karim", lastName: "Ben Ali" }.
+ */
+export function splitName(full: string) {
+  const words = full.trim().split(/\s+/).filter(Boolean);
+  return { firstName: words[0] ?? '', lastName: words.slice(1).join(' ') };
+}
 
 const name = (what: string) =>
   z
@@ -46,9 +56,10 @@ export const CheckoutSchema = z.object({
     }),
   wilaya: z.number({ message: 'Choose your wilaya' }).int().min(1, 'Choose your wilaya').max(58, 'Choose your wilaya'),
   commune: z.string().trim().min(2, 'Enter your commune').max(60, 'Too long'),
-  address: z.string().trim().min(6, 'Enter your address (street, building, number)').max(200, 'Too long'),
+  /** only needed for home delivery: a stop-desk parcel waits at the courier's office */
+  address: z.string().trim().max(200, 'Too long').default(''),
   method: z.enum(DELIVERY_METHODS),
-  confirm: z.enum(CONFIRM_BY),
+  confirm: z.enum(CONFIRM_BY).default('call'),
   note: z.string().trim().max(300, 'Up to 300 characters').default(''),
   items: z
     .array(
@@ -63,6 +74,9 @@ export const CheckoutSchema = z.object({
     .max(30),
   /** honeypot: a field people never see. Bots fill it in; the order is then dropped. */
   website: z.string().max(200).optional(),
+}).superRefine((v, ctx) => {
+  if (v.method === 'home' && v.address.length < 6)
+    ctx.addIssue({ code: 'custom', path: ['address'], message: 'Enter your address (street, building, number)' });
 });
 export type CheckoutInput = z.input<typeof CheckoutSchema>;
 export type CheckoutData = z.output<typeof CheckoutSchema>;

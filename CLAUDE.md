@@ -7,9 +7,10 @@ campaign and a real store at once. Real product photos (background removed) and 
 
 ## Non-negotiable visual rules
 - Palette "glacier": frost `#F3F4F6`, white, mist/stone `#E8EBEF`, steel `#8E99A8`, ink `#0F1216` (text), ONE accent
-  cobalt `#2B59FF`. **No rainbow/holographic colours** (owner rejected them). The hero is a cool, atmospheric grey world
+  cobalt `#2B59FF` — plus one signal red (`.btn-order`) reserved for the order buttons (owner-requested). **No rainbow/holographic colours** (owner rejected them). The hero is a cool, atmospheric grey world
   (igloo.inc-inspired); the rest of the site is frost-white. Never a dark/neon site.
-- Effects language (class names kept from the old holo era, now chrome): `.holo-border`/`.holo-ring` = travelling
+- Effects language (class names kept from the old holo era, now chrome): the header bar is liquid chrome (`.glass-pill` + two drifting SVG-noise sheets in `Header.tsx`, see-through);
+  `.holo-border`/`.holo-ring` = travelling
   chrome edge with a cobalt glint, `.btn-holo` white pill, `.holo-text` dark steel text with a cobalt glint, `.glass`,
   film grain, `[data-reveal]`. Liquid elements are chrome (mercury). Use these, don't invent new gradients.
 - Type: Archivo 900 condensed italic (display — the owner's "action font", `.display`), Sora (body), Geist Mono
@@ -39,8 +40,9 @@ campaign and a real store at once. Real product photos (background removed) and 
   (`ProductCard.tsx`, `QuickAdd.tsx`; sold-out sizes can't be picked). Availability (`availability()` in `catalog.ts`):
   "Coming soon" (admin switch `comingSoon`, with or without stock: shown, not sold) wins over "Out of stock" (every size
   at 0); both badge the card, disable the `+` and replace the buy box; the quote and order APIs refuse them.
-- Product page: pinned viewer (desktop) / scroll drop into the buy box (phones); the buy box has a small white
-  "Add to bag" and the cash-on-delivery order form itself (`QuickBuy.tsx`, "Buy now" orders straight away) → "Complete the look" (3) → more from
+- Product page: pinned viewer (desktop) / scroll drop into the buy box (phones: the photo breaks into jagged shards
+  with chrome sparks and re-forms as it lands; one rAF per frame, transforms only, geometry measured on resize); the buy box has a small white
+  "Add to bag" and the short cash-on-delivery order form itself (`QuickBuy.tsx`, the red "Order now" orders straight away) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA".
@@ -50,7 +52,8 @@ campaign and a real store at once. Real product photos (background removed) and 
   → `scripts/odoo-catalog.mjs` writes `src/data/products/generated.json`. Every product starts "Coming soon";
   stock starts from Odoo for one-size items, 0 for sized ones. Luxury-brand copies are never listed.
 - Checkout = cash on delivery, Algeria only (`/checkout`, `CodCheckout.tsx`): first/last name, Algerian mobile, wilaya
-  (58), commune, address, ZR Express home or stop desk, confirm by a call (≈ within the hour) or an SMS, note.
+  (58), commune, ZR Express home or stop desk (street address only for home), note. One "full name" field (split into
+  first/last by `splitName()`). We always confirm by a call (≈ within the hour); the SMS option was removed.
   `POST /api/orders` re-validates (`src/lib/validation/order.ts`), prices from the catalogue + `deliveryFee()`
   (`src/lib/delivery.ts`; starting prices in `src/data/delivery/wilayas.ts`, edited in Admin → Delivery), checks stock,
   and saves to the D1 `orders` table (`src/lib/store/orders.ts`), returning a private receipt link `/order/<token>`

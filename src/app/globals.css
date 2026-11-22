@@ -1302,11 +1302,48 @@
   pointer-events: none;
   will-change: transform;
 }
-.pdp-flyer img {
+/* the photo in shards: each one the full picture clipped to a jagged band, its own GPU layer */
+.pdp-shard {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.pdp-shard img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 24px 22px rgb(15 18 22 / 0.24));
+}
+.pdp-flyer [data-shard='lite'],
+.pdp-flyer.is-lite [data-shard='full'],
+.pdp-flyer.is-lite .pdp-spark {
+  display: none;
+}
+.pdp-flyer.is-lite [data-shard='lite'] {
+  display: block;
+}
+/* chrome sparks: a white-hot core with a cobalt glint, flung from the cracks */
+.pdp-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff 0 35%, #cdd6e2 55%, rgb(43 89 255 / 0.85) 100%);
+  box-shadow: 0 0 6px 1px rgb(255 255 255 / 0.9);
+  transform: scale(0);
+  will-change: transform;
+}
+/* the still glow behind the product (was a spinning blurred gradient: repainted every frame) */
+.pdp-glow {
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.95), rgb(205 214 228 / 0.55) 45%, rgb(43 89 255 / 0.07) 72%, transparent);
+}
+/* the chapter caption over the moving product: solid frost, no backdrop blur to recompute */
+.pdp-caption {
+  background: rgb(255 255 255 / 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.9),
+    0 12px 30px -18px rgb(15 18 22 / 0.35);
 }
 .pdp-slot.is-landed {
   animation: slot-settle 0.5s var(--ease-expo) both;
@@ -1662,8 +1699,9 @@
   border-radius: 50%;
   background: rgb(15 18 22 / 0.22);
   filter: blur(9px);
-  transform: translateX(-50%) scale(calc(0.35 + var(--near, 0) * 0.65));
-  opacity: calc(0.15 + var(--near, 0) * 0.85);
+  transform: translateX(-50%) scale(0.35);
+  opacity: 0.15;
+  will-change: transform, opacity;
 }
 .pdp-slot.is-landed::after {
   content: '';
@@ -1689,7 +1727,7 @@
   }
 }
 .pdp-flyer {
-  transform-origin: 50% 100%;
+  transform-origin: 0 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .pdp-slot.is-landed::after {
@@ -2371,25 +2409,33 @@ html[dir='rtl'] .rtl-flip {
 }
 }
 
-/* ---------------- the header: liquid chrome (polished mercury, a metal rim, a reflection that flows) ---------------- */
+/* ---------------- the header: liquid chrome (always-moving mercury folds, see-through, a steel rim) ---------------- */
 .glass-pill {
   position: relative;
   isolation: isolate;
   border: 1px solid transparent;
   background:
-    /* the chrome body: sky above, a bright horizon line, darker metal below, light again at the bottom edge */
-    linear-gradient(180deg, #ffffff 0%, #eceff3 16%, #bcc4ce 41%, #fbfcfd 48.5%, #98a3b0 52%, #b9c1cb 66%, #e6e9ed 86%, #ffffff 100%) padding-box,
-    /* the rim: brushed steel catching light at the top and bottom */
-    linear-gradient(180deg, #ffffff 0%, #8e99a8 42%, #ffffff 52%, #5f6a78 100%) border-box;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 1),
-    inset 0 -1px 0 rgb(15 20 30 / 0.12),
-    inset 0 10px 14px -12px rgb(255 255 255 / 1),
-    inset 0 -12px 16px -12px rgb(15 20 30 / 0.2),
-    0 2px 4px rgb(15 20 30 / 0.08),
-    0 18px 40px -20px rgb(15 20 30 / 0.45);
+    linear-gradient(180deg, rgb(255 255 255 / 0.34), rgb(232 236 241 / 0.18) 55%, rgb(255 255 255 / 0.3)) padding-box,
+    linear-gradient(180deg, rgb(255 255 255 / 0.95) 0%, rgb(142 153 168 / 0.8) 42%, rgb(255 255 255 / 0.95) 52%, rgb(95 106 120 / 0.85) 100%) border-box;
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.6);
 }
-/* the liquid reflection: a soft band of light drifting across the metal, with a faint cobalt glint */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-pill {
+    background:
+      linear-gradient(180deg, #f7f8fa, #e4e8ed) padding-box,
+      linear-gradient(180deg, #fff, #8e99a8) border-box;
+  }
+}
+.glass-pill {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -1px 0 rgb(15 20 30 / 0.12),
+    0 2px 4px rgb(15 20 30 / 0.06),
+    0 18px 40px -20px rgb(15 20 30 / 0.4);
+}
+/* a band of light that sweeps across the metal, with a faint cobalt glint */
 .glass-pill::before {
   content: '';
   position: absolute;
@@ -2397,15 +2443,21 @@ html[dir='rtl'] .rtl-flip {
   z-index: -1;
   border-radius: inherit;
   pointer-events: none;
-  background:
-    linear-gradient(100deg, transparent 0%, transparent 34%, rgb(255 255 255 / 0.85) 44%, rgb(225 233 255 / 0.55) 48%, transparent 58%, transparent 100%),
-    radial-gradient(120% 220% at 50% -60%, rgb(255 255 255 / 0.9), transparent 55%);
-  background-size: 260% 100%, 100% 100%;
-  background-position: 120% 0, 0 0;
-  mix-blend-mode: screen;
-  animation: chrome-flow 9s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  background: linear-gradient(100deg, transparent 0%, transparent 34%, rgb(255 255 255 / 0.8) 44%, rgb(225 233 255 / 0.5) 48%, transparent 58%, transparent 100%);
+  background-size: 260% 100%;
+  background-position: 120% 0;
+  animation: chrome-flow 7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
 }
-/* the liquid metal itself (an SVG noise filter in Header.tsx), under the sheen, clipped to the pill */
+@keyframes chrome-flow {
+  0% {
+    background-position: 120% 0;
+  }
+  55%,
+  100% {
+    background-position: -20% 0;
+  }
+}
+/* the liquid metal (two SVG noise sheets in Header.tsx), under the sheen, clipped to the pill */
 .chrome-liquid {
   position: absolute;
   inset: 0;
@@ -2418,36 +2470,37 @@ html[dir='rtl'] .rtl-flip {
   position: absolute;
   top: 0;
   left: 0;
-  width: 220%;
+  width: 240%;
   height: 100%;
+  opacity: 0.62;
   will-change: transform;
-  animation: chrome-drift 38s ease-in-out infinite alternate;
+  animation: chrome-drift 17s ease-in-out infinite alternate;
+}
+.chrome-liquid-sheet + .chrome-liquid-sheet {
+  opacity: 0.4;
+  animation: chrome-drift-back 23s ease-in-out infinite alternate;
 }
 /* volume on top of the folds: lit from above, rolling into shade below, like a tube of mercury */
 .chrome-liquid::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.45) 0%, rgb(255 255 255 / 0.05) 35%, rgb(15 20 30 / 0) 62%, rgb(15 20 30 / 0.22) 100%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.4) 0%, rgb(255 255 255 / 0.04) 35%, rgb(15 20 30 / 0) 62%, rgb(15 20 30 / 0.16) 100%);
 }
 @keyframes chrome-drift {
   from {
     transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translate3d(-54%, 0, 0);
+    transform: translate3d(-58%, 0, 0);
   }
 }
-.glass-pill {
-  text-shadow: 0 1px 0 rgb(255 255 255 / 0.6);
-}
-@keyframes chrome-flow {
-  0% {
-    background-position: 120% 0, 0 0;
+@keyframes chrome-drift-back {
+  from {
+    transform: translate3d(-58%, 0, 0);
   }
-  55%,
-  100% {
-    background-position: -20% 0, 0 0;
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }
 /* the bag button: a drop of mercury */
@@ -2508,53 +2561,124 @@ html[dir='rtl'] .rtl-flip {
     padding: 22px 22px 18px;
   }
 }
-.qb-grid {
+/* the product-page order form: one column, big fields, nothing extra */
+.qb-promise {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.qb-promise li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #f1f3f6;
+  padding: 5px 10px 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a424d;
+}
+.qb-promise li::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1f9d55 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m6 12.5 4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 10px no-repeat;
+}
+.qb-stack {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.qb-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 10px;
-}
-.qb-wide {
-  grid-column: 1 / -1;
-}
-@media (min-width: 1280px) {
-  .qb-wide {
-    grid-column: auto;
-  }
-}
-.qb-field {
-  min-width: 0;
-  animation: qb-rise 0.6s var(--ease-expo) both;
-  animation-delay: calc(0.08s + var(--i, 0) * 45ms);
+  gap: 10px;
 }
 .qb .co-input {
-  height: 46px;
+  height: 52px;
+  border-radius: 14px;
+  background: #f6f7f9;
 }
-.qb-option {
-  padding: 10px 12px;
+.qb .co-input:focus {
+  background: #fff;
 }
-.qb-chip[data-active='true'] {
-  background: var(--color-ink, #0f1216);
-  color: #fff;
+.qb .qb-phone {
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+/* home or stop desk: two big tappable cards with the price */
+.qb-way {
+  display: block;
+  cursor: pointer;
+  border-radius: 14px;
+  border: 1.5px solid #e3e6ea;
+  background: #f6f7f9;
+  padding: 11px 12px;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    transform 0.2s;
+}
+.qb-way:active {
+  transform: scale(0.98);
+}
+.qb-way:has(input:checked) {
   border-color: var(--color-ink, #0f1216);
+  background: #fff;
+  box-shadow: 0 8px 20px -14px rgb(15 20 30 / 0.5);
 }
-.qb-total {
-  display: grid;
-  gap: 4px;
-  border-top: 1px dashed #d9dde3;
-  padding-top: 12px;
-  font-size: 14px;
+.qb-way:has(input:focus-visible) {
+  outline: 2px solid var(--color-cobalt);
+  outline-offset: 2px;
 }
-.qb-total > div {
+.qb-way[data-off] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.qb-sum {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  color: #66707c;
+  margin-top: 16px;
+  border-top: 1px dashed #d9dde3;
+  padding-top: 12px;
 }
-.qb-total-row {
-  margin-top: 4px;
-  color: var(--color-ink, #0f1216) !important;
-  font-size: 18px;
+/* the order button: signal red — the one red on the site, kept for "order" */
+.btn-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f43b44 0%, #d9131e 100%);
+  color: #fff;
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -2px 0 rgb(120 0 8 / 0.25),
+    0 16px 30px -14px rgb(217 19 30 / 0.65);
+  transition:
+    transform 0.2s var(--ease-expo),
+    filter 0.2s;
+}
+.btn-order:hover {
+  filter: brightness(1.06);
+}
+.btn-order:active {
+  transform: scale(0.98);
+}
+.btn-order:focus-visible {
+  outline: 2px solid var(--color-ink, #0f1216);
+  outline-offset: 3px;
+}
+.btn-order:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.4);
+  opacity: 0.7;
 }
 .qb-pop {
   display: inline-block;
@@ -2563,7 +2687,6 @@ html[dir='rtl'] .rtl-flip {
 .qb-buy {
   position: relative;
   overflow: hidden;
-  box-shadow: 0 14px 30px -14px rgb(43 89 255 / 0.55);
 }
 /* a light sweep across the button now and then: it's the action */
 .qb-buy::after {

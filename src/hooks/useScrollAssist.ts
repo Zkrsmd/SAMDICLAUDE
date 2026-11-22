@@ -20,6 +20,8 @@ export function useScrollAssist(points: () => number[] | null, opts: { idle?: nu
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // touch screens keep their own momentum: a glide after the finger lifts reads as a stall there
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     let lastY = window.scrollY;
     let dir = 0;
     let idle = 0;

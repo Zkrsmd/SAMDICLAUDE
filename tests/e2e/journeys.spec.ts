@@ -148,7 +148,7 @@ test.describe('cash on delivery checkout', () => {
     await page.goto('/checkout');
     await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
     await page.getByRole('button', { name: 'Confirm order' }).click();
-    await expect(page.getByText('Enter your first name')).toBeVisible();
+    await expect(page.getByText('Enter your first and last name')).toBeVisible();
     await expect(page.getByText(/Enter a mobile number/)).toBeVisible();
     await expect(page.getByText('Choose your wilaya').last()).toBeVisible();
     // Alger: 980 DA + 650 DA home delivery, or 470 DA at the stop desk
@@ -156,9 +156,10 @@ test.describe('cash on delivery checkout', () => {
     await expect(page.getByTestId('co-total')).toHaveText(/1\s630\sDA/);
     await page.locator('label').filter({ hasText: 'Stop desk' }).click();
     await expect(page.getByTestId('co-total')).toHaveText(/1\s450\sDA/);
+    // a stop-desk parcel needs no street address; we always confirm by calling (no SMS option)
+    await expect(page.locator('#co-address')).toHaveCount(0);
     await expect(page.getByText('We call you within about an hour')).toBeVisible();
-    await page.locator('label').filter({ hasText: 'Send me an SMS' }).click();
-    await expect(page.getByText('We’ll text you to confirm.')).toBeVisible();
+    await expect(page.getByText('Send me an SMS')).toHaveCount(0);
   });
 });
 
@@ -222,15 +223,14 @@ test.describe('buy from the product page', () => {
     await page.goto(`/product/${ON_SALE.whistle.slug}`);
     const form = page.getByTestId('quickbuy');
     await expect(form).toBeVisible();
-    await form.getByLabel('First name').fill('Quick');
-    await form.getByLabel('Last name').fill('Buyer');
+    await form.getByLabel('Full name').fill('Quick Buyer');
     await form.getByLabel('Phone number').fill('0770 11 22 33');
     await form.getByLabel('Wilaya').selectOption('16');
     await form.getByLabel('Commune').fill('Hydra');
     await form.getByLabel('Address').fill('Rue test 3');
     // Alger home delivery: 980 + 650 DA
     await expect(form.getByTestId('qb-total')).toHaveText(/1\s630\sDA/);
-    await form.getByRole('button', { name: 'Buy now' }).click();
+    await form.getByRole('button', { name: 'Order now' }).click();
     const done = page.getByTestId('quickbuy-done');
     await expect(done).toBeVisible();
     await expect(done).toContainText(/Order #\d+/);
