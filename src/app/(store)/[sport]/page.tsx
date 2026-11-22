@@ -15,7 +15,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   await ensureStore();
   const s = getSport((await params).sport);
   const t = await getT();
-  return s ? { title: t(s.name), description: t(s.description) } : {};
+  if (!s) return {};
+  const title = t('{sport} gear in Algeria', { sport: t(s.name) });
+  const description = `${t(s.description)} ${t('Prices in DA, cash on delivery to all 58 wilayas.')}`;
+  // one canonical address per sport, whatever filters are in the URL
+  return { title, description, alternates: { canonical: `/${s.slug}` }, openGraph: { title, description, url: `/${s.slug}` } };
 }
 
 export default async function SportPage({ params, searchParams }: Props) {

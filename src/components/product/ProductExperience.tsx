@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ProductImage } from './ProductImage';
-import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { QuickBuy } from '@/components/checkout/QuickBuy';
 import type { CheckoutWilaya } from '@/components/checkout/CodCheckout';
 import { useCart } from '@/stores/cart';
@@ -17,18 +16,16 @@ import { useT } from '@/i18n/client';
 
 /** the cut-out's resting pose: a slight tilt, like it's placed on display */
 const POSE = 'rotate(-6deg)';
+/** at most 5 of one item per order line */
+const MAX_QTY = 5;
 
 export function ProductExperience({
   product,
   brandName,
-  sportName,
-  subName,
   checkout,
 }: {
   product: Product;
   brandName: string;
-  sportName: string;
-  subName: string;
   /** the order form on the page: delivery prices per wilaya, the courier, when we call */
   checkout: { wilayas: CheckoutWilaya[]; courier: string; confirmCall: string };
 }) {
@@ -41,6 +38,9 @@ export function ProductExperience({
   const [qty, setQty] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
+  /** the Add button's feedback: idle → done (a check for a moment) */
+  const [addState, setAddState] = useState<'idle' | 'done'>('idle');
+  const addTimer = useRef(0);
   const [view, setView] = useState(0);
   const [inspect, setInspect] = useState(false);
   const [barOn, setBarOn] = useState(false);
@@ -142,7 +142,8 @@ export function ProductExperience({
     return false;
   };
 
-  const addToCart = (buyNow = false) => {
+  /** `from`: the button that was tapped (the flight to the bag starts there) */
+  const addToCart = (buyNow = false, from?: HTMLElement | null) => {
     if (!size) {
       setError(t('Please choose a size.'));
       document.querySelector<HTMLInputElement>('input[name="pdp-size"]')?.focus();
@@ -150,9 +151,12 @@ export function ProductExperience({
     }
     setError(null);
     add({ productId: product.slug, colorId, size, qty });
-    const rect = shown.current?.getBoundingClientRect();
-    setUi({ flyFrom: { x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2, y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2, src: images[0]! } });
+    const rect = (from ?? shown.current)?.getBoundingClientRect();
+    setUi({ flyFrom: { x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2, y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2, src: images[0]!, n: qty } });
     setAdded(true);
+    setAddState('done');
+    window.clearTimeout(addTimer.current);
+    addTimer.current = window.setTimeout(() => setAddState('idle'), 1600);
     if (buyNow) router.push('/checkout');
     return true;
   };
@@ -205,6 +209,18 @@ export function ProductExperience({
           </button>
           <span aria-hidden className="absolute bottom-[8%] left-1/2 h-6 w-[40%] -translate-x-1/2 rounded-[50%] bg-ink/15 blur-xl lg:bottom-[9%]" />
 
+          {/* save for later: on the photo, out of the way of buying */}
+          <button
+            type="button"
+            className="pdp-wish absolute start-3 top-[84px] grid h-11 w-11 place-items-center rounded-full lg:start-6 lg:top-[100px]"
+            data-on={hydrated && wished ? '' : undefined}
+            aria-pressed={hydrated ? wished : false}
+            aria-label={t('Save to wishlist')}
+            onClick={() => toggleWish(product.slug)}
+          >
+            <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} />
+          </button>
+
           {/* photo switcher */}
           {images.length > 1 && (
             <div className="absolute end-3 top-[84px] flex flex-col gap-2 lg:end-6 lg:top-[100px]" role="group" aria-label={t('Product photos')}>
@@ -233,14 +249,7 @@ export function ProductExperience({
       <div className="relative z-10 bg-bg lg:order-2">
         <div className="pdp-build container-x lg:px-10 lg:pb-16 lg:pt-24">
           <div className="pt-8 lg:pt-0">
-            <Breadcrumbs label={t('Breadcrumb')}
-              items={[
-                { label: sportName, href: `/${product.sport}` },
-                { label: subName, href: `/${product.sport}/${product.sub}` },
-                { label: product.name },
-              ]}
-            />
-            <p className="eyebrow mt-6 text-muted">{brandName}</p>
+            <p className="eyebrow text-muted">{brandName}</p>
             <h1 className="display mt-2 text-[clamp(30px,6.2vw,56px)] leading-[0.86]">{product.name}</h1>
             <div className="mt-4 flex items-center gap-3">
               <span className="mono text-[20px] font-semibold">{formatPrice(product.price)}</span>
@@ -281,11 +290,11 @@ export function ProductExperience({
               </div>
             </fieldset>
 
-            <fieldset className="mt-6">
+            <fieldset className="mt-5">
               <legend className="eyebrow text-muted">{t('Size')} {size ? <span className="text-ink">— {size}</span> : null}</legend>
-              <div id="size-group" tabIndex={-1} className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6" aria-invalid={!!error} aria-describedby={error ? 'size-error' : undefined}>
+              <div id="size-group" tabIndex={-1} className="pdp-sizes mt-2.5" aria-invalid={!!error} aria-describedby={error ? 'size-error' : undefined}>
                 {product.sizes.map((s) => (
-                  <label key={s} className={product.stock && (product.stock[s] ?? 0) <= 0 ? 'cursor-not-allowed' : 'cursor-pointer'}>
+                  <label key={s} className={`pdp-size-wrap ${product.stock && (product.stock[s] ?? 0) <= 0 ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                     <input
                       type="radio"
                       name="pdp-size"
@@ -296,7 +305,7 @@ export function ProductExperience({
                       className="peer sr-only"
                     />
                     <span
-                      className="chip h-11 w-full justify-center px-1 text-[13px] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:text-ink/30 peer-disabled:line-through"
+                      className="pdp-size peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:text-ink/30 peer-disabled:line-through"
                       data-active={size === s}
                     >
                       {s}
@@ -318,15 +327,6 @@ export function ProductExperience({
                   <p className={`flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-semibold ${avail === 'soon' ? 'bg-ink text-white' : 'border border-line bg-white text-muted'}`}>
                     {avail === 'soon' ? t('Coming soon') : t('Out of stock')}
                   </p>
-                  <button
-                    type="button"
-                    className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white"
-                    aria-pressed={hydrated ? wished : false}
-                    aria-label={t('Save to wishlist')}
-                    onClick={() => toggleWish(product.slug)}
-                  >
-                    <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
-                  </button>
                 </div>
                 <p className="mt-3 text-[14px] text-muted">
                   {avail === 'soon'
@@ -336,30 +336,23 @@ export function ProductExperience({
               </div>
             ) : (
             <>
-            <div className="mt-6 flex items-center gap-3">
-              <div className="flex items-center rounded-full border border-line bg-white" role="group" aria-label={t('Quantity')}>
-                <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label={t('Decrease quantity')} disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
-                  <Icon name="minus" size={16} />
+            <div className="mt-5 flex items-center gap-2.5">
+              <div className="pdp-qty" role="group" aria-label={t('Quantity')}>
+                <button type="button" aria-label={t('Decrease quantity')} disabled={qty <= 1} onClick={() => setQty((q) => q - 1)}>
+                  <Icon name="minus" size={15} />
                 </button>
-                <span className="mono w-8 text-center" aria-live="polite">
+                <span key={qty} className="mono pdp-qty-n" aria-live="polite">
                   {qty}
                 </span>
-                <button type="button" className="grid h-12 w-11 place-items-center disabled:opacity-30" aria-label={t('Increase quantity')} disabled={qty >= 10} onClick={() => setQty((q) => q + 1)}>
-                  <Icon name="plus" size={16} />
+                <button type="button" aria-label={t('Increase quantity')} disabled={qty >= MAX_QTY} onClick={() => setQty((q) => Math.min(MAX_QTY, q + 1))}>
+                  <Icon name="plus" size={15} />
                 </button>
               </div>
-              <button type="button" className="pdp-add h-12 flex-1" onClick={() => addToCart()}>
-                <Icon name="bag" size={16} />
-                {t('Add to bag')}
-              </button>
-              <button
-                type="button"
-                className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white"
-                aria-pressed={hydrated ? wished : false}
-                aria-label={t('Save to wishlist')}
-                onClick={() => toggleWish(product.slug)}
-              >
-                <Icon name={hydrated && wished ? 'heart-fill' : 'heart'} size={20} className={hydrated && wished ? 'text-cobalt' : ''} />
+              <button type="button" className="pdp-add h-11 px-5" data-state={addState} onClick={(e) => addToCart(false, e.currentTarget)} aria-label={t('Add to bag')}>
+                <span className="pdp-add-icon" aria-hidden>
+                  <Icon name={addState === 'done' ? 'check' : 'bag'} size={16} />
+                </span>
+                {addState === 'done' ? t('Added') : t('Add')}
               </button>
             </div>
             <QuickBuy
@@ -427,8 +420,8 @@ export function ProductExperience({
             <button
               type="button"
               className="btn btn-ink h-11 px-4"
-              onClick={() => {
-                if (!addToCart()) purchase.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              onClick={(e) => {
+                if (!addToCart(false, e.currentTarget)) purchase.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
             >
               {t('Add to bag')}

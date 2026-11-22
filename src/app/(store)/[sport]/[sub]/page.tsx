@@ -22,7 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const s = getSport(sport);
   const x = getSub(sport, sub);
   const t = await getT();
-  return s && x ? { title: `${t(x.name)} — ${t(s.name)}`, description: t(x.blurb) } : {};
+  if (!s || !x) return {};
+  const title = `${t(x.name)} ${t(s.name)} — ${t('price in Algeria')}`;
+  const description = `${t(x.blurb)} ${t('Prices in DA, cash on delivery to all 58 wilayas.')}`;
+  const path = `/${s.slug}/${x.slug}`;
+  return { title, description, alternates: { canonical: path }, openGraph: { title, description, url: path } };
 }
 
 const ACCENT: Record<string, string> = { football: '#89C94A', boxing: '#C8A451', swimming: '#64D7D1' };

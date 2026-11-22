@@ -8,7 +8,8 @@ import { getT } from '@/i18n/server';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = { title: 'Search' };
+// results pages are for people, not for the index
+export const metadata: Metadata = { title: 'Search', robots: { index: false, follow: true } };
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 

@@ -63,7 +63,7 @@ export function CartLines({ quote, compact, failed }: { quote: QuoteResponse | n
                   type="button"
                   className="grid h-9 w-9 place-items-center disabled:opacity-30"
                   aria-label={t('Increase quantity')}
-                  disabled={l.qty >= 20}
+                  disabled={l.qty >= 5}
                   onClick={() => setQty(l.key, l.qty + 1)}
                 >
                   <Icon name="plus" size={16} />

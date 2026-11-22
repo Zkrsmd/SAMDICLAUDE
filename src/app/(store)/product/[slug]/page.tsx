@@ -9,6 +9,9 @@ import { getT } from '@/i18n/server';
 import { brand } from '@/config/brand';
 import { COURIER } from '@/data/delivery/wilayas';
 import { getWilayas } from '@/lib/delivery';
+import { formatPrice } from '@/lib/format';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { breadcrumbLd, productImages, productLd, productTitle } from '@/lib/seo';
 
 // pages for products/sports added in the admin render on first visit (unknown ones still 404)
 export const dynamic = 'force-dynamic';
@@ -17,8 +20,19 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   await ensureStore();
   const p = getProduct((await params).slug);
+  if (!p) return {};
   const t = await getT();
-  return p ? { title: `${brandName(p.brand)} ${p.name}`, description: t(p.short) } : {};
+  const name = productTitle(brandName(p.brand), p.name);
+  const title = `${name} — ${t('price in Algeria')}`;
+  const description = `${t(p.short)} ${formatPrice(p.price)} · ${t('Cash on delivery to all 58 wilayas.')}`;
+  const images = productImages(p).slice(0, 2);
+  return {
+    title,
+    description,
+    alternates: { canonical: `/product/${p.slug}` },
+    openGraph: { type: 'website', title, description, url: `/product/${p.slug}`, images },
+    twitter: { card: 'summary_large_image', title, description, images },
+  };
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -45,7 +59,16 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      <ProductExperience key={product.slug} product={shown} brandName={brandName(product.brand)} sportName={t(sport.name)} subName={t(sub.name)}
+      <JsonLd data={productLd(product, brandName(product.brand), shown.description, `${t(sport.name)} > ${t(sub.name)}`)} />
+      <JsonLd
+        data={breadcrumbLd([
+          { name: 'REVO', path: '/' },
+          { name: t(sport.name), path: `/${sport.slug}` },
+          { name: t(sub.name), path: `/${sport.slug}/${sub.slug}` },
+          { name: productTitle(brandName(product.brand), product.name), path: `/product/${product.slug}` },
+        ])}
+      />
+      <ProductExperience key={product.slug} product={shown} brandName={brandName(product.brand)}
         checkout={{ wilayas: getWilayas().map(({ code, name, ar, home, desk }) => ({ code, name, ar, home, desk })), courier: COURIER, confirmCall: brand.commerce.confirmCall }}
       />
 

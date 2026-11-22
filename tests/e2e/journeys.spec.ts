@@ -216,23 +216,34 @@ test.describe('orders and receipts', () => {
 });
 
 test.describe('buy from the product page', () => {
-  test('the order form on the product page places the order directly', async ({ page }, info) => {
+  test('two sizes added one after the other are ordered together, then the bag empties', async ({ page }, info) => {
     test.skip(info.project.name !== 'desktop', 'places a real order: once, on desktop');
     // earlier tests placed orders from this same connection: start from a clean order limit
     resetRateLimits();
-    await page.goto(`/product/${ON_SALE.whistle.slug}`);
+    await page.goto(`/product/${ON_SALE.gloves.slug}`);
+    const add = page.getByRole('button', { name: 'Add to bag' }).first();
+    await page.locator('label').filter({ hasText: /^12 oz$/ }).click();
+    await add.click();
+    await expect(add).toHaveAttribute('data-state', 'done');
+    await page.locator('label').filter({ hasText: /^14 oz$/ }).click();
+    await add.click();
+    await expect.poll(() => cartCount(page)).toBe(2);
+
     const form = page.getByTestId('quickbuy');
-    await expect(form).toBeVisible();
     await form.getByLabel('Full name').fill('Quick Buyer');
     await form.getByLabel('Phone number').fill('0770 11 22 33');
     await form.getByLabel('Wilaya').selectOption('16');
     await form.getByLabel('Commune').fill('Hydra');
     await form.getByLabel('Address').fill('Rue test 3');
-    // Alger home delivery: 980 + 650 DA
-    await expect(form.getByTestId('qb-total')).toHaveText(/1\s630\sDA/);
+    const lines = form.getByTestId('qb-lines');
+    await expect(lines).toContainText('12 oz');
+    await expect(lines).toContainText('14 oz');
+    // Alger home delivery: 2 × 4 300 + 650 DA
+    await expect(form.getByTestId('qb-total')).toHaveText(/9\s250\sDA/);
     await form.getByRole('button', { name: 'Order now' }).click();
     const done = page.getByTestId('quickbuy-done');
     await expect(done).toBeVisible();
     await expect(done).toContainText(/Order #\d+/);
+    await expect.poll(() => cartCount(page)).toBe(0);
   });
 });

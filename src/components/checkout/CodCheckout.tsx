@@ -354,8 +354,15 @@ export function CodCheckout({ wilayas, courier, confirmCall: confirmCallEn }: { 
                 {errors.form}
               </p>
             )}
-            <button type="submit" className="btn-order qb-buy mt-5 h-14 w-full" disabled={sending || blocked || !data || !lines.length}>
-              {sending ? t('Sending…') : t('Confirm order')}
+            <button type="submit" className="btn-order qb-buy mt-5 h-14 w-full" disabled={sending || blocked || !data || !lines.length} data-sending={sending ? '' : undefined}>
+              {sending ? (
+                <>
+                  <span className="btn-spin" aria-hidden />
+                  {t('Sending…')}
+                </>
+              ) : (
+                t('Confirm order')
+              )}
             </button>
             <p className="mt-3 text-center text-[12px] text-muted">
               {t('We’ll call you {when} to confirm.', { when: confirmCall })}

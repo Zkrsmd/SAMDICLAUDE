@@ -43,7 +43,7 @@ campaign and a real store at once. Real product photos (background removed) and 
   at 0); both badge the card, disable the `+` and replace the buy box; the quote and order APIs refuse them.
 - Product page: one still photo with the brand name behind it (pinned beside the details on desktop) — no scroll
   animation (owner: it felt like an ad) — then straight to the buy box (colour, size); it has a small white
-  "Add to bag" and the short cash-on-delivery order form itself (`QuickBuy.tsx`, the red "Order now" orders straight away) → "Complete the look" (3) → more from
+  "Add to bag" and the short cash-on-delivery order form itself (`QuickBuy.tsx`: the red "Order now" orders the whole bag plus the current pick, then empties the bag; quantities max 5) → "Complete the look" (3) → more from
   the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA".
@@ -76,8 +76,15 @@ campaign and a real store at once. Real product photos (background removed) and 
 English, French, Arabic (right to left). Write text in English in the code as `t('…')` (`useT()` in client components,
 `await getT()` in server ones, `src/i18n/`); add its French and Arabic to `src/i18n/fr.ts` / `ar.ts` and check with
 `node scripts/i18n-keys.mjs` (must say 100% for both). The `lang` cookie holds the choice; without it a picker opens
-first (`LanguageGate`, the hero waits). Use logical classes (`ms-/me-/ps-/start-/end-/text-end`), not left/right.
+first (`LanguageGate`, the hero waits). Without a cookie (and for search engines) pages render in French (`DEFAULT_LOCALE`). Use logical classes (`ms-/me-/ps-/start-/end-/text-end`), not left/right.
 Product names stay as written; the admin stays English.
+
+## Search (SEO, Algerian market)
+`src/lib/seo.ts` + `src/config/site.ts` (`SITE_URL`, server env `SITE_URL`, defaults to the live address): localized titles
+and descriptions with local terms ("prix en Algérie", "58 wilayas"), a canonical per page (filters never canonical),
+`robots.ts` (admin/api/cart/checkout/order/wishlist/search blocked), `sitemap.ts` (every sport, category, product, from the
+live catalogue), schema.org JSON-LD via `components/seo/JsonLd.tsx` (OnlineStore + WebSite search on the home page; Product
++ Offer in DZD + BreadcrumbList on product pages). JsonLd renders a <script> text child — never dangerouslySetInnerHTML.
 
 ## Hosting
 Cloudflare Workers via OpenNext (`wrangler.jsonc`, `open-next.config.ts`), D1 database `smadi` (schema in

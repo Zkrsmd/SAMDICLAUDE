@@ -8,7 +8,7 @@ interface UiState {
   /** Set by the intro loader; the hero waits for it before playing its timeline. */
   introDone: boolean;
   /** Last added product, used by the fly-to-cart animation. */
-  flyFrom: { x: number; y: number; src: string } | null;
+  flyFrom: { x: number; y: number; src: string; n?: number } | null;
   set: (patch: Partial<Omit<UiState, 'set'>>) => void;
 }
 

@@ -29,12 +29,12 @@ export const useCart = create<CartState>()(
           const k = lineKey(line);
           const existing = s.lines.find((l) => lineKey(l) === k);
           if (existing)
-            return { lines: s.lines.map((l) => (lineKey(l) === k ? { ...l, qty: Math.min(20, l.qty + line.qty) } : l)) };
-          return { lines: [...s.lines, { ...line, qty: Math.min(20, Math.max(1, line.qty)) }].slice(-50) };
+            return { lines: s.lines.map((l) => (lineKey(l) === k ? { ...l, qty: Math.min(5, l.qty + line.qty) } : l)) };
+          return { lines: [...s.lines, { ...line, qty: Math.min(5, Math.max(1, line.qty)) }].slice(-50) };
         }),
       setQty: (key, qty) =>
         set((s) => ({
-          lines: s.lines.map((l) => (lineKey(l) === key ? { ...l, qty: Math.min(20, Math.max(1, Math.round(qty))) } : l)),
+          lines: s.lines.map((l) => (lineKey(l) === key ? { ...l, qty: Math.min(5, Math.max(1, Math.round(qty))) } : l)),
         })),
       remove: (key) => set((s) => ({ lines: s.lines.filter((l) => lineKey(l) !== key) })),
       clear: () => set({ lines: [] }),

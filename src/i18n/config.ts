@@ -6,7 +6,8 @@
  */
 export const LOCALES = ['en', 'fr', 'ar'] as const;
 export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = 'en';
+/** before a visitor picks (and for search engines): French, the language most Algerian shoppers search in */
+export const DEFAULT_LOCALE: Locale = 'fr';
 export const LANG_COOKIE = 'lang';
 export const isLocale = (v: unknown): v is Locale => typeof v === 'string' && (LOCALES as readonly string[]).includes(v);
 export const dirOf = (l: Locale) => (l === 'ar' ? 'rtl' : 'ltr');

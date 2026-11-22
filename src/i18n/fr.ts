@@ -533,4 +533,13 @@ export const fr: Record<string, string> = {
   "e.g. Karim Benali": "ex. Karim Benali",
   "{product} + {delivery} delivery": "{product} + {delivery} de livraison",
   "Enter your first and last name": "Entrez votre nom et prénom",
+  "Add": "Ajouter",
+  "Added": "Ajouté",
+  "Cash on delivery to all 58 wilayas.": "Paiement à la livraison dans les 58 wilayas.",
+  "Football jerseys, boxing gloves, swimming, fitness and more — prices in DA, cash on delivery to all 58 wilayas.": "Maillots de foot, gants de boxe, natation, fitness et plus — prix en DA, paiement à la livraison dans les 58 wilayas.",
+  "Prices in DA, cash on delivery to all 58 wilayas.": "Prix en DA, paiement à la livraison dans les 58 wilayas.",
+  "REVO is an online sports store in Algeria: football jerseys, boxing gloves, swimming, fitness, martial arts, basketball and fishing gear. Prices in DA, cash on delivery to all 58 wilayas.": "REVO est une boutique de sport en ligne en Algérie : maillots de foot, gants de boxe, natation, fitness, arts martiaux, basket et pêche. Prix en DA, paiement à la livraison dans les 58 wilayas.",
+  "Sports store in Algeria": "Boutique de sport en Algérie",
+  "price in Algeria": "prix en Algérie",
+  "{sport} gear in Algeria": "{sport} : équipement et prix en Algérie",
 };

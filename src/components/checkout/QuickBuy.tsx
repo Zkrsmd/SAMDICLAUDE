@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatPrice } from '@/lib/format';
 import { CheckoutSchema, formatPhone, normalizePhone, splitName, type DeliveryMethod } from '@/lib/validation/order';
 import { useT } from '@/i18n/client';
+import { lineKey, useCart, type CartLine } from '@/stores/cart';
+import { useHydrated } from '@/hooks/useHydrated';
+import { useQuote } from '@/hooks/useQuote';
 import type { OrderResponse } from '@/app/api/orders/route';
 import type { CheckoutWilaya } from './CodCheckout';
 
@@ -16,9 +19,10 @@ const SAVED = 'revo-buyer';
 
 /**
  * Buy this product right here: the cash-on-delivery form on the product page, kept as short as it can
- * be — name, phone, wilaya, commune, home or stop desk (the address only for home delivery). Same
- * validation and the same /api/orders as the checkout: the server prices everything again. We always
- * confirm by calling.
+ * be — name, phone, wilaya, commune, home or stop desk (the address only for home delivery). It orders
+ * everything in the bag, plus this product in the chosen size when that isn't in the bag yet (so "S"
+ * and "M" added one after the other arrive together), then empties the bag. Same validation and the
+ * same /api/orders as the checkout: the server prices everything again. We always confirm by calling.
  */
 export function QuickBuy({
   productId,
@@ -52,6 +56,19 @@ export function QuickBuy({
   const [done, setDone] = useState<{ number?: number; receipt?: string; phone: string; total: number } | null>(null);
   const honey = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const hydrated = useHydrated();
+  const bag = useCart((s) => s.lines);
+  const clearBag = useCart((s) => s.clear);
+
+  /** what this order contains: the bag, plus the current pick if it isn't in the bag already */
+  const items = useMemo<CartLine[]>(() => {
+    const cur = size ? { productId, colorId, size, qty } : null;
+    const lines = hydrated ? bag : [];
+    if (!cur) return lines;
+    return lines.some((l) => lineKey(l) === lineKey(cur)) ? lines : [...lines, cur];
+  }, [bag, hydrated, productId, colorId, size, qty]);
+  const { data: quote } = useQuote(items, hydrated && items.length > 0);
+  const onlyThis = items.length === 0 || (items.length === 1 && items[0]!.productId === productId && items[0]!.size === size);
 
   // details remembered on this device
   useEffect(() => {
@@ -76,7 +93,7 @@ export function QuickBuy({
 
   const w = wilayas.find((x) => x.code === f.wilaya);
   const fee = w ? w[method] : undefined;
-  const subtotal = unitPrice * qty;
+  const subtotal = onlyThis ? unitPrice * qty : (quote?.subtotal ?? unitPrice * qty);
   const total = subtotal + (fee ? fee * 100 : 0);
   const options = useMemo(() => wilayas.map((x) => ({ ...x, off: x.home === null && x.desk === null })), [wilayas]);
 
@@ -93,7 +110,11 @@ export function QuickBuy({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (sending) return;
-    if (!ensureSize() || !size) return;
+    // with an empty bag this product needs a size; with things in the bag, the bag is the order
+    if (!items.length) {
+      ensureSize();
+      return;
+    }
     const { firstName, lastName } = splitName(f.name);
     const body = {
       firstName,
@@ -105,7 +126,7 @@ export function QuickBuy({
       method,
       confirm: 'call',
       note: '',
-      items: [{ productId, colorId, size, qty }],
+      items: items.map(({ productId, colorId, size, qty }) => ({ productId, colorId, size, qty })),
       website: honey.current?.value ?? '',
     };
     const check = CheckoutSchema.safeParse(body);
@@ -137,6 +158,7 @@ export function QuickBuy({
         /* private mode */
       }
       setDone({ number: r.number, receipt: r.receipt, phone: normalizePhone(f.phone) ?? f.phone, total });
+      clearBag();
     } catch {
       setErrors({ form: t('Your order could not be sent. Check your connection and try again.') });
     } finally {
@@ -278,6 +300,24 @@ export function QuickBuy({
         <input ref={honey} id="qb-website" name="website" tabIndex={-1} autoComplete="off" />
       </div>
 
+      {!onlyThis && quote && quote.lines.length > 0 && (
+        <div className="qb-lines" data-testid="qb-lines">
+          <p className="eyebrow text-muted">
+            {t('Your order')} · {items.reduce((n, l) => n + l.qty, 0)}
+          </p>
+          <ul>
+            {quote.lines.map((l) => (
+              <li key={l.key}>
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="mono text-muted">{l.qty}×</span> {l.name} <span className="text-muted">· {l.size}</span>
+                </span>
+                <span className="mono whitespace-nowrap">{formatPrice(l.total)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="qb-sum">
         <span className="text-[13px] text-muted">
           {fee !== undefined && fee !== null
@@ -294,8 +334,15 @@ export function QuickBuy({
           {t(errors.form)}
         </p>
       )}
-      <button type="submit" className="btn-order qb-buy mt-3 h-[58px] w-full" disabled={sending}>
-        {sending ? t('Sending…') : t('Order now')}
+      <button type="submit" className="btn-order qb-buy mt-3 h-[58px] w-full" disabled={sending} data-sending={sending ? '' : undefined}>
+        {sending ? (
+          <>
+            <span className="btn-spin" aria-hidden />
+            {t('Sending…')}
+          </>
+        ) : (
+          t('Order now')
+        )}
       </button>
       <p className="mt-2.5 text-center text-[12.5px] text-muted">{t('We’ll call you {when} to confirm.', { when: confirmCall })}</p>
     </form>

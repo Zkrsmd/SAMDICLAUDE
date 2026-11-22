@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from 'next';
 import { Archivo, Cairo, Geist_Mono, Sora } from 'next/font/google';
 import { brand } from '@/config/brand';
 import { dirOf } from '@/i18n/config';
-import { getLocaleInfo } from '@/i18n/server';
+import { getLocaleInfo, getT } from '@/i18n/server';
+import { SITE_URL } from '@/config/site';
+import { OG_LOCALE } from '@/lib/seo';
 import 'lenis/dist/lenis.css';
 import './globals.css';
 
@@ -13,12 +15,22 @@ const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono-face', disp
 // Arabic text (the store in Arabic): Cairo, for body and display
 const arabic = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '600', '800', '900'], variable: '--font-arabic-face', display: 'swap' });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
-  title: { default: `${brand.name} — ${brand.tagline}`, template: `%s — ${brand.name}` },
-  description: brand.description,
-  openGraph: { siteName: brand.name, type: 'website' },
-};
+/** Titles and descriptions in the visitor's language (French for search engines, see DEFAULT_LOCALE). */
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale } = await getLocaleInfo();
+  const t = await getT();
+  const title = `${brand.name} — ${t('Sports store in Algeria')}`;
+  const description = t('Football jerseys, boxing gloves, swimming, fitness and more — prices in DA, cash on delivery to all 58 wilayas.');
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: { default: title, template: `%s | ${brand.name}` },
+    description,
+    applicationName: brand.name,
+    openGraph: { siteName: brand.name, type: 'website', locale: OG_LOCALE[locale], title, description, url: '/' },
+    twitter: { card: 'summary_large_image', title, description },
+    formatDetection: { telephone: false },
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',

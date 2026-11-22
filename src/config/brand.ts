@@ -8,7 +8,7 @@ export const brand = {
   shortName: 'RV',
   tagline: 'Gear for every decisive moment.',
   description:
-    'A curated sports equipment store for football, boxing, swimming and more — presented like a showroom, shopped like a store.',
+    'REVO is an online sports store in Algeria: football jerseys, boxing gloves, swimming, fitness, martial arts, basketball and fishing gear. Prices in DA, cash on delivery to all 58 wilayas.',
   contact: {
     email: 'hello@example.com',
     phone: '+00 000 000 000',

@@ -10,8 +10,13 @@ import { sportIcons } from '@/config/hero';
 import { applyListing, bestSellers, getAllProducts, getSports, productsFor, toCard, type CardData } from '@/lib/catalog';
 import { ensureStore } from '@/lib/catalog';
 import { getT } from '@/i18n/server';
+import type { Metadata } from 'next';
+import { brand } from '@/config/brand';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { storeLd } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 /** deterministic shuffle (the page is prerendered: same order on server and client) */
 function shuffle<T>(list: T[], seed: number) {
@@ -96,6 +101,7 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={storeLd(t(brand.description))} />
       <Hero />
       {/* the store slides up over the films as one sheet */}
       <div className="home-sheet">
