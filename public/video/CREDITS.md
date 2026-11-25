@@ -1,15 +1,15 @@
 # Hero films
 
 Two shapes per film: `<name>.mp4` (landscape, desktop) and `<name>-p.mp4` (portrait, phones), each with a
-`.webp` poster still. Football, martial arts, fitness and diving are clips used WHOLE (no cuts), re-encoded by
+`.webp` poster still. Football, sportswear, martial arts, fitness and diving are clips used WHOLE (no cuts), re-encoded by
 `scripts/full-films.mjs` (a portrait clip sits in the middle of the desktop shape over a blurred copy of itself).
-Sportswear, swimming and basketball (the Competition slide) are short edits cut by `scripts/edit-films.mjs`.
+Swimming and basketball (the Competition slide) are short edits cut by `scripts/edit-films.mjs`.
 Every film loops in the hero.
 
 | Sport      | Source clips | Rights |
 | ---------- | ------------ | ------ |
 | Football   | `tiktok/football-full.mp4` — owner-supplied clip (used whole) | Supplied by the site owner; commercial use must be cleared with the creator |
-| Sportswear | `tiktok/football.mp4` — owner-supplied clip (a brand campaign film; the former football edit) | Supplied by the site owner; commercial use must be cleared with the rights holder |
+| Sportswear | `tiktok/sportswear-full.mp4` — owner-supplied clip (tracksuits and sets laid out, used whole) | Supplied by the site owner; commercial use must be cleared with the creator |
 | Martial arts | `tiktok/martial-arts-full.mov` — owner-supplied clip (heavy-bag training, used whole) | Supplied by the site owner; commercial use must be cleared with the creator |
 | Fitness    | `tiktok/gym-full.mp4` — owner-supplied clip (gym training, used whole) | Supplied by the site owner; commercial use must be cleared with the creator |
 | Diving     | `media-src/video-raw/b/underwater.mp4` — underwater swimmer (used whole) | Stock clip from the earlier media pull; check its licence before heavy promotion |

@@ -5,6 +5,20 @@ import { smoothScroll } from './smooth-scroll';
  * when an order can't be sent: a missing size, a wrong phone number… Smooth unless the visitor
  * prefers reduced motion. `shake` replays a short attention nudge on the element.
  */
+/**
+ * Glide down so `el`'s top sits `gap` px below the top of the screen — never up (if it's already
+ * there or above, nothing moves). Used to bring the product page's order form into view.
+ */
+export function scrollDownTo(el: HTMLElement | null, gap = 84) {
+  if (!el) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const target = window.scrollY + el.getBoundingClientRect().top - gap;
+  if (target <= window.scrollY + 8) return;
+  const lenis = smoothScroll.get();
+  if (lenis) lenis.scrollTo(target, { immediate: reduce, duration: 1.1 });
+  else window.scrollTo({ top: target, behavior: reduce ? 'auto' : 'smooth' });
+}
+
 export function goToField(el: HTMLElement | null, focus: HTMLElement | null = el) {
   if (!el) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

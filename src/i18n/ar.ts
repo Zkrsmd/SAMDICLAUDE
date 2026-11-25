@@ -565,4 +565,6 @@ export const ar: Record<string, string> = {
   "MMA gloves, rash guards and fight shorts.": "قفازات الفنون القتالية المختلطة وقمصان الراش غارد وسراويل القتال.",
   "Sportswear": "ملابس رياضية",
   "{sport} in Algeria": "{sport} في الجزائر",
+  "Or order right now": "أو اطلب الآن مباشرة",
+  "Fill in your details just below, pay cash on delivery.": "املأ معلوماتك في الأسفل مباشرة، والدفع عند الاستلام.",
 };

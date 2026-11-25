@@ -565,4 +565,6 @@ export const fr: Record<string, string> = {
   "MMA gloves, rash guards and fight shorts.": "Gants de MMA, rashguards et shorts de combat.",
   "Sportswear": "Sportswear",
   "{sport} in Algeria": "{sport} en Algérie",
+  "Or order right now": "Ou commandez tout de suite",
+  "Fill in your details just below, pay cash on delivery.": "Remplissez vos informations juste en dessous, paiement à la livraison.",
 };

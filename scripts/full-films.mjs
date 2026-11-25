@@ -19,6 +19,7 @@ const FILMS = {
   football: { src: 'tiktok/football-full.mp4', poster: 0.45 },
   'martial-arts': { src: 'tiktok/martial-arts-full.mov', poster: 0.45 },
   fitness: { src: 'tiktok/gym-full.mp4', poster: 0.35 },
+  sportswear: { src: 'tiktok/sportswear-full.mp4', poster: 0.4 },
   // an underwater swimmer (landscape): the diving slide
   diving: { src: 'media-src/video-raw/b/underwater.mp4', poster: 0.45, f: 0.42 },
 };

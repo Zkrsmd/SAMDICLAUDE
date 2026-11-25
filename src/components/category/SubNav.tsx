@@ -13,7 +13,11 @@ export interface SubTile {
   href?: string;
 }
 
-/** Sub-category tiles. Tapping one records where the product "burst" should originate. */
+/**
+ * Sub-category circles — the same round, cut-out tiles as the homepage's "Choose your sport"
+ * (`.sport-tile`, globals.css). The first one, "All", holds a small collage of the categories.
+ * Tapping one records where the product "burst" should originate.
+ */
 export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]; active?: string }) {
   const t = useT();
   const remember = (e: React.MouseEvent) => {
@@ -23,38 +27,38 @@ export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]
       /* ignore */
     }
   };
+  const total = subs.reduce((n, s) => n + s.count, 0);
+  const collage = subs.filter((s) => s.image).slice(0, 3);
   return (
     <nav aria-label={t('Categories')} className="relative">
-      <ul className="no-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
-        <li className="shrink-0 snap-start">
-          <Link
-            href={`/${sport}`}
-            onClick={remember}
-            aria-current={!active ? 'page' : undefined}
-            className="chip h-full min-h-[96px] w-[112px] flex-col items-start justify-between p-3 aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-white"
-          >
-            <span className="eyebrow">{t('All')}</span>
-            <span className="mono text-[11px] opacity-70">{subs.reduce((n, s) => n + s.count, 0)}</span>
+      <ul className="sport-tiles cat-tiles">
+        <li style={{ ['--i' as string]: 0 }}>
+          <Link href={`/${sport}`} onClick={remember} aria-current={!active ? 'page' : undefined} className="sport-tile">
+            <span className="sport-tile-orb cat-all-orb" aria-hidden>
+              {collage.map((s, i) => (
+                <span key={s.slug} className="cat-all-obj" data-n={i}>
+                  <ProductImage slug={s.image!.slug} colorId={s.image!.color} alt="" sizes="60px" />
+                </span>
+              ))}
+            </span>
+            <span className="sport-tile-name">{t('All')}</span>
+            <span className="sport-tile-count mono">{t('{n} products', { n: total })}</span>
           </Link>
         </li>
         {subs.map((s, i) => (
-          <li key={s.slug} className="shrink-0 snap-start" style={{ animation: `tile-in .7s ${0.1 + i * 0.05}s var(--ease-expo) both` }}>
-            <Link
-              href={s.href ?? `/${sport}/${s.slug}`}
-              onClick={remember}
-              aria-current={active === s.slug ? 'page' : undefined}
-              className="group relative flex h-[96px] w-[168px] items-end overflow-hidden rounded-[2px] border border-line bg-white p-3 transition-colors hover:border-ink aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-white"
-            >
-              {s.image && (
-                <span className="absolute -right-3 -top-2 h-[78px] w-[86px] transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-[-6deg]">
-                  <ProductImage slug={s.image.slug} colorId={s.image.color} alt="" sizes="90px" />
-                </span>
-              )}
-              <span className="relative">
-                <span className="block text-[14px] font-medium leading-tight">{s.name}</span>
-                <span className="mono mt-0.5 block text-[11px] opacity-60">
-                  {s.count} {s.showroom ? '· Showroom' : ''}
-                </span>
+          <li key={s.slug} style={{ ['--i' as string]: i + 1 }}>
+            <Link href={s.href ?? `/${sport}/${s.slug}`} onClick={remember} aria-current={active === s.slug ? 'page' : undefined} className="sport-tile">
+              <span className="sport-tile-orb" aria-hidden>
+                {s.image && (
+                  <span className="sport-tile-obj">
+                    <ProductImage slug={s.image.slug} colorId={s.image.color} alt="" sizes="120px" />
+                  </span>
+                )}
+              </span>
+              <span className="sport-tile-name">{s.name}</span>
+              <span className="sport-tile-count mono">
+                {t('{n} products', { n: s.count })}
+                {s.showroom ? ' · Showroom' : ''}
               </span>
             </Link>
           </li>

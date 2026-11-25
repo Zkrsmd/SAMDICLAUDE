@@ -11,7 +11,7 @@ import { useTransitionStore, useUi } from '@/stores/ui';
 import { useHydrated, useReducedMotion } from '@/hooks/useHydrated';
 import { useDialog } from '@/hooks/useDialog';
 import { formatPrice, renderUrl } from '@/lib/format';
-import { goToField } from '@/lib/scroll-to';
+import { goToField, scrollDownTo } from '@/lib/scroll-to';
 import type { Product } from '@/types/catalog';
 import { useT } from '@/i18n/client';
 
@@ -142,6 +142,18 @@ export function ProductExperience({
     setError(t('Please choose a size.'));
     const first = document.querySelector<HTMLInputElement>('input[name="pdp-size"]:not(:disabled)');
     goToField(document.getElementById('size-field'), first);
+  };
+  /** the order form under the buy box: glide down to it (and, when asked, put the cursor in the name) */
+  const toOrderForm = (focusName: boolean) => {
+    scrollDownTo(document.querySelector<HTMLElement>('[data-testid="quickbuy"]'));
+    if (focusName) window.setTimeout(() => document.getElementById('qb-name')?.focus({ preventScroll: true }), reduced ? 0 : 900);
+  };
+  /** the first size picked: glide down a little so the order form shows under the buy box */
+  const nudged = useRef(false);
+  const nudgeToForm = () => {
+    if (nudged.current) return;
+    nudged.current = true;
+    window.requestAnimationFrame(() => scrollDownTo(document.getElementById('size-field')));
   };
   /** the order form asks for this before ordering */
   const ensureSize = () => {
@@ -316,6 +328,7 @@ export function ProductExperience({
                       onChange={() => {
                         setSize(s);
                         setError(null);
+                        if (avail === 'in') nudgeToForm();
                       }}
                       disabled={!!product.stock && (product.stock[s] ?? 0) <= 0}
                       className="peer sr-only"
@@ -371,6 +384,18 @@ export function ProductExperience({
                 {addState === 'done' ? t('Added') : t('Add')}
               </button>
             </div>
+            {/* points down to the order form: tap to go straight to filling it in */}
+            <button type="button" className="pdp-order-cue" onClick={() => toOrderForm(true)}>
+              <span className="pdp-order-cue-arrow" aria-hidden>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M6 13l6 6 6-6" />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <span className="block font-semibold">{t('Or order right now')}</span>
+                <span className="block text-[13px] text-muted">{t('Fill in your details just below, pay cash on delivery.')}</span>
+              </span>
+            </button>
             <QuickBuy
               productId={product.slug}
               colorId={colorId}

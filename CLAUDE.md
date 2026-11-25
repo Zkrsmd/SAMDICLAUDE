@@ -31,9 +31,9 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
   Competition (basketball + volleyball + handball), Diving. Sportswear, Martial arts and Competition open "world" pages
   that gather several sports/categories (`src/config/worlds.ts`, rendered by `[sport]/page.tsx` at /sportswear,
   /combat-sports, /competition). Films: `public/video/<film>.mp4` (landscape) and `<film>-p.mp4` (portrait, picked by
-  `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Football, martial arts, fitness and diving are the
-  owner's clips used WHOLE (`scripts/full-films.mjs`: portrait clip centred over its own blur on desktop); sportswear,
-  swimming and basketball are short edits (`scripts/edit-films.mjs`). Every film LOOPS; after one full play the next
+  `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Football, sportswear, martial arts and fitness are the
+  owner's clips used WHOLE (`scripts/full-films.mjs`: portrait clip centred over its own blur on desktop), diving an
+  underwater stock clip (whole); swimming and basketball are short edits (`scripts/edit-films.mjs`). Every film LOOPS; after one full play the next
   slide comes (the banner loops round); hover / off screen keep the current one looping. NO pause button (owner);
   reduced motion shows the stills. Over the film, the name in big see-through white (`.hero-word`), which is the link.
   Arrows, index, swipe and arrow keys change slides (`hero-wipe-in`, `--d`). The hero is sticky;
@@ -50,7 +50,9 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
 - Product page: one still photo with a big word behind it (the admin's "Word behind the photo", else the brand; any
   length fits one line via `--n`) (pinned beside the details on desktop) — no scroll animation (owner: it felt like an
   ad) — then straight to the buy box: colour ONLY when the admin set colours (`colorChoice`), size, then quantity +
-  "Add" filling one row, and the short cash-on-delivery order form itself (`QuickBuy.tsx`: the red "Order now" orders
+  "Add" filling one row, a green bouncing arrow "Or order right now" (tap = glide to the form, cursor in the name; the
+  first size picked also glides down so the form shows, `scrollDownTo()`), and the short cash-on-delivery order form
+  itself (`QuickBuy.tsx`: the red "Order now" orders
   the whole bag plus the current pick, then empties the bag; quantities max 5). Anything missing (no size, a wrong
   field) scrolls back to it with the reason in red (`goToField()`, `src/lib/scroll-to.ts`); the red clears as soon as it's
   fixed → "Complete the look" (3: `boughtWith()` in `catalog.ts` = the shop's picks — the admin's, else one per paired

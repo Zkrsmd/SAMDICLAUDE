@@ -1,4 +1,4 @@
-// Cuts the hero films that are short edits (sportswear, swimming, basketball; football, martial arts, fitness and
+// Cuts the hero films that are short edits (swimming, basketball; football, sportswear, martial arts, fitness and
 // diving are whole clips — scripts/full-films.mjs): short, punchy edits of the raw clips — speed ramps (full speed easing into slow
 // motion), a slow push-in, a punch on every cut (zoom kick, shake, a soft white flash), motion trails
 // in the slow parts and a light grade — rendered in a real browser (canvas + MediaRecorder, no ffmpeg)
@@ -18,7 +18,6 @@ const ROOT = path.resolve('.');
 const OUT = path.resolve('public/video');
 fs.mkdirSync(OUT, { recursive: true });
 
-const FOOTBALL = 'tiktok/football.mp4';
 const SWIM1 = 'tiktok/swiming1.mp4';
 const SWIM2 = 'tiktok/Swiming2.mp4';
 const DUNK_W = 'media-src/video-raw/b/dunk-windmill.mp4';
@@ -27,18 +26,6 @@ const DUNK_O = 'media-src/video-raw/b/dunk-outdoor.mp4';
 // segments: source in/out (s), playback rate (or [from, to]: a speed ramp across the first 45%),
 // zoom from→to, focus, kick (punch on the cut), trail (0..1). Every in/out avoids burnt-in captions.
 const EDITS = {
-  // the former football film, now the Sportswear slide (football itself is a whole clip: scripts/full-films.mjs)
-  sportswear: {
-    segs: [
-      // the red tunnel opens into sparks and a player floating over the pitch
-      { src: FOOTBALL, a: 41.85, b: 43.95, rate: [1, 0.6], z: [1.0, 1.1], f: [0.5, 0.42], trail: 0.3 },
-      // it rains footballs
-      { src: FOOTBALL, a: 24.15, b: 26.6, rate: 0.85, z: [1.14, 1.0], f: [0.5, 0.55], kick: 1 },
-      // lightning hits the pitch, the player walks out of it
-      { src: FOOTBALL, a: 30.1, b: 32.7, rate: [1, 0.6], z: [1.0, 1.12], f: [0.5, 0.5], kick: 1, trail: 0.35 },
-    ],
-    poster: { src: FOOTBALL, t: 26.1 },
-  },
   swimming: {
     segs: [
       // the dive: in through the sun
