@@ -208,7 +208,13 @@ export function QuickBuy({
   return (
     <form ref={formRef} onSubmit={submit} noValidate className="qb" aria-labelledby="qb-title" data-testid="quickbuy">
       <div className="qb-head">
-        <h2 id="qb-title" className="display text-[24px]">
+        <h2 id="qb-title" className="qb-title display text-[24px]">
+          {/* a green arrow pointing down at the fields to fill in */}
+          <span className="qb-arrow" aria-hidden>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M6 13l6 6 6-6" />
+            </svg>
+          </span>
           {t('Order now')}
         </h2>
         <ul className="qb-promise" aria-label={t('Cash on delivery')}>

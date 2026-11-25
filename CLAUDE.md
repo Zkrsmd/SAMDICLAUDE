@@ -31,9 +31,9 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
   Competition (basketball + volleyball + handball), Diving. Sportswear, Martial arts and Competition open "world" pages
   that gather several sports/categories (`src/config/worlds.ts`, rendered by `[sport]/page.tsx` at /sportswear,
   /combat-sports, /competition). Films: `public/video/<film>.mp4` (landscape) and `<film>-p.mp4` (portrait, picked by
-  `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Football, sportswear, martial arts and fitness are the
-  owner's clips used WHOLE (`scripts/full-films.mjs`: portrait clip centred over its own blur on desktop), diving an
-  underwater stock clip (whole); swimming and basketball are short edits (`scripts/edit-films.mjs`). Every film LOOPS; after one full play the next
+  `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Football, sportswear, martial arts, fitness and diving
+  are the owner's clips used WHOLE (`scripts/full-films.mjs`: portrait clip centred over its own blur on desktop);
+  swimming and basketball are short edits (`scripts/edit-films.mjs`). Every film LOOPS; after one full play the next
   slide comes (the banner loops round); hover / off screen keep the current one looping. NO pause button (owner);
   reduced motion shows the stills. Over the film, the name in big see-through white (`.hero-word`), which is the link.
   Arrows, index, swipe and arrow keys change slides (`hero-wipe-in`, `--d`). The hero is sticky;
