@@ -137,22 +137,39 @@ export function Hero() {
     return () => cancelAnimationFrame(raf);
   }, [index, away, reduced, next]);
 
-  // as the page slides over the hero: push in, darken, lift the word; pause once it is covered
+  // as the page slides over the hero: push in, darken, lift the word; pause once it is covered.
+  // The scroll progress p (0→1) goes straight onto the few things that move, as transform and
+  // opacity — not as a variable on the whole section, which made the browser restyle every element
+  // of the hero on every frame of scrolling. The window height is read on resize only.
   useEffect(() => {
     const el = section.current;
     if (!el) return;
+    const slides = el.querySelector<HTMLElement>('.hero-slides');
+    const scrim = el.querySelector<HTMLElement>('.hero-scrim');
+    const words = el.querySelector<HTMLElement>('.hero-words');
+    const fades = [...el.querySelectorAll<HTMLElement>('.hero-ui')];
+    const arrows = [...el.querySelectorAll<HTMLElement>('.hero-arrow')];
+    const fade = (p: number, k: number) => String(Math.max(0, 1 - p * k).toFixed(3));
     let raf = 0;
     let last = -1;
     let wasAway = false;
+    let vh = window.innerHeight || 1;
     const apply = () => {
       raf = 0;
-      const vh = window.innerHeight || 1;
-      const p = Math.min(1, Math.max(0, window.scrollY / vh));
+      const y = window.scrollY;
+      const p = Math.min(1, Math.max(0, y / vh));
       if (Math.abs(p - last) > 0.0005) {
         last = p;
-        el.style.setProperty('--p', p.toFixed(4));
+        if (slides) slides.style.transform = `scale(${(1 + p * 0.07).toFixed(4)})`;
+        scrim?.style.setProperty('--p', p.toFixed(4));
+        if (words) {
+          words.style.transform = `translate3d(0, ${(p * -14).toFixed(3)}vh, 0)`;
+          words.style.opacity = fade(p, 1.5);
+        }
+        for (const f of fades) f.style.opacity = fade(p, 2.4);
+        for (const a of arrows) a.style.opacity = fade(p, 2.2);
       }
-      const a = window.scrollY > vh * 0.98;
+      const a = y > vh * 0.98;
       if (a !== wasAway) {
         wasAway = a;
         setAway(a);
@@ -161,13 +178,18 @@ export function Hero() {
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(apply);
     };
+    const onResize = () => {
+      vh = window.innerHeight || 1;
+      last = -1;
+      onScroll();
+    };
     apply();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onResize);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 

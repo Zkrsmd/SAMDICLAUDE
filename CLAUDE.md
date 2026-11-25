@@ -20,7 +20,8 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
   (`tone.wide/tall` in `config/hero.ts`); on a slide change the new colour follows the slide edge across the letters (a
   clipped copy, `.sh-ghost`, synced to `--hero-t`). Hides (12px up + fade, 180ms) after ~40px down, returns (260ms
   ease-out) after ~12px up; stays at the top, with the menu open, on focus and when the bag count changes; reduced
-  motion = fade only.
+  motion = fade only. It looks under itself (a hit test) at most every 150 ms while scrolling + once when it stops, never
+  per frame, never while hidden, and writes attributes only when they change (per-frame sampling made the site lag).
 - Effects language (class names kept from the old holo era, now chrome):
   `.holo-border`/`.holo-ring` = travelling
   chrome edge with a cobalt glint, `.btn-holo` white pill, `.holo-text` dark steel text with a cobalt glint, `.glass`,
@@ -46,7 +47,9 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
   slide comes (the banner loops round); hover / off screen keep the current one looping. NO pause button (owner);
   reduced motion shows the stills. Over the film, the name in big see-through white (`.hero-word`), which is the link.
   Arrows, index, swipe and arrow keys change slides (`hero-wipe-in`, `--d`). The hero is sticky;
-  the store after it is one `.home-sheet` that slides up over it while `--p` pushes the film in and darkens it.
+  the store after it is one `.home-sheet` that slides up over it while the scroll pushes the film in and darkens it
+  (Hero.tsx writes transform/opacity straight onto the few moving parts, `--p` only on `.hero-scrim` — never a variable
+  on the whole section: that restyled ~150 elements per frame and made the site lag).
   Smooth wheel scrolling site-wide is Lenis (`SmoothScroll.tsx`, `src/lib/smooth-scroll.ts`; dialogs hold it via `useDialog`).
   Slides, the sport-circle cut-outs (`sportIcons`) and category photos: `src/config/hero.ts`.
 - Homepage order: hero (sport films) → brands → shop by sport (`SportShop.tsx`: a small circle per sport with one cut-out that opens that
@@ -140,7 +143,9 @@ Cloudflare Workers via OpenNext (`wrangler.jsonc`, `open-next.config.ts`), D1 da
 - Nothing may make a page wider than the phone (a wider page opens zoomed out): flex/grid children that hold long text
   get `min-w-0` / `minmax(0,1fr)`, and nothing is parked far off to one side (in Arabic that widens the page) — the
   smoke test checks every key page in French and Arabic. Form fields are ≥ 16px on touch screens (no iPhone zoom on tap).
-- Animation state lives in refs/CSS variables, never React state per frame.
+- Animation state lives in refs/CSS variables, never React state per frame. Per scroll frame: no hit tests, no layout
+  reads (scrollLeft, innerHeight, getBoundingClientRect) and no inherited CSS variables on big subtrees — write
+  transform/opacity on the element that moves; loops stop when off screen (profile with a 4× CPU slowdown).
 
 ## Security restrictions
 - No secrets in the repo; `.env.example` only. Never trust client prices/quantities; validate with Zod.

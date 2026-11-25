@@ -1703,7 +1703,7 @@
   translate: 0 -50%;
   color: #fff;
   filter: drop-shadow(0 2px 10px rgb(16 22 30 / 0.5));
-  opacity: calc(1 - var(--p, 0) * 2.2);
+  /* opacity follows the scroll (Hero.tsx writes it) */
 }
 .hero-arrow-prev {
   left: max(2px, env(safe-area-inset-left));
@@ -1738,11 +1738,12 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* fixed values in the keyframes (no var()) so the browser can run the nudge off the main thread */
 .hero-arrow svg {
   animation: hero-nudge 3.2s var(--ease-expo) infinite;
 }
 .hero-arrow-prev svg {
-  --nudge: -6px;
+  animation-name: hero-nudge-back;
 }
 .hero-arrow:active svg {
   scale: 0.85;
@@ -1754,7 +1755,20 @@
     translate: 0 0;
   }
   74% {
-    translate: var(--nudge, 6px) 0;
+    translate: 6px 0;
+  }
+  86% {
+    translate: 0 0;
+  }
+}
+@keyframes hero-nudge-back {
+  0%,
+  62%,
+  100% {
+    translate: 0 0;
+  }
+  74% {
+    translate: -6px 0;
   }
   86% {
     translate: 0 0;
@@ -1776,8 +1790,9 @@
 }
 
 /* ── hero: a full-screen film per sport, its name across it in see-through white ──
-   The section is sticky: the page after it (.home-sheet) slides up over it, while --p (0→1, set
-   from the scroll) pushes the films in, darkens them and lifts the word away. A new sport wipes in
+   The section is sticky: the page after it (.home-sheet) slides up over it, while the scroll (0→1)
+   pushes the films in, darkens them and lifts the word away — Hero.tsx writes transform/opacity
+   straight onto .hero-slides, .hero-words, .hero-ui and the arrows, and --p onto .hero-scrim only. A new sport wipes in
    from the side it came from (--d = 1 next / -1 previous) while the old film slides off under it. */
 .hero-stage {
   --hero-t: 1.15s;
@@ -1795,7 +1810,6 @@
 .hero-slides {
   position: absolute;
   inset: 0;
-  transform: scale(calc(1 + var(--p, 0) * 0.07));
   will-change: transform;
 }
 .hero-slide {
@@ -1912,7 +1926,6 @@
   opacity: calc(var(--p, 0) * 0.7);
 }
 .hero-ui {
-  opacity: calc(1 - var(--p, 0) * 2.4);
   text-shadow: 0 1px 10px rgb(8 11 15 / 0.35);
 }
 /* the word: as wide as the screen allows (by its letter count), see-through white */
@@ -1923,8 +1936,6 @@
   display: grid;
   place-items: center;
   pointer-events: none;
-  transform: translate3d(0, calc(var(--p, 0) * -14vh), 0);
-  opacity: calc(1 - var(--p, 0) * 1.5);
 }
 .hero-word {
   grid-area: 1 / 1;

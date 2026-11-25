@@ -21,6 +21,8 @@ export interface NavSport {
 /** scrolled this far down the header steps away; this far back up it returns */
 const HIDE_AFTER = 40;
 const SHOW_AFTER = 12;
+/** how often (at most) the header looks at what is under it while the page scrolls */
+const SAMPLE_MS = 150;
 /** the hero's slide wipe (keep in sync with --hero-t / --hero-ease in globals.css) */
 const WIPE_MS = 1150;
 const WIPE_EASE = 'cubic-bezier(0.76, 0, 0.18, 1)';
@@ -63,10 +65,32 @@ export function Header({ nav }: { nav: NavSport[] }) {
     let lastY = window.scrollY;
     let down = 0;
     let up = 0;
+    // what is painted now: attributes are only written when they change (a write restyles the header)
+    let hidden = false;
+    let tone: HeaderTone | null = null;
+    let busy: boolean | null = null;
+    // where to look (the middle of the logo): measured once, and again on resize — not every frame
+    let px = 0;
+    let py = 0;
+    const measure = () => {
+      const r = (home.current ?? row).getBoundingClientRect();
+      px = Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2));
+      py = Math.max(0, r.top + r.height / 2 + (hidden ? 12 : 0));
+    };
+    // looking under the header is a hit test: while scrolling do it at most every SAMPLE_MS, plus
+    // once when the scrolling stops — never on every frame, and not at all while the header is hidden
+    let sampledAt = 0;
+    let settle = 0;
 
     const setHidden = (hide: boolean) => {
-      if (hide && !menuRef.current) h.dataset.hidden = '';
-      else delete h.dataset.hidden;
+      const next = hide && !menuRef.current;
+      if (next === hidden) return;
+      hidden = next;
+      if (next) h.dataset.hidden = '';
+      else {
+        delete h.dataset.hidden;
+        retone(); // the right colour as it comes back
+      }
     };
     shown.current = () => {
       down = 0;
@@ -75,10 +99,8 @@ export function Header({ nav }: { nav: NavSport[] }) {
 
     /** what is under the logo: its tone, whether it is a photo/film, and whether it is the hero */
     const sample = () => {
-      const r = (home.current ?? row).getBoundingClientRect();
-      const x = Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2));
-      const y = Math.max(0, r.top + r.height / 2);
-      for (const el of document.elementsFromPoint(x, y)) {
+      sampledAt = performance.now();
+      for (const el of document.elementsFromPoint(px, py)) {
         if (h.contains(el)) continue;
         const src = el.closest<HTMLElement>('[data-header-tone]');
         if (src) return { tone: src.dataset.headerTone as HeaderTone, busy: src.hasAttribute('data-header-busy'), hero: src.hasAttribute('data-header-wipe') };
@@ -86,12 +108,19 @@ export function Header({ nav }: { nav: NavSport[] }) {
       }
       return { tone: 'light' as HeaderTone, busy: false, hero: false };
     };
-    const paint = (tone: HeaderTone, busy: boolean) => {
-      row.dataset.tone = tone;
-      if (busy) h.dataset.busy = '';
-      else delete h.dataset.busy;
+    const paint = (t: HeaderTone, b: boolean) => {
+      if (t !== tone) {
+        tone = t;
+        row.dataset.tone = t;
+      }
+      if (b !== busy) {
+        busy = b;
+        if (b) h.dataset.busy = '';
+        else delete h.dataset.busy;
+      }
     };
-    const retone = () => {
+    function retone() {
+      if (hidden) return;
       const s = sample();
       // a wipe in progress owns the colour while the hero is still under the header
       if (wipe) {
@@ -99,9 +128,9 @@ export function Header({ nav }: { nav: NavSport[] }) {
         wipe.cancel();
       }
       paint(s.tone, s.busy);
-    };
+    }
 
-    const tick = () => {
+    const tick = (now: number) => {
       raf = 0;
       const y = window.scrollY;
       const dy = y - lastY;
@@ -116,10 +145,16 @@ export function Header({ nav }: { nav: NavSport[] }) {
       if (y <= HIDE_AFTER) setHidden(false);
       else if (down >= HIDE_AFTER) setHidden(true);
       else if (up >= SHOW_AFTER) setHidden(false);
-      retone();
+      if (now - sampledAt >= SAMPLE_MS) retone();
+      window.clearTimeout(settle);
+      settle = window.setTimeout(retone, SAMPLE_MS);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(tick);
+    };
+    const onResize = () => {
+      measure();
+      retone();
     };
 
     // the hero changed slide: the new colour sweeps in with the film's edge
@@ -164,9 +199,10 @@ export function Header({ nav }: { nav: NavSport[] }) {
     const watch = new MutationObserver(() => retone());
     watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-header-tone'] });
 
+    measure();
     retone();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onResize);
     window.addEventListener(HERO_WIPE_EVENT, onWipe);
     h.addEventListener('focusin', onFocus);
     // the page under the header changes after a navigation: look again once it has painted
@@ -174,10 +210,11 @@ export function Header({ nav }: { nav: NavSport[] }) {
     return () => {
       cancelAnimationFrame(raf);
       window.clearTimeout(later);
+      window.clearTimeout(settle);
       watch.disconnect();
       wipe?.cancel();
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
       window.removeEventListener(HERO_WIPE_EVENT, onWipe);
       h.removeEventListener('focusin', onFocus);
     };

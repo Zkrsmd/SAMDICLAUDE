@@ -50,10 +50,11 @@ export function SportShop({ items }: { items: SportShopItem[] }) {
     const phone = window.matchMedia('(max-width: 767px)');
     const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
     let raf = 0;
-    let visible = true;
     let pausedUntil = performance.now() + 1500;
     let dir = 1;
     let pos = el.scrollLeft;
+    // the row may have been moved by hand while resting: read where it is when drifting resumes
+    let resync = true;
     let last = performance.now();
     const SPEED = 22; // px per second
     const pause = (ms = 3500) => {
@@ -63,9 +64,14 @@ export function SportShop({ items }: { items: SportShopItem[] }) {
       raf = requestAnimationFrame(tick);
       const dt = Math.min(64, now - last);
       last = now;
-      if (!phone.matches || calm.matches || !visible || openRef.current || now < pausedUntil) {
-        pos = el.scrollLeft;
+      // resting: touch nothing (reading scrollLeft every frame would force a layout per frame)
+      if (!phone.matches || calm.matches || openRef.current || now < pausedUntil) {
+        resync = true;
         return;
+      }
+      if (resync) {
+        resync = false;
+        pos = el.scrollLeft;
       }
       const before = el.scrollLeft;
       pos += dir * SPEED * (dt / 1000);
@@ -77,8 +83,15 @@ export function SportShop({ items }: { items: SportShopItem[] }) {
         pause(1200);
       }
     };
+    // off screen the loop stops altogether; it starts again when the row comes back into view
     const io = new IntersectionObserver(([e]) => {
-      visible = !!e?.isIntersecting;
+      cancelAnimationFrame(raf);
+      raf = 0;
+      if (e?.isIntersecting) {
+        last = performance.now();
+        resync = true;
+        raf = requestAnimationFrame(tick);
+      }
     });
     io.observe(el);
     const touch = () => pause();
@@ -87,7 +100,6 @@ export function SportShop({ items }: { items: SportShopItem[] }) {
     el.addEventListener('touchstart', touch, opts);
     el.addEventListener('wheel', touch, opts);
     el.addEventListener('focusin', touch);
-    raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
