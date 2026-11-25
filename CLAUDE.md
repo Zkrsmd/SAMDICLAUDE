@@ -1,8 +1,10 @@
 # CLAUDE.md — project guide
 
 ## Purpose
-Premium, mobile-first sports e-commerce store **STRYKE** (formerly REVO; social handles "Stryke Algeria") (the name is the logo — `Wordmark.tsx`; the favicon `app/icon.svg` is the S) that feels like an award-site
-campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
+Premium, mobile-first sports e-commerce store **STRYKE** "by SMADI" (formerly REVO; social handles "Stryke Algeria").
+The logo is the owner's artwork cut to `public/brand/` (`stryke-logo.webp` for light backgrounds, `-light` with a white
+"by SMADI" for the dark header, `stryke-emblem.webp` without it), shown by `Wordmark.tsx`; the favicon `app/icon.svg` is a
+navy tile with a slanted S and the cobalt slash. It feels like an award-site campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
 (the owner rejected the procedural/"comic" look).
 
 ## Non-negotiable visual rules
@@ -24,13 +26,17 @@ campaign and a real store at once. Real product photos (background removed) and 
   the admin lives in `src/app/admin` with its own frame. The root layout is only the document shell.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
-- Hero = full-screen sport FILMS (owner-requested; no 3D, no explosion, no product): `src/components/hero/Hero.tsx`.
-  One short, hard-cut film per sport (speed ramps, push-in, a punch on each cut) made by `scripts/edit-films.mjs` from the
-  owner's clips in `tiktok/` (gitignored) and Pexels dunks, in two shapes: `public/video/<sport>.mp4` (landscape) and
-  `<sport>-p.mp4` (portrait, picked by `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Over the film, the
-  sport's name in big see-through white (`.hero-word`, letters rise in), which is the link to the sport — no button.
-  Films change when they end (held on hover / off screen / the Pause control / reduced motion), or by the edge arrows,
-  the index, a swipe or the arrow keys: the new film wipes in from its side (`hero-wipe-in`, `--d`). The hero is sticky;
+- Hero = the banner (owner-requested; no 3D, no product): `src/components/hero/Hero.tsx`, slides in
+  `src/config/hero.ts`, in this order: Football, Sportswear, Martial arts (boxing included), Fitness (gym), Swimming,
+  Competition (basketball + volleyball + handball), Diving. Sportswear, Martial arts and Competition open "world" pages
+  that gather several sports/categories (`src/config/worlds.ts`, rendered by `[sport]/page.tsx` at /sportswear,
+  /combat-sports, /competition). Films: `public/video/<film>.mp4` (landscape) and `<film>-p.mp4` (portrait, picked by
+  `<source media>` = `HERO_TALL_QUERY`), each with a `.webp` still. Football, martial arts, fitness and diving are the
+  owner's clips used WHOLE (`scripts/full-films.mjs`: portrait clip centred over its own blur on desktop); sportswear,
+  swimming and basketball are short edits (`scripts/edit-films.mjs`). Every film LOOPS; after one full play the next
+  slide comes (the banner loops round); hover / off screen keep the current one looping. NO pause button (owner);
+  reduced motion shows the stills. Over the film, the name in big see-through white (`.hero-word`), which is the link.
+  Arrows, index, swipe and arrow keys change slides (`hero-wipe-in`, `--d`). The hero is sticky;
   the store after it is one `.home-sheet` that slides up over it while `--p` pushes the film in and darkens it.
   Smooth wheel scrolling site-wide is Lenis (`SmoothScroll.tsx`, `src/lib/smooth-scroll.ts`; dialogs hold it via `useDialog`).
   Slides, the sport-circle cut-outs (`sportIcons`) and category photos: `src/config/hero.ts`.
@@ -50,6 +56,9 @@ campaign and a real store at once. Real product photos (background removed) and 
   fixed → "Complete the look" (3: `boughtWith()` in `catalog.ts` = the shop's picks — the admin's, else one per paired
   category — blended with what customers buy together, D1 `copurchase`, weight orders/(orders+150), pairs need ≥3
   orders) → more from the same category. Hero films: `public/video` (cut by `scripts/edit-films.mjs`, sources and rights in `CREDITS.md`).
+- Niche categories (to help navigate): martial arts → Judo, Karate, Kung fu (+ suits, belts, mitts, nunchaku); boxing →
+  Kickboxing & Muay Thai, MMA. Base products are sorted into them by name (`niche()` in `src/data/products/index.ts`);
+  an empty category never shows. "Choose your sport" keeps every sport (boxing included) with these finer chips.
 - `src/stores` Zustand (cart stores ids/variants/qty only; prices come from `POST /api/cart/quote`).
 - Money is Algerian dinars, kept in centimes (DA × 100) like cents; `formatPrice` prints "12 500 DA".
 - Catalogue = the shop's Odoo export + the jersey collection: `scripts/odoo-xlsx.py` (xlsx → JSON) →

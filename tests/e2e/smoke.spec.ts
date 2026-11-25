@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { openHome } from './helpers';
 
-const ROUTES = ['/', '/football', '/football/jerseys', '/boxing/gloves', '/swimming/goggles', '/fishing', '/pool', '/product/psg-2026-27-home-jersey', '/product/fox-40-classic-whistle', '/search?q=intex', '/cart', '/wishlist', '/checkout'];
+const ROUTES = ['/', '/sportswear', '/combat-sports', '/competition', '/martial-arts/judo', '/boxing/kickboxing', '/football', '/football/jerseys', '/boxing/gloves', '/swimming/goggles', '/fishing', '/pool', '/product/psg-2026-27-home-jersey', '/product/fox-40-classic-whistle', '/search?q=intex', '/cart', '/wishlist', '/checkout'];
 
 test('key routes render without page errors', async ({ page }) => {
   // 13 image-heavy pages in a row: don't wait for every product photo to finish loading
@@ -48,6 +48,13 @@ test('on a phone every page is exactly as wide as the screen (French and Arabic)
 
 test('hero is usable and the store is reachable without swiping', async ({ page }) => {
   await openHome(page);
+  // the banner: seven slides, films that loop, no pause button
+  const index = page.getByRole('group', { name: 'Choose sport' });
+  await expect(index.getByRole('button')).toHaveCount(7);
+  for (const name of ['Football', 'Sportswear', 'Martial arts', 'Fitness', 'Swimming', 'Competition', 'Diving']) await expect(index.getByRole('button', { name })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Pause the films/ })).toHaveCount(0);
+  await index.getByRole('button', { name: 'Sportswear' }).click();
+  await expect(page.getByRole('link', { name: /Explore sportswear/i })).toHaveAttribute('href', '/sportswear');
   await page.getByRole('group', { name: 'Choose sport' }).getByRole('button', { name: 'Swimming' }).click();
   await expect(page.getByRole('link', { name: /Explore swimming/i })).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press('Tab');

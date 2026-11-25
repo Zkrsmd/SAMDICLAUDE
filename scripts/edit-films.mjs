@@ -1,4 +1,5 @@
-// Cuts the hero films: short, punchy edits of the raw clips — speed ramps (full speed easing into slow
+// Cuts the hero films that are short edits (sportswear, swimming, basketball; football, martial arts, fitness and
+// diving are whole clips — scripts/full-films.mjs): short, punchy edits of the raw clips — speed ramps (full speed easing into slow
 // motion), a slow push-in, a punch on every cut (zoom kick, shake, a soft white flash), motion trails
 // in the slow parts and a light grade — rendered in a real browser (canvas + MediaRecorder, no ffmpeg)
 // and saved to public/video with poster stills, twice per sport:
@@ -18,18 +19,16 @@ const OUT = path.resolve('public/video');
 fs.mkdirSync(OUT, { recursive: true });
 
 const FOOTBALL = 'tiktok/football.mp4';
-const BOXING = 'tiktok/BOXING.mp4';
 const SWIM1 = 'tiktok/swiming1.mp4';
 const SWIM2 = 'tiktok/Swiming2.mp4';
 const DUNK_W = 'media-src/video-raw/b/dunk-windmill.mp4';
 const DUNK_O = 'media-src/video-raw/b/dunk-outdoor.mp4';
-// Pexels (free for commercial use): fitness, martial arts, fishing — see public/video/CREDITS.md
-const X = (f) => `media-src/video-raw/x/${f}.mp4`;
 
 // segments: source in/out (s), playback rate (or [from, to]: a speed ramp across the first 45%),
 // zoom from→to, focus, kick (punch on the cut), trail (0..1). Every in/out avoids burnt-in captions.
 const EDITS = {
-  football: {
+  // the former football film, now the Sportswear slide (football itself is a whole clip: scripts/full-films.mjs)
+  sportswear: {
     segs: [
       // the red tunnel opens into sparks and a player floating over the pitch
       { src: FOOTBALL, a: 41.85, b: 43.95, rate: [1, 0.6], z: [1.0, 1.1], f: [0.5, 0.42], trail: 0.3 },
@@ -39,14 +38,6 @@ const EDITS = {
       { src: FOOTBALL, a: 30.1, b: 32.7, rate: [1, 0.6], z: [1.0, 1.12], f: [0.5, 0.5], kick: 1, trail: 0.35 },
     ],
     poster: { src: FOOTBALL, t: 26.1 },
-  },
-  boxing: {
-    segs: [
-      { src: BOXING, a: 7.2, b: 8.38, rate: [1, 0.35], z: [1.0, 1.1], f: [0.5, 0.5], trail: 0.35 },
-      { src: BOXING, a: 8.42, b: 9.95, rate: [1, 0.4], z: [1.06, 1.14], f: [0.5, 0.55], kick: 1, trail: 0.35 },
-      { src: BOXING, a: 11.08, b: 13.05, rate: [0.9, 0.4], z: [1.12, 1.0], f: [0.5, 0.5], kick: 1, trail: 0.3 },
-    ],
-    poster: { src: BOXING, t: 8.6 },
   },
   swimming: {
     segs: [
@@ -67,33 +58,6 @@ const EDITS = {
       { src: DUNK_O, a: 10.6, b: 12.6, rate: [0.6, 0.9], z: [1.06, 1.0], f: [0.5, 0.4], kick: 0.7 },
     ],
     poster: { src: DUNK_O, t: 1.8 },
-  },
-  fitness: {
-    segs: [
-      { src: X('fit-dumbbell'), a: 0.5, b: 3.4, rate: [1, 0.55], z: [1.0, 1.1], f: [0.5, 0.55], trail: 0.3 },
-      { src: X('fit-weights'), a: 3.5, b: 6.0, rate: 0.85, z: [1.1, 1.0], f: [0.42, 0.5], fp: [0.4, 0.5], kick: 1 },
-      { src: X('fit-bike'), a: 0.5, b: 3.0, rate: [1, 0.6], z: [1.0, 1.1], f: [0.5, 0.45], fp: [0.45, 0.5], kick: 1, trail: 0.3 },
-      { src: X('fit-dumbbell'), a: 8.6, b: 11.2, rate: 0.8, z: [1.04, 1.14], f: [0.5, 0.45], kick: 0.7 },
-    ],
-    poster: { src: X('fit-dumbbell'), t: 2.0 },
-  },
-  'martial-arts': {
-    segs: [
-      { src: X('ma-dojo2'), a: 0.3, b: 3.4, rate: [1, 0.55], z: [1.0, 1.1], f: [0.5, 0.5], trail: 0.3 },
-      { src: X('ma-belt'), a: 9.0, b: 11.6, rate: 0.85, z: [1.08, 1.0], f: [0.5, 0.5], kick: 1 },
-      { src: X('ma-dojo'), a: 2.0, b: 5.0, rate: [1, 0.6], z: [1.0, 1.12], f: [0.5, 0.5], kick: 1, trail: 0.35 },
-      { src: X('ma-belt'), a: 20.4, b: 22.9, rate: 0.8, z: [1.0, 1.08], f: [0.5, 0.5], kick: 0.6 },
-    ],
-    poster: { src: X('ma-dojo2'), t: 1.5 },
-  },
-  fishing: {
-    segs: [
-      { src: X('fish-rocks'), a: 2.0, b: 5.2, rate: [1, 0.6], z: [1.0, 1.1], f: [0.45, 0.5], fp: [0.45, 0.5], trail: 0.25 },
-      { src: X('fish-silhouette'), a: 3.0, b: 6.4, rate: 0.85, z: [1.08, 1.0], f: [0.4, 0.5], fp: [0.35, 0.5], kick: 1 },
-      { src: X('fish-catch'), a: 0.3, b: 3.4, rate: [1, 0.55], z: [1.0, 1.12], f: [0.5, 0.45], fp: [0.45, 0.45], kick: 1, trail: 0.3 },
-      { src: X('fish-rocks'), a: 12.0, b: 15.0, rate: 0.8, z: [1.06, 1.0], f: [0.45, 0.5], fp: [0.45, 0.5], kick: 0.6 },
-    ],
-    poster: { src: X('fish-catch'), t: 1.2 },
   },
 };
 

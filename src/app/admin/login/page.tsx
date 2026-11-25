@@ -14,11 +14,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <div className="adm grid min-h-svh place-items-center px-4 py-10">
       <main className="w-full max-w-[380px]">
         <div className="mb-6 flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-ink text-white">
-            <span className="display text-[20px]">S</span>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/stryke-logo.webp" alt="STRYKE by SMADI" width={900} height={191} className="h-11 w-auto" />
           <div>
-            <p className="text-[16px] font-bold">STRYKE admin</p>
+            <p className="text-[16px] font-bold">Admin</p>
             <p className="text-[#66707c]">Sign in to manage the store</p>
           </div>
         </div>

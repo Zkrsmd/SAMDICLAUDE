@@ -47,8 +47,8 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="container-x flex h-14 items-center">
-        <span className="text-[22px]">
-          <Wordmark />
+        <span>
+          <Wordmark className="h-8" />
         </span>
         <LanguageSwitcher className="ms-auto" />
         <button type="button" className="-me-2 ms-2 grid h-11 w-11 place-items-center" aria-label={t('Close menu')} onClick={close}>

@@ -40,7 +40,7 @@ test('shop by sport opens a sport in place, with best sellers, new releases and 
   await panel.getByRole('button', { name: /^See all \d+/ }).click();
   await expect.poll(() => all.count()).toBeGreaterThan(before);
   // a category chip narrows the list in place
-  await panel.getByRole('button', { name: /^Boxing & MMA gloves/ }).click();
+  await panel.getByRole('button', { name: /^Boxing gloves \d+$/ }).click();
   await expect(panel.getByRole('heading', { name: /All boxing/ })).toBeVisible();
   await panel.getByRole('button', { name: 'Close Boxing' }).click();
   await expect(panel).toBeHidden();

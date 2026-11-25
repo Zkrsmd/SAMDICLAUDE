@@ -30,7 +30,7 @@ export function storeLd(description: string) {
         '@id': `${SITE_URL}/#store`,
         name: brand.name,
         url: `${SITE_URL}/`,
-        logo: absolute('/icon.svg'),
+        logo: absolute('/brand/stryke-logo.webp'),
         description,
         areaServed: { '@type': 'Country', name: 'Algeria', identifier: 'DZ' },
         currenciesAccepted: 'DZD',

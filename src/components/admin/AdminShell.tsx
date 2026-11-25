@@ -116,8 +116,8 @@ export function AdminShell({ children, unfulfilled, index, writable }: { childre
           <AIcon name={drawer ? 'close' : 'menu'} />
         </button>
         <Link href="/admin" className="adm-brand">
-          <span className="adm-brand-mark display text-[15px]">S</span>
-          <span className="hidden sm:inline">STRYKE</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/stryke-emblem.webp" alt="STRYKE" width={900} height={163} className="h-[22px] w-auto" />
           <span className="mono hidden rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-white/70 sm:inline">Admin</span>
         </Link>
         <button type="button" className="adm-search" onClick={() => setPalette(true)} aria-label="Search the admin">

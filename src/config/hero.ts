@@ -1,17 +1,21 @@
 /**
- * Hero slides: one full-screen film per sport, with the sport's name over it in big white,
- * see-through type. The films are cut by scripts/edit-films.mjs in two shapes — landscape for
- * desktop and portrait for phones — each with a poster still (shown until the film plays, and
- * instead of it with reduced motion). Sources and rights are listed in public/video/CREDITS.md.
+ * Hero slides (the banner): a full-screen film each, with the name over it in big white,
+ * see-through type — the name opens the page. In this order (owner's choice): Football,
+ * Sportswear, Martial arts (boxing included), Fitness (gym), Swimming, Competition (basketball,
+ * volleyball, handball), Diving. Sportswear, Martial arts and Competition open the pages that gather
+ * several sports (src/config/worlds.ts). Each film exists in two shapes — landscape for desktop,
+ * portrait for phones — with a poster still; football, martial arts, fitness and diving are the
+ * owner's clips used whole (scripts/full-films.mjs), the others short edits (scripts/edit-films.mjs).
+ * Films loop. Sources and rights: public/video/CREDITS.md.
  */
 export const heroSlides = [
-  { id: 'football', word: 'Football', cta: 'Explore football', href: '/football' },
-  { id: 'boxing', word: 'Boxing', cta: 'Explore boxing', href: '/boxing' },
-  { id: 'swimming', word: 'Swimming', cta: 'Explore swimming', href: '/swimming' },
-  { id: 'fitness', word: 'Fitness', cta: 'Explore fitness', href: '/fitness' },
-  { id: 'martial-arts', word: 'Martial arts', cta: 'Explore martial arts', href: '/martial-arts' },
-  { id: 'basketball', word: 'Basketball', cta: 'Explore basketball', href: '/basketball' },
-  { id: 'fishing', word: 'Fishing', cta: 'Explore fishing', href: '/fishing' },
+  { id: 'football', film: 'football', word: 'Football', cta: 'Explore football', href: '/football' },
+  { id: 'sportswear', film: 'sportswear', word: 'Sportswear', cta: 'Explore sportswear', href: '/sportswear' },
+  { id: 'martial-arts', film: 'martial-arts', word: 'Martial arts', cta: 'Explore martial arts', href: '/combat-sports' },
+  { id: 'fitness', film: 'fitness', word: 'Fitness', cta: 'Explore fitness', href: '/fitness' },
+  { id: 'swimming', film: 'swimming', word: 'Swimming', cta: 'Explore swimming', href: '/swimming' },
+  { id: 'competition', film: 'basketball', word: 'Competition', cta: 'Explore competition sports', href: '/competition' },
+  { id: 'diving', film: 'diving', word: 'Diving', cta: 'Explore diving', href: '/diving' },
 ] as const;
 
 export type HeroSlide = (typeof heroSlides)[number];
@@ -57,4 +61,6 @@ export const categoryMedia: Record<string, string> = {
   // the hero films' stills
   'martial-arts': '/video/martial-arts.webp',
   fishing: '/video/fishing.webp',
+  diving: '/video/diving.webp',
+  volleyball: '/video/basketball.webp',
 };

@@ -66,8 +66,8 @@ export function Header({ nav }: { nav: NavSport[] }) {
           style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}
         >
           <span aria-hidden className="hdr-aurora" />
-          <Link href="/" className="text-[19px] md:text-[21px]" aria-label={t('STRYKE home')}>
-            <Wordmark />
+          <Link href="/" className="relative shrink-0" aria-label={t('STRYKE home')}>
+            <Wordmark tone="light" className="h-[30px] md:h-[36px]" />
           </Link>
 
           <nav aria-label={t('Sports')} className="mx-auto hidden items-center gap-0.5 lg:flex">

@@ -1948,21 +1948,6 @@ a.hero-word:hover {
     opacity: 0;
   }
 }
-/* pause / play glyph */
-.hero-pp {
-  position: relative;
-  width: 9px;
-  height: 10px;
-  border-inline: 2px solid currentColor;
-  border-block: 0;
-}
-.hero-pp[data-paused] {
-  width: 0;
-  height: 0;
-  border-block: 5px solid transparent;
-  border-inline: 0;
-  border-inline-start: 9px solid currentColor;
-}
 /* the store slides up over the films as one sheet */
 .home-sheet {
   position: relative;
@@ -2408,10 +2393,6 @@ html[dir='rtl'] .rtl-flip {
   to {
     transform: translate3d(-140%, -4%, 0) scale(0.9);
   }
-}
-/* the logo's "O" in a light cobalt so it glows on the night blue */
-.hdr .wm-o {
-  color: #8aa4ff;
 }
 /* the bag: a bright cobalt button */
 .hdr-bag {

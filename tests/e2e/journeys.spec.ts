@@ -12,7 +12,7 @@ test.describe('core shopping journeys', () => {
     await expect(page.getByRole('heading', { level: 1, name: /STRYKE/ })).toBeAttached();
     const current = page.getByRole('group', { name: 'Choose sport' }).locator('[aria-current="true"]');
     await page.getByTestId('hero-stage').hover({ position: { x: 40, y: 300 } });
-    const order = ['Football', 'Boxing', 'Swimming', 'Fitness', 'Martial arts', 'Basketball', 'Fishing'];
+    const order = ['Football', 'Sportswear', 'Martial arts', 'Fitness', 'Swimming', 'Competition', 'Diving'];
     for (let n = 0; n < 2; n++) {
       const now = (await current.getAttribute('aria-label')) ?? 'Football';
       const want = order[(order.indexOf(now) + 1) % order.length]!;

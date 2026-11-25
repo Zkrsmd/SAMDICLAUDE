@@ -30,7 +30,7 @@ export const KIND: Record<string, ModelKind> = {
   boots: 'boot', shoes: 'boot', balls: 'ball', handballs: 'ball', gloves: 'glove', 'hand-wraps': 'handwrap', mouthguards: 'mouthguard',
   'head-protection': 'headgear', 'punching-bags': 'heavybag', goggles: 'goggles', caps: 'cap', swimwear: 'swimsuit', burkinis: 'swimsuit',
   'swim-shorts': 'shorts', fins: 'fins', apparel: 'shorts', weights: 'dumbbell', mats: 'mat', jerseys: 'jersey', socks: 'sock',
-  'shin-guards': 'shinguard', shakers: 'bottle', bags: 'bag', tracksuits: 'jacket', kits: 'jersey', pads: 'mitt', goalkeeper: 'glove',
+  'shin-guards': 'shinguard', shakers: 'bottle', bags: 'bag', tracksuits: 'jacket', kits: 'jersey', pads: 'mitt', goalkeeper: 'glove', mma: 'glove', kickboxing: 'mitt',
 };
 
 export const PAIRS: Record<string, string[]> = {
@@ -44,6 +44,11 @@ export const PAIRS: Record<string, string[]> = {
   'boxing/punching-bags': ['boxing/gloves', 'boxing/hand-wraps'],
   'boxing/apparel': ['boxing/gloves', 'boxing/protection'],
   'martial-arts/suits': ['martial-arts/belts', 'martial-arts/gloves'],
+  'martial-arts/judo': ['martial-arts/belts'],
+  'martial-arts/karate': ['martial-arts/belts', 'martial-arts/gloves'],
+  'martial-arts/kung-fu': ['martial-arts/nunchaku', 'martial-arts/belts'],
+  'boxing/kickboxing': ['boxing/protection', 'boxing/gloves', 'boxing/mouthguards'],
+  'boxing/mma': ['boxing/hand-wraps', 'boxing/mouthguards', 'boxing/protection'],
   'swimming/goggles': ['swimming/caps', 'swimming/swim-shorts', 'swimming/training'],
   'swimming/caps': ['swimming/goggles', 'swimming/burkinis'],
   'swimming/burkinis': ['swimming/caps', 'swimming/goggles'],
@@ -82,6 +87,11 @@ const SHORT: Record<string, string> = {
   'boxing/mouthguards': 'Protect your teeth and jaw.',
   'boxing/apparel': 'Free movement for every round.',
   'martial-arts/suits': 'Strong cotton for training and grading.',
+  'martial-arts/judo': 'Strong cotton for training and grading.',
+  'martial-arts/karate': 'Strong cotton for training and grading.',
+  'martial-arts/kung-fu': 'Strong cotton for training and grading.',
+  'boxing/kickboxing': 'Built for kicks, knees and clinches.',
+  'boxing/mma': 'Free movement for every round.',
   'martial-arts/belts': 'Every grade colour.',
   'swimming/goggles': 'A clear, sealed view lap after lap.',
   'swimming/caps': 'Keeps you streamlined.',
@@ -121,7 +131,26 @@ export const STORE_BRANDS: Record<string, string> = {
 /** Hero / flagship products. */
 export const FEATURED = ['psg-2026-27-home-jersey', 'algeria-2026-world-cup-home-jersey', 'real-madrid-2026-27-home-jersey', 'fc-barcelona-2026-27-home-jersey'];
 
-const rows = generated as Row[];
+/**
+ * Finer categories for martial arts and combat sports, sorted by the product name (the Odoo export
+ * only knows "suits", "gloves", "pads", "apparel"…): judo, karate and kung fu suits; kickboxing /
+ * Muay Thai gear; MMA gear. Products edited in the admin keep the category saved there.
+ */
+function niche(r: Row): string {
+  const n = r.name.toLowerCase();
+  if (r.sport === 'martial-arts') {
+    if (r.sub === 'suits' && n.includes('judo')) return 'judo';
+    if ((r.sub === 'suits' || r.sub === 'gloves') && n.includes('karate')) return 'karate';
+    if (r.sub === 'suits' && n.includes('kung fu')) return 'kung-fu';
+  }
+  if (r.sport === 'boxing') {
+    if (/mma|rash guard|ufc fight shorts/.test(n)) return 'mma';
+    if (/kickboxing|thai|kick shield|round kick/.test(n)) return 'kickboxing';
+  }
+  return r.sub;
+}
+
+const rows = (generated as Row[]).map((r) => ({ ...r, sub: niche(r) }));
 /** Best sellers: what sold beyond the counted stock in the shop, plus the flagship jerseys. */
 const BEST = new Set([...FEATURED, ...rows.filter((r) => r.sold >= 3 && r.photo).map((r) => r.slug)]);
 

@@ -9,6 +9,8 @@ export interface SubTile {
   count: number;
   showroom?: string;
   image?: { slug: string; color: string };
+  /** where the tile goes (default: /<sport>/<slug>) */
+  href?: string;
 }
 
 /** Sub-category tiles. Tapping one records where the product "burst" should originate. */
@@ -38,7 +40,7 @@ export function SubNav({ sport, subs, active }: { sport: string; subs: SubTile[]
         {subs.map((s, i) => (
           <li key={s.slug} className="shrink-0 snap-start" style={{ animation: `tile-in .7s ${0.1 + i * 0.05}s var(--ease-expo) both` }}>
             <Link
-              href={`/${sport}/${s.slug}`}
+              href={s.href ?? `/${sport}/${s.slug}`}
               onClick={remember}
               aria-current={active === s.slug ? 'page' : undefined}
               className="group relative flex h-[96px] w-[168px] items-end overflow-hidden rounded-[2px] border border-line bg-white p-3 transition-colors hover:border-ink aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-white"

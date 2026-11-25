@@ -36,7 +36,9 @@ export const sports: Sport[] = [
     accent: '#C8A451',
     accentSoft: '#F3ECDC',
     subs: [
-      { slug: 'gloves', name: 'Boxing & MMA gloves', blurb: 'Hung on the wall like trophies.', showroom: 'hooks' },
+      { slug: 'gloves', name: 'Boxing gloves', blurb: 'Hung on the wall like trophies.', showroom: 'hooks' },
+      { slug: 'kickboxing', name: 'Kickboxing & Muay Thai', blurb: 'Kick pads, shin guards, shorts and trousers.' },
+      { slug: 'mma', name: 'MMA', blurb: 'MMA gloves, rash guards and fight shorts.' },
       { slug: 'hand-wraps', name: 'Hand wraps', blurb: 'The first layer of protection.' },
       { slug: 'punching-bags', name: 'Punching bags', blurb: 'Heavy bags for power work.' },
       { slug: 'pads', name: 'Pads & mitts', blurb: 'Thai pads, focus mitts and shields.' },
@@ -55,6 +57,9 @@ export const sports: Sport[] = [
     accent: '#B5543C',
     accentSoft: '#F4E1DB',
     subs: [
+      { slug: 'judo', name: 'Judo', blurb: 'Judo suits for training and competition.' },
+      { slug: 'karate', name: 'Karate', blurb: 'Karate suits and mitts, kids and adults.' },
+      { slug: 'kung-fu', name: 'Kung fu', blurb: 'Kung fu suits and training gear.' },
       { slug: 'suits', name: 'Suits & kimonos', blurb: 'Karate, judo and kung fu.' },
       { slug: 'belts', name: 'Belts', blurb: 'Every grade colour.' },
       { slug: 'gloves', name: 'Mitts', blurb: 'Karate mitts.' },

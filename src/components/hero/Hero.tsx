@@ -12,11 +12,12 @@ const SLIDE_MS = 1150;
 const N = heroSlides.length;
 
 /**
- * The opening: a full-screen film per sport (short, cut hard, played muted inline) with the
- * sport's name across it in big see-through white type — the name opens the sport. Films change on
- * their own when they end (paused on hover, off screen, with the pause control and with reduced
- * motion), or with the arrows on the screen edges, the index, a swipe or the arrow keys. A new
- * sport wipes in from the side it came from while the old film slides away under it.
+ * The opening: a full-screen film per slide (played muted inline, looping) with the name across it
+ * in big see-through white type — the name opens the page. Each film plays through once, then the
+ * next slide comes; after the last, the first again — the banner loops. On hover or off screen the
+ * film just keeps looping where it is (no pause button: the owner's choice; reduced motion shows
+ * the stills). The arrows on the screen edges, the index, a swipe or the arrow keys change slides
+ * too. A new slide wipes in from the side it came from while the old film slides away under it.
  *
  * The hero holds still while the white page slides up over it (it is sticky; the page after it is
  * a sheet that covers it), slowly pushing in and darkening as it goes. All motion is CSS and refs —
@@ -34,14 +35,13 @@ export function Hero() {
   const [dir, setDir] = useState<1 | -1>(1);
   const [moved, setMoved] = useState(false);
   const [hover, setHover] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
   const [away, setAway] = useState(false);
   const section = useRef<HTMLElement>(null);
   const films = useRef<(HTMLVideoElement | null)[]>([]);
   const bar = useRef<HTMLSpanElement>(null);
   const indexRef = useRef(0);
   indexRef.current = index;
-  const hold = hover || userPaused || away || reduced || gated;
+  const hold = hover || away || reduced || gated;
   const holdRef = useRef(hold);
   holdRef.current = hold;
 
@@ -73,11 +73,11 @@ export function Hero() {
   useEffect(() => {
     const v = films.current[index];
     if (!v) return;
-    if (away || userPaused || gated) {
+    if (away || gated) {
       v.pause();
       return;
     }
-    if (started.current !== index || v.ended) v.currentTime = 0;
+    if (started.current !== index) v.currentTime = 0;
     started.current = index;
     void v.play().catch(() => {});
     const warm = () => {
@@ -89,39 +89,33 @@ export function Hero() {
     };
     v.addEventListener('playing', warm, { once: true });
     return () => v.removeEventListener('playing', warm);
-  }, [index, away, userPaused]);
+  }, [index, away]);
 
-  // progress (the index underline) follows the film; a still slide is timed instead
+  // progress (the index underline) follows the film; once it has played through (it loops, so
+  // its time jumps back to the start) the next slide comes — unless held. A still slide is timed.
   useEffect(() => {
     if (away) return;
     let raf = 0;
     const t0 = performance.now();
+    let last = 0;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       const v = films.current[indexRef.current];
       const playing = v && !v.paused && v.readyState > 2 && v.duration > 0;
       const k = playing ? v.currentTime / v.duration : Math.min(1, (now - t0) / STILL_MS);
       bar.current?.style.setProperty('transform', `scaleX(${(holdRef.current && !playing ? 1 : k).toFixed(4)})`);
+      if (playing) {
+        const looped = k + 0.5 < last;
+        last = k;
+        if (looped && !holdRef.current) next();
+        return;
+      }
       // no film to wait for (it could not start): move on by time
-      if (!playing && !holdRef.current && now - t0 > STILL_MS) next();
+      if (!holdRef.current && now - t0 > STILL_MS) next();
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [index, away, reduced, next]);
-
-  const onEnded = useCallback(
-    (i: number) => {
-      if (i !== indexRef.current) return;
-      if (holdRef.current) {
-        const v = films.current[i];
-        if (v) {
-          v.currentTime = 0;
-          void v.play().catch(() => {});
-        }
-      } else next();
-    },
-    [next],
-  );
 
   // as the page slides over the hero: push in, darken, lift the word; pause once it is covered
   useEffect(() => {
@@ -226,7 +220,7 @@ export function Hero() {
 
       <div className="hero-slides" aria-hidden>
         {heroSlides.map((s, i) => {
-          const f = heroFilm(s.id);
+          const f = heroFilm(s.film);
           const pos = i === index ? 'current' : i === leaving ? 'leaving' : 'idle';
           return (
             <div key={s.id} className="hero-slide" data-pos={pos}>
@@ -241,12 +235,12 @@ export function Hero() {
                       films.current[i] = el;
                     }}
                     muted
+                    loop
                     playsInline
                     disablePictureInPicture
                     preload={i === 0 ? 'auto' : 'none'}
                     tabIndex={-1}
                     onPlaying={(e) => e.currentTarget.setAttribute('data-live', '')}
-                    onEnded={() => onEnded(i)}
                   >
                     <source src={f.tall} media={HERO_TALL_QUERY} type="video/mp4" />
                     <source src={f.wide} type="video/mp4" />
@@ -315,7 +309,7 @@ export function Hero() {
         </div>
       </div>
 
-      {/* bottom: where you are, and a pause for the films */}
+      {/* bottom: where you are */}
       <div className="hero-ui pointer-events-none absolute inset-x-0 bottom-0 z-[4]">
         <div className="container-x flex items-end justify-between gap-6 pb-[calc(100lvh-100svh+max(24px,env(safe-area-inset-bottom)))]">
           <p className="mono text-[10.5px] uppercase tracking-[0.18em] text-white/80">
@@ -325,18 +319,6 @@ export function Hero() {
           <p aria-hidden className="hero-scroll mono hidden text-[10.5px] uppercase tracking-[0.18em] text-white/75 sm:flex">
             {t('Scroll')}
           </p>
-          {!reduced && (
-            <button
-              type="button"
-              onClick={() => setUserPaused((v) => !v)}
-              aria-pressed={userPaused}
-              aria-label={userPaused ? t('Play the films') : t('Pause the films')}
-              className="mono pointer-events-auto inline-flex min-h-[32px] items-center gap-2 text-[10.5px] uppercase tracking-[0.18em] text-white/80 transition-colors hover:text-white"
-            >
-              <span aria-hidden className="hero-pp" data-paused={userPaused ? '' : undefined} />
-              {userPaused ? t('Play') : t('Pause')}
-            </button>
-          )}
         </div>
       </div>
 

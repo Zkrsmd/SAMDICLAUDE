@@ -41,19 +41,9 @@ export default async function ReceiptPage({ params, searchParams }: Props) {
       <article className="rc" aria-label={`Receipt for order ${o.number}`}>
         <header className="rc-head">
           <div className="rc-brand">
-            <svg viewBox="0 0 48 48" className="rc-mark" aria-hidden>
-              <rect width="48" height="48" rx="12" fill="#0F1216" />
-              <g transform="skewX(-10) translate(6 0)" fill="none" stroke="#fff" strokeWidth="5.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M30 13H20.5a6.5 6.5 0 0 0 0 13h6a6.5 6.5 0 0 1 0 13H15" />
-              </g>
-              <circle cx="37" cy="37" r="3" fill="#2B59FF" />
-            </svg>
-            <div>
-              <p className="rc-name">
-                STR<span>Y</span>KE
-              </p>
-              <p className="rc-sub">{brand.socialName} · Boutique de sport</p>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/stryke-logo.webp" alt="STRYKE by SMADI" className="rc-logo" width={900} height={191} />
+            <p className="rc-sub">{brand.socialName} · Boutique de sport</p>
           </div>
           <div className="rc-meta">
             <p className="rc-title">Bon de commande</p>

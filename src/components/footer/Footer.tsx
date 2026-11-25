@@ -21,8 +21,8 @@ export async function Footer({ nav }: { nav: NavSport[] }) {
     <footer className="relative mt-24 overflow-hidden border-t border-line bg-stone">
       <div className="container-x grid gap-12 py-16 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
-          <div className="text-[34px]">
-            <Wordmark />
+          <div>
+            <Wordmark className="h-14" />
           </div>
           <p className="mt-4 max-w-sm text-[15px] text-muted">{t(brand.description)}</p>
           <p className="eyebrow mt-6 text-muted">{t('Cash on delivery · all of Algeria')}</p>

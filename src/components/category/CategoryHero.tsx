@@ -22,8 +22,12 @@ export async function CategoryHero({
   crumbs,
   hero,
   compact,
+  media: mediaSrc,
 }: {
-  sport: SportSlug;
+  /** a sport, or a world (src/config/worlds.ts) */
+  sport: string;
+  /** the header still (default: the sport's, src/config/hero.ts) */
+  media?: string;
   title: string;
   description: string;
   count: number;
@@ -32,8 +36,8 @@ export async function CategoryHero({
   compact?: boolean;
 }) {
   const t = await getT();
-  const media = categoryMedia[sport];
-  const glow = GLOW[sport] ?? 'rgba(255,255,255,.4)';
+  const media = mediaSrc ?? categoryMedia[sport];
+  const glow = GLOW[sport as SportSlug] ?? 'rgba(255,255,255,.4)';
   const letters = title.toUpperCase().split('');
   return (
     <header className={`relative isolate overflow-hidden bg-[#07080A] text-white [container-type:inline-size] ${compact ? 'min-h-[62svh]' : 'min-h-[88svh]'} md:min-h-[78vh]`}>

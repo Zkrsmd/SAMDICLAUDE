@@ -33,6 +33,8 @@ for (const k of [
   keys.add(k);
 const hero = fs.readFileSync('src/config/hero.ts', 'utf8');
 for (const m of hero.matchAll(/(?:word|cta): '([^']+)'/g)) keys.add(m[1]);
+const worldsSrc = fs.readFileSync('src/config/worlds.ts', 'utf8');
+for (const m of worldsSrc.matchAll(/(?:name|description): '([^']+)'/g)) keys.add(m[1]);
 const brand = fs.readFileSync('src/config/brand.ts', 'utf8');
 for (const m of brand.matchAll(/(?:tagline|description):\s*'([^']+)'/g)) keys.add(m[1]);
 // messages that reach the shopper from validation, the APIs and the receipt
