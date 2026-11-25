@@ -1,16 +1,15 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Wordmark } from '@/components/ui/Wordmark';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useCartCount } from '@/stores/cart';
-import { useWishlist } from '@/stores/lists';
 import { useUi } from '@/stores/ui';
 import { useHydrated } from '@/hooks/useHydrated';
 import { MobileMenu } from './MobileMenu';
-import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { HeaderMark as Mark } from './HeaderMark';
 import { useT } from '@/i18n/client';
+import { HERO_WIPE_EVENT, type HeaderTone, type HeroWipeDetail } from '@/lib/header-tone';
 
 export interface NavSport {
   slug: string;
@@ -19,106 +18,231 @@ export interface NavSport {
   subs: { slug: string; name: string }[];
 }
 
+/** scrolled this far down the header steps away; this far back up it returns */
+const HIDE_AFTER = 40;
+const SHOW_AFTER = 12;
+/** the hero's slide wipe (keep in sync with --hero-t / --hero-ease in globals.css) */
+const WIPE_MS = 1150;
+const WIPE_EASE = 'cubic-bezier(0.76, 0, 0.18, 1)';
+
 /**
- * Floating midnight-cobalt bar: soft cobalt lights drift inside it and a glint of light travels round
- * its rim (all CSS transforms). It stays with you on scroll and tightens once you leave the top.
+ * The header: no bar — the STRYKE logo floats straight over the page on the left, the bag and a
+ * bone-white-to-royal-blue "••• MENU" pill on the right, open space between.
+ *
+ * The letters (and the bag) take the colour of what is under them: bone white on dark, deep navy on
+ * light (src/lib/header-tone.ts); the slash stays electric blue. Over the hero films the colour is
+ * steady per slide, with a soft shadow, and when the slide changes the new colour follows the
+ * slide's edge across the letters: a second copy of the row (`.sh-ghost`) in the new colour is
+ * revealed with the same clip as the incoming film. It steps away (12px up, fading, 180ms) after
+ * ~40px of scrolling down and comes back (260ms) after ~12px up; it stays at the top of the page and
+ * while the menu is open. Everything runs on refs and data attributes — no React state per frame.
  */
 export function Header({ nav }: { nav: NavSport[] }) {
   const t = useT();
   const pathname = usePathname();
   const hydrated = useHydrated();
   const cartCount = useCartCount();
-  const wishCount = useWishlist((s) => s.slugs.length);
   const { set, menuOpen } = useUi();
-  const [scrolled, setScrolled] = useState(false);
   const [bump, setBump] = useState(false);
+  const header = useRef<HTMLElement>(null);
+  const base = useRef<HTMLDivElement>(null);
+  const ghost = useRef<HTMLDivElement>(null);
+  const home = useRef<HTMLAnchorElement>(null);
+  const shown = useRef<() => void>(() => {});
+  const menuRef = useRef(menuOpen);
+  menuRef.current = menuOpen;
 
   useEffect(() => {
-    // a 1px marker 40px down the page: no scroll handler, no layout reads while scrolling
-    const mark = document.createElement('div');
-    mark.setAttribute('aria-hidden', 'true');
-    mark.style.cssText = 'position:absolute;top:40px;left:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
-    document.body.prepend(mark);
-    const io = new IntersectionObserver(([e]) => setScrolled(!!e && !e.isIntersecting && e.boundingClientRect.top < 0));
-    io.observe(mark);
-    return () => {
-      io.disconnect();
-      mark.remove();
-    };
-  }, []);
+    const h = header.current;
+    const row = base.current;
+    const over = ghost.current;
+    if (!h || !row || !over) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let wipe: Animation | null = null;
+    let raf = 0;
+    let lastY = window.scrollY;
+    let down = 0;
+    let up = 0;
 
-  // little pop whenever the bag count changes
+    const setHidden = (hide: boolean) => {
+      if (hide && !menuRef.current) h.dataset.hidden = '';
+      else delete h.dataset.hidden;
+    };
+    shown.current = () => {
+      down = 0;
+      setHidden(false);
+    };
+
+    /** what is under the logo: its tone, whether it is a photo/film, and whether it is the hero */
+    const sample = () => {
+      const r = (home.current ?? row).getBoundingClientRect();
+      const x = Math.min(window.innerWidth - 1, Math.max(0, r.left + r.width / 2));
+      const y = Math.max(0, r.top + r.height / 2);
+      for (const el of document.elementsFromPoint(x, y)) {
+        if (h.contains(el)) continue;
+        const src = el.closest<HTMLElement>('[data-header-tone]');
+        if (src) return { tone: src.dataset.headerTone as HeaderTone, busy: src.hasAttribute('data-header-busy'), hero: src.hasAttribute('data-header-wipe') };
+        return { tone: backgroundTone(el), busy: false, hero: false };
+      }
+      return { tone: 'light' as HeaderTone, busy: false, hero: false };
+    };
+    const paint = (tone: HeaderTone, busy: boolean) => {
+      row.dataset.tone = tone;
+      if (busy) h.dataset.busy = '';
+      else delete h.dataset.busy;
+    };
+    const retone = () => {
+      const s = sample();
+      // a wipe in progress owns the colour while the hero is still under the header
+      if (wipe) {
+        if (s.hero) return;
+        wipe.cancel();
+      }
+      paint(s.tone, s.busy);
+    };
+
+    const tick = () => {
+      raf = 0;
+      const y = window.scrollY;
+      const dy = y - lastY;
+      lastY = y;
+      if (dy > 0) {
+        down += dy;
+        up = 0;
+      } else if (dy < 0) {
+        up -= dy;
+        down = 0;
+      }
+      if (y <= HIDE_AFTER) setHidden(false);
+      else if (down >= HIDE_AFTER) setHidden(true);
+      else if (up >= SHOW_AFTER) setHidden(false);
+      retone();
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+
+    // the hero changed slide: the new colour sweeps in with the film's edge
+    const onWipe = (e: Event) => {
+      const { from, to, dir } = (e as CustomEvent<HeroWipeDetail>).detail;
+      const s = sample();
+      if (!s.hero) return;
+      wipe?.cancel();
+      if (from === to || reduce.matches) {
+        paint(to, true);
+        return;
+      }
+      paint(from, true);
+      over.dataset.tone = to;
+      over.dataset.on = '';
+      const a = over.animate([{ clipPath: dir === 1 ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], {
+        duration: WIPE_MS,
+        easing: WIPE_EASE,
+        fill: 'both',
+      });
+      wipe = a;
+      a.onfinish = () => {
+        if (wipe === a) wipe = null;
+        // swap without a fade: the copy already shows the new colour
+        row.dataset.snap = '';
+        paint(to, true);
+        void row.offsetWidth;
+        delete row.dataset.snap;
+        delete over.dataset.on;
+        a.cancel();
+      };
+      a.oncancel = () => {
+        if (wipe === a) wipe = null;
+        delete over.dataset.on;
+      };
+    };
+
+    // a keyboard user tabbing into the header brings it back
+    const onFocus = () => shown.current();
+
+    // a surface changes its tone (the hero's slide or film cut): look again
+    const watch = new MutationObserver(() => retone());
+    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-header-tone'] });
+
+    retone();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    window.addEventListener(HERO_WIPE_EVENT, onWipe);
+    h.addEventListener('focusin', onFocus);
+    // the page under the header changes after a navigation: look again once it has painted
+    const later = window.setTimeout(retone, 120);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(later);
+      watch.disconnect();
+      wipe?.cancel();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      window.removeEventListener(HERO_WIPE_EVENT, onWipe);
+      h.removeEventListener('focusin', onFocus);
+    };
+  }, [pathname]);
+
+  // the menu is open: the header stays
+  useEffect(() => {
+    if (menuOpen) shown.current();
+  }, [menuOpen]);
+
+  // little pop whenever the bag count changes (and the header comes back to show where it went)
   useEffect(() => {
     if (!hydrated || !cartCount) return;
+    shown.current();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setBump(true);
     const t = window.setTimeout(() => setBump(false), 600);
     return () => window.clearTimeout(t);
   }, [cartCount, hydrated]);
 
+  const menuLabel = t('Menu');
+
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
-        <div
-          className={`hdr pointer-events-auto flex w-full items-center gap-2 rounded-full ps-5 pe-1.5 transition-all duration-700 ease-[var(--ease-expo)] ${
-            scrolled ? 'h-14 max-w-[1040px]' : 'h-16 max-w-[1240px]'
-          }`}
-          style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}
-        >
-          <span aria-hidden className="hdr-aurora" />
-          <Link href="/" className="relative shrink-0" aria-label={t('STRYKE home')}>
-            <Wordmark tone="light" className="h-[30px] md:h-[36px]" />
+      <header ref={header} className="sh">
+        <div ref={base} className="sh-row container-x" data-tone="light" style={{ animation: 'header-in 1.1s .2s var(--ease-expo) both' }}>
+          <Link ref={home} href="/" className="sh-home" aria-label={t('STRYKE home')}>
+            <Mark />
           </Link>
-
-          <nav aria-label={t('Sports')} className="mx-auto hidden items-center gap-0.5 lg:flex">
-            {nav.filter((s) => s.tier === 'major').map((s) => {
-              const active = pathname.startsWith(`/${s.slug}`);
-              return (
-                <Link
-                  key={s.slug}
-                  href={`/${s.slug}`}
-                  aria-current={active ? 'page' : undefined}
-                  className={`group relative rounded-full px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                    active ? 'bg-white text-[#0b1534] shadow-[0_4px_14px_-6px_rgba(43,89,255,0.8)]' : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  <span className="relative z-10">{s.name}</span>
-                  {!active && (
-                    <span aria-hidden className="absolute inset-0 scale-75 rounded-full bg-white/10 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="ms-auto flex items-center gap-0.5 lg:ms-0">
-            <LanguageSwitcher className="me-1 hidden lg:inline-flex" />
-            <button type="button" className="grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-white/10" aria-label={t('Search products')} onClick={() => set({ searchOpen: true })}>
-              <Icon name="search" size={20} />
-            </button>
-            <Link href="/wishlist" className="relative grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-white/10" aria-label={hydrated ? t('Wishlist, {n} items', { n: wishCount }) : t('Wishlist')}>
-              <Icon name="heart" size={20} />
-              {hydrated && wishCount > 0 && <Badge n={wishCount} />}
-            </Link>
+          <div className="sh-end">
             <button
               type="button"
               id="cart-button"
-              className={`hdr-bag relative grid h-11 w-11 place-items-center rounded-full transition-transform duration-300 ${bump ? 'scale-125' : ''}`}
+              className={`sh-cart ${bump ? 'scale-125' : ''}`}
               aria-label={hydrated ? t('Open bag, {n} items', { n: cartCount }) : t('Open bag')}
               onClick={() => set({ cartOpen: true })}
             >
-              <Icon name="bag" size={19} />
-              {hydrated && cartCount > 0 && <Badge n={cartCount} accent />}
+              <Icon name="bag" size={24} />
+              {hydrated && cartCount > 0 && (
+                <span aria-hidden className="sh-badge mono">
+                  {cartCount > 99 ? '99' : cartCount}
+                </span>
+              )}
             </button>
-            <button
-              type="button"
-              className="ms-0.5 grid h-11 w-11 place-items-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
-              aria-label={t('Open menu')}
-              aria-expanded={menuOpen}
-              onClick={() => set({ menuOpen: true })}
-            >
-              <Icon name="menu" />
+            <button type="button" className="sh-menu" aria-label={t('Open menu')} aria-expanded={menuOpen} aria-haspopup="dialog" onClick={() => set({ menuOpen: true })}>
+              <Dots />
+              <span>{menuLabel}</span>
             </button>
+          </div>
+        </div>
+        {/* the same row in the next colour, revealed by the hero's slide edge (decoration only) */}
+        <div ref={ghost} className="sh-ghost" aria-hidden inert>
+          <div className="sh-row container-x">
+            <span className="sh-home">
+              <Mark />
+            </span>
+            <div className="sh-end">
+              <span className={`sh-cart ${bump ? 'scale-125' : ''}`}>
+                <Icon name="bag" size={24} />
+              </span>
+              <span className="sh-menu invisible">
+                <Dots />
+                <span>{menuLabel}</span>
+              </span>
+            </div>
           </div>
         </div>
       </header>
@@ -127,16 +251,23 @@ export function Header({ nav }: { nav: NavSport[] }) {
   );
 }
 
-function Badge({ n, accent }: { n: number; accent?: boolean }) {
+function Dots() {
   return (
-    <span
-      aria-hidden
-      // sits on the top corner of the icon button, above everything in it
-      className={`pointer-events-none absolute -end-1 -top-1 z-10 grid h-[19px] min-w-[19px] place-items-center rounded-full px-1 font-mono text-[10px] font-bold leading-none tabular-nums ring-2 ring-[#0b1534] ${
-        accent ? 'bg-white text-[#1d3fd0]' : 'bg-cobalt text-white'
-      }`}
-    >
-      {n > 99 ? '99' : n}
+    <span className="sh-dots" aria-hidden>
+      <i />
+      <i />
+      <i />
     </span>
   );
+}
+
+/** no tone given: read the first solid background behind the element (dark if it is dim) */
+function backgroundTone(el: Element): HeaderTone {
+  for (let n: Element | null = el; n; n = n.parentElement) {
+    const m = getComputedStyle(n).backgroundColor.match(/[\d.]+/g);
+    if (!m || (m.length > 3 && Number(m[3]) < 0.5)) continue;
+    const [r, g, b] = m.map(Number) as [number, number, number];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b < 110 ? 'dark' : 'light';
+  }
+  return 'light';
 }

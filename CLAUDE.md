@@ -3,7 +3,8 @@
 ## Purpose
 Premium, mobile-first sports e-commerce store **STRYKE** "by SMADI" (formerly REVO; social handles "Stryke Algeria").
 The logo is the owner's artwork cut to `public/brand/` (`stryke-logo.webp` for light backgrounds, `-light` with a white
-"by SMADI" for the dark header, `stryke-emblem.webp` without it), shown by `Wordmark.tsx`; the favicon `app/icon.svg` is a
+"by SMADI" for the dark header, `stryke-emblem.webp` without it), shown by `Wordmark.tsx` (footer, admin, receipts); the header uses two masks cut from it,
+`stryke-letters.webp` + `stryke-slash.webp` (`HeaderMark.tsx`), so the letters can take any colour; the favicon `app/icon.svg` is a
 navy tile with a slanted S and the cobalt slash. It feels like an award-site campaign and a real store at once. Real product photos (background removed) and real media only — **no 3D models**
 (the owner rejected the procedural/"comic" look).
 
@@ -11,8 +12,16 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
 - Palette "glacier": frost `#F3F4F6`, white, mist/stone `#E8EBEF`, steel `#8E99A8`, ink `#0F1216` (text), ONE accent
   cobalt `#2B59FF` — plus one signal red (`.btn-order`) reserved for the order buttons (owner-requested). **No rainbow/holographic colours** (owner rejected them). The hero is a cool, atmospheric grey world
   (igloo.inc-inspired); the rest of the site is frost-white. Never a dark/neon site.
-- Effects language (class names kept from the old holo era, now chrome): the header bar is midnight cobalt (`.hdr`: night-blue, drifting cobalt lights, a glint
-  travelling round the rim — all transforms; the owner chose one dark blue for it);
+- Header (`Header.tsx`, `.sh` in globals.css, owner's STRYKE reference): NO bar — the logo floats over the page on the
+  left, the bag icon and a bone-white→royal-blue "••• MENU" pill (opens `MobileMenu`, all widths: sports, language, search,
+  wishlist) on the right, open space between. Letters + bag are bone white `#F3EEE4` on dark, deep navy `#0B1B3F` on light,
+  slash always cobalt: surfaces say `data-header-tone` (+ `data-header-busy` for photos/films: one steady colour + soft
+  shadow), else the background colour is read (`src/lib/header-tone.ts`). Hero films carry a measured tone per cut
+  (`tone.wide/tall` in `config/hero.ts`); on a slide change the new colour follows the slide edge across the letters (a
+  clipped copy, `.sh-ghost`, synced to `--hero-t`). Hides (12px up + fade, 180ms) after ~40px down, returns (260ms
+  ease-out) after ~12px up; stays at the top, with the menu open, on focus and when the bag count changes; reduced
+  motion = fade only.
+- Effects language (class names kept from the old holo era, now chrome):
   `.holo-border`/`.holo-ring` = travelling
   chrome edge with a cobalt glint, `.btn-holo` white pill, `.holo-text` dark steel text with a cobalt glint, `.glass`,
   film grain, `[data-reveal]`. Liquid elements are chrome (mercury). Use these, don't invent new gradients.

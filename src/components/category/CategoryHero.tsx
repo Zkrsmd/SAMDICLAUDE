@@ -40,7 +40,7 @@ export async function CategoryHero({
   const glow = GLOW[sport as SportSlug] ?? 'rgba(255,255,255,.4)';
   const letters = title.toUpperCase().split('');
   return (
-    <header className={`relative isolate overflow-hidden bg-[#07080A] text-white [container-type:inline-size] ${compact ? 'min-h-[62svh]' : 'min-h-[88svh]'} md:min-h-[78vh]`}>
+    <header data-header-tone="dark" data-header-busy="" className={`relative isolate overflow-hidden bg-[#07080A] text-white [container-type:inline-size] ${compact ? 'min-h-[62svh]' : 'min-h-[88svh]'} md:min-h-[78vh]`}>
       {media && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={media} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" style={{ animation: 'ken-burns 18s ease-out both' }} />

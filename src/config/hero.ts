@@ -8,14 +8,18 @@
  * owner's clips used whole (scripts/full-films.mjs), the others short edits (scripts/edit-films.mjs).
  * Films loop. Sources and rights: public/video/CREDITS.md.
  */
+// `tone`: how the film reads under the header's logo, for its landscape (wide) and portrait (tall)
+// cut — dark films get bone-white letters, light ones deep navy (src/lib/header-tone.ts). One steady
+// value per cut, measured across the whole film (light only if the area under the logo stays above
+// ~115/255 all along), so the logo never flickers with the frames.
 export const heroSlides = [
-  { id: 'football', film: 'football', word: 'Football', cta: 'Explore football', href: '/football' },
-  { id: 'sportswear', film: 'sportswear', word: 'Sportswear', cta: 'Explore sportswear', href: '/sportswear' },
-  { id: 'martial-arts', film: 'martial-arts', word: 'Martial arts', cta: 'Explore martial arts', href: '/combat-sports' },
-  { id: 'fitness', film: 'fitness', word: 'Fitness', cta: 'Explore fitness', href: '/fitness' },
-  { id: 'swimming', film: 'swimming', word: 'Swimming', cta: 'Explore swimming', href: '/swimming' },
-  { id: 'competition', film: 'basketball', word: 'Competition', cta: 'Explore competition sports', href: '/competition' },
-  { id: 'diving', film: 'diving', word: 'Diving', cta: 'Explore diving', href: '/diving' },
+  { id: 'football', film: 'football', word: 'Football', cta: 'Explore football', href: '/football', tone: { wide: 'dark', tall: 'dark' } },
+  { id: 'sportswear', film: 'sportswear', word: 'Sportswear', cta: 'Explore sportswear', href: '/sportswear', tone: { wide: 'dark', tall: 'dark' } },
+  { id: 'martial-arts', film: 'martial-arts', word: 'Martial arts', cta: 'Explore martial arts', href: '/combat-sports', tone: { wide: 'dark', tall: 'dark' } },
+  { id: 'fitness', film: 'fitness', word: 'Fitness', cta: 'Explore fitness', href: '/fitness', tone: { wide: 'dark', tall: 'dark' } },
+  { id: 'swimming', film: 'swimming', word: 'Swimming', cta: 'Explore swimming', href: '/swimming', tone: { wide: 'dark', tall: 'dark' } },
+  { id: 'competition', film: 'basketball', word: 'Competition', cta: 'Explore competition sports', href: '/competition', tone: { wide: 'light', tall: 'dark' } },
+  { id: 'diving', film: 'diving', word: 'Diving', cta: 'Explore diving', href: '/diving', tone: { wide: 'dark', tall: 'dark' } },
 ] as const;
 
 export type HeroSlide = (typeof heroSlides)[number];

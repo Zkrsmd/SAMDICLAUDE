@@ -1,15 +1,23 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { HERO_TALL_QUERY, heroFilm, heroSlides } from '@/config/hero';
 import { useReducedMotion } from '@/hooks/useHydrated';
 import { useLocale, useT } from '@/i18n/client';
+import { HERO_WIPE_EVENT, type HeroWipeDetail } from '@/lib/header-tone';
 
 /** how long a slide waits when its film can't play (autoplay blocked, data saver) */
 const STILL_MS = 7000;
 /** the wipe between two sports (keep in sync with --hero-t in globals.css) */
 const SLIDE_MS = 1150;
 const N = heroSlides.length;
+/** which cut of the films is showing (portrait on tall screens): the header's colour depends on it */
+const onTallChange = (cb: () => void) => {
+  const m = window.matchMedia(HERO_TALL_QUERY);
+  m.addEventListener('change', cb);
+  return () => m.removeEventListener('change', cb);
+};
+const isTall = () => window.matchMedia(HERO_TALL_QUERY).matches;
 
 /**
  * The opening: a full-screen film per slide (played muted inline, looping) with the name across it
@@ -56,6 +64,18 @@ export function Hero() {
   }, []);
   const next = useCallback(() => go(indexRef.current + 1, 1), [go]);
   const back = useCallback(() => go(indexRef.current - 1, -1), [go]);
+
+  // tell the floating header: its colour change follows this wipe's edge across the logo
+  const cut = useSyncExternalStore(onTallChange, isTall, () => false) ? 'tall' : 'wide';
+  const shownIndex = useRef(0);
+  // (a layout effect: it runs before the header sees the tone attribute change, so no flash)
+  useLayoutEffect(() => {
+    const from = shownIndex.current;
+    shownIndex.current = index;
+    if (from === index) return;
+    const detail: HeroWipeDetail = { from: heroSlides[from]!.tone[cut], to: heroSlides[index]!.tone[cut], dir };
+    window.dispatchEvent(new CustomEvent(HERO_WIPE_EVENT, { detail }));
+  }, [index, dir, cut]);
 
   // the old film keeps moving under the wipe, then rests
   useEffect(() => {
@@ -202,6 +222,9 @@ export function Hero() {
       aria-label={t('Featured sports')}
       data-testid="hero-stage"
       data-moved={moved ? '' : undefined}
+      data-header-tone={slide.tone[cut]}
+      data-header-busy=""
+      data-header-wipe=""
       className="hero-stage"
       style={{ '--d': dir } as React.CSSProperties}
       onMouseEnter={() => setHover(true)}

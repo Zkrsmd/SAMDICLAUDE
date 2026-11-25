@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { Wordmark } from '@/components/ui/Wordmark';
+import { HeaderMark } from './HeaderMark';
 import { useUi } from '@/stores/ui';
 import { useDialog } from '@/hooks/useDialog';
 import type { NavSport } from './Header';
@@ -41,17 +41,20 @@ export function MobileMenu({ nav }: { nav: NavSport[] }) {
       aria-label={t('Menu')}
       aria-hidden={!menuOpen}
       inert={!menuOpen}
-      className={`fixed inset-0 z-[60] flex flex-col bg-bg transition-[clip-path] duration-700 ease-[var(--ease-expo)] lg:hidden ${
+      className={`fixed inset-0 z-[60] flex flex-col bg-bg transition-[clip-path] duration-700 ease-[var(--ease-expo)] ${
         menuOpen ? '[clip-path:inset(0_0_0_0)]' : '[clip-path:inset(0_0_100%_0)]'
       }`}
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="container-x flex h-14 items-center">
-        <span>
-          <Wordmark className="h-8" />
+        <span style={{ ['--sh-ink' as string]: '#0b1b3f' }}>
+          <HeaderMark className="sh-mark-menu" />
         </span>
         <LanguageSwitcher className="ms-auto" />
-        <button type="button" className="-me-2 ms-2 grid h-11 w-11 place-items-center" aria-label={t('Close menu')} onClick={close}>
+        <button type="button" className="ms-1 grid h-11 w-11 place-items-center" aria-label={t('Search products')} onClick={() => set({ menuOpen: false, searchOpen: true })}>
+          <Icon name="search" size={20} />
+        </button>
+        <button type="button" className="-me-2 grid h-11 w-11 place-items-center" aria-label={t('Close menu')} onClick={close}>
           <Icon name="close" />
         </button>
       </div>
