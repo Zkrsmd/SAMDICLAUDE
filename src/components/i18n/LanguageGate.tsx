@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { chooseLanguage } from '@/i18n/client';
 import { LANGUAGE_NAMES, LOCALES } from '@/i18n/config';
+import { HeaderMark } from '@/components/header/HeaderMark';
 
 /**
  * First visit: the store asks for a language before anything else plays (the hero films wait for it).
@@ -21,8 +22,9 @@ export function LanguageGate() {
   return (
     <div className="lang-gate" role="dialog" aria-modal="true" aria-labelledby="lang-gate-title">
       <div className="lang-gate-card">
-        <p className="display text-[44px] tracking-[0.04em]" dir="ltr">
-          REV<span className="text-cobalt">O</span>
+        <p dir="ltr" style={{ ['--sh-ink' as string]: '#0b1b3f' }}>
+          <span className="sr-only">STRYKE</span>
+          <HeaderMark className="lang-gate-mark" />
         </p>
         <h2 id="lang-gate-title" className="mt-5 text-[15px] text-muted">
           <span lang="en">Choose your language</span>

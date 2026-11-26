@@ -45,3 +45,4 @@ npm-debug.log*
 !.dev.vars.example
 # the owner's Odoo export (business data)
 /product from odoo/
+preview-loader/

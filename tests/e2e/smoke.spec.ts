@@ -95,3 +95,20 @@ test('first visit asks for a language; French and Arabic switch the whole store'
   await expect(page.getByRole('heading', { level: 1, name: 'كرة القدم' })).toBeVisible();
   await context.close();
 });
+
+test('first visit: the intro plays once (flip-book, then the STRYKE card opens onto the page), never again that visit', async ({ page, context }, info) => {
+  test.skip(info.project.name === 'reduced-motion', 'no intro with reduced motion');
+  test.skip(info.project.name !== 'desktop' && !info.project.name.includes('mobile'), 'phone and desktop');
+  await context.clearCookies({ name: 'stryke_intro' });
+  await page.goto('/');
+  const intro = page.locator('.intro');
+  await expect(intro).toBeVisible();
+  await expect(intro.locator('.intro-img[data-on]').first()).toBeAttached();
+  // it opens onto the page and goes, and the visit remembers it
+  await expect(intro).toHaveAttribute('data-state', 'done', { timeout: 12_000 });
+  await expect(page.getByTestId('hero-stage')).toBeVisible();
+  expect((await context.cookies()).some((c) => c.name === 'stryke_intro')).toBe(true);
+  await page.goto('/football');
+  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('.intro')).toHaveCount(0);
+});

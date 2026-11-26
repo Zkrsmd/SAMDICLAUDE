@@ -21,9 +21,15 @@ export default defineConfig({
   use: {
     baseURL,
     channel,
-    // a language already chosen (English), so the first-visit language picker doesn't cover the pages;
-    // the picker itself is tested in smoke.spec.ts with a fresh context
-    storageState: { cookies: [{ name: 'lang', value: 'en', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] },
+    // a language already chosen (English) and the first-visit intro already seen, so neither covers the
+    // pages; the picker and the intro are tested in smoke.spec.ts with fresh cookies
+    storageState: {
+      cookies: [
+        { name: 'lang', value: 'en', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' },
+        { name: 'stryke_intro', value: '1', domain: 'localhost', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' },
+      ],
+      origins: [],
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

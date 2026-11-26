@@ -32,10 +32,19 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
 
 ## Architecture
 - `src/app` routes (Server Components by default). Client islands only for canvases, gestures, stores.
-  Storefront pages live in the `(store)` route group (its layout = `StoreChrome`: header, footer, bag, search, effects);
+  Storefront pages live in the `(store)` route group (its layout = `StoreChrome`: header, footer, bag, search, effects,
+  and the first-visit intro);
   the admin lives in `src/app/admin` with its own frame. The root layout is only the document shell.
 - `src/data` catalogue → validated by Zod in `src/lib/catalog.ts` (`server-only`). Never hardcode product facts in components.
 - Product images: `/products/<slug>-1.webp` (hero) and `-2.webp` (second view) via `renderUrl()` in `src/lib/format.ts`.
+- First-visit intro (`src/components/layout/Intro.tsx`, `.intro` in globals.css; owner's reference: k95.it on a
+  phone): ONCE per visit only — never on page clicks (the owner rejected a loader on navigation) — and only after the
+  language is chosen. Frost-white page, a small 3:4 card flipping through ancient Greek sport art (boxers,
+  wrestlers, pankration, chariot, bronze/marble athletes: public-domain museum photos, `public/intro/CREDITS.md`, cut
+  by `scripts/intro-cards.mjs` from `media-src/intro-art/`; never Behance or other artists' work) with a `[0]`→`[100]`
+  count, then the royal-blue STRYKE card holds until the page has loaded, becomes a window onto the page and opens to
+  full screen. Session cookie `stryke_intro` (`src/config/intro.ts`) — the server skips rendering it afterwards; the
+  tests set it (playwright.config) except the intro test. Reduced motion: none.
 - Hero = the banner (owner-requested; no 3D, no product): `src/components/hero/Hero.tsx`, slides in
   `src/config/hero.ts`, in this order: Football, Sportswear, Martial arts (boxing included), Fitness (gym), Swimming,
   Competition (basketball + volleyball + handball), Diving. Sportswear, Martial arts and Competition open "world" pages
@@ -62,9 +71,9 @@ navy tile with a slanted S and the cobalt slash. It feels like an award-site cam
 - Product page: one still photo with a big word behind it (the admin's "Word behind the photo", else the brand; any
   length fits one line via `--n`) (pinned beside the details on desktop) — no scroll animation (owner: it felt like an
   ad) — then straight to the buy box: colour ONLY when the admin set colours (`colorChoice`), size, then quantity +
-  "Add" filling one row, a green bouncing arrow "Or order right now" (tap = glide to the form, cursor in the name; the
-  first size picked also glides down so the form shows, `scrollDownTo()`), and the short cash-on-delivery order form
-  itself (`QuickBuy.tsx`: the red "Order now" orders
+  "Add" filling one row (the first size picked glides down so the order form shows, `scrollDownTo()`), and the short
+  cash-on-delivery order form itself (`QuickBuy.tsx`, a green bouncing down-arrow on the left of its "ORDER NOW"
+  title; the red "Order now" orders
   the whole bag plus the current pick, then empties the bag; quantities max 5). Anything missing (no size, a wrong
   field) scrolls back to it with the reason in red (`goToField()`, `src/lib/scroll-to.ts`); the red clears as soon as it's
   fixed → "Complete the look" (3: `boughtWith()` in `catalog.ts` = the shop's picks — the admin's, else one per paired

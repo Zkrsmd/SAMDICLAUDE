@@ -2609,6 +2609,156 @@ html[dir='rtl'] .rtl-flip {
   }
 }
 
+/* ---------------- the first-visit intro (Intro.tsx) ----------------
+   Frost-white page, a small 3:4 card in the middle flipping through banner films and products (each
+   pops out of the middle of the last), a [0]→[100] count beside it, then the STRYKE card (royal blue,
+   bone letters). The card is a window: the white around it is its own huge shadow, so when its
+   pictures fade the real page shows through, and the window opens to the whole screen. Above the
+   header (z 50), which drops in once it is gone. */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  touch-action: none;
+}
+.intro[data-state='done'] {
+  display: none;
+}
+/* without JavaScript it goes after a few seconds */
+.intro:not([data-js]) {
+  animation: intro-gone 0s 6s forwards;
+}
+@keyframes intro-gone {
+  to {
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    display: none;
+  }
+}
+.intro-card {
+  position: relative;
+  width: clamp(168px, 56vw, 270px);
+  aspect-ratio: 3 / 4;
+  background: #f3f4f6;
+  box-shadow: 0 0 0 150vmax #f3f4f6;
+}
+/* the flip-book: the first card is there with the first paint (full size: the page is busy starting
+   then, and an animation could stall half-way), the others pop in when Intro.tsx says (data-on) */
+.intro-img,
+.intro-brand {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+}
+.intro-img:first-child {
+  opacity: 1;
+}
+.intro-img[data-on],
+.intro-brand[data-on] {
+  animation: intro-pop 0.36s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes intro-pop {
+  from {
+    opacity: 1;
+    transform: scale(0.32);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* the STRYKE card: royal blue (deep enough for the electric slash), the letters in bone */
+.intro-brand {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(120% 90% at 50% 40%, #1f3be0 0%, #1730c4 45%, #0e1f96 100%);
+  --sh-ink: #f3eee4;
+}
+.intro-mark {
+  width: 74%;
+  height: auto;
+}
+/* the [0]→[100] count, counted by CSS: to 92 across the flip-book (--flip), to 100 once ready */
+@property --n {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+.intro-count {
+  position: absolute;
+  top: -3px;
+  left: calc(100% + 10px);
+  color: #2b59ff;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  counter-reset: n var(--n);
+}
+.intro[data-flip] .intro-count {
+  animation: intro-count var(--flip, 2s) cubic-bezier(0.3, 0, 0.6, 1) forwards;
+}
+.intro-count::before {
+  content: '[' counter(n) ']';
+}
+.intro[data-count='full'] .intro-count {
+  animation: intro-count-end 0.28s ease-out forwards;
+}
+@keyframes intro-count {
+  from {
+    --n: 0;
+  }
+  to {
+    --n: 92;
+  }
+}
+@keyframes intro-count-end {
+  from {
+    --n: 92;
+  }
+  to {
+    --n: 100;
+  }
+}
+/* opening: the pictures fade, the window shows the page, the count goes */
+.intro[data-state='open'] .intro-card {
+  background-color: transparent;
+  transition: background-color 0.18s ease;
+}
+.intro[data-state='open'] :is(.intro-img, .intro-brand) {
+  animation: intro-fade 0.18s ease forwards;
+}
+.intro[data-state='open'] .intro-count {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+@keyframes intro-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+/* the header waits behind the intro, then drops in */
+body:has(.intro:not([data-state='done'])) .sh-row {
+  animation-play-state: paused !important;
+}
+
+.lang-gate-mark {
+  height: 34px;
+  margin-inline: auto;
+}
+
 /* ---------------- product page: small white "Add to bag" + the order form ---------------- */
 /* the small white "Add" button: presses in, then flips to a cobalt check for a moment */
 .pdp-add {
